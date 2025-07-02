@@ -1,0 +1,200 @@
+<div class="minimal-form-container">
+  <!-- Header minimalista -->
+  <div class="form-header">
+    <mat-icon class="header-icon">school</mat-icon>
+    <h2 class="header-title">Información académica</h2>
+  </div>
+
+  <!-- Formulario en columnas -->
+  <form [formGroup]="academicoForm" class="minimal-form">
+    
+    <!-- Pregunta principal -->
+    <div class="main-question">
+      <mat-form-field appearance="outline" class="minimal-field">
+        <mat-label>¿Está estudiando actualmente?</mat-label>
+        <mat-select formControlName="academico" required>
+          <mat-option value="">Seleccione</mat-option>
+          <mat-option value="1">
+            <mat-icon>close</mat-icon>
+            No
+          </mat-option>
+          <mat-option value="2">
+            <mat-icon>check</mat-icon>
+            Sí
+          </mat-option>
+        </mat-select>
+        <mat-icon matSuffix>school</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <!-- Detalles académicos (condicional) -->
+    <div class="academic-details" *ngIf="academicoForm.get('academico')?.value === '2'">
+      <h3 class="section-title">
+        <mat-icon>info</mat-icon>
+        Información Académica
+      </h3>
+      
+      <!-- Grid de campos en 2 columnas -->
+      <div class="form-grid">
+        
+        <!-- Columna 1: Información básica -->
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Nivel académico</mat-label>
+            <mat-select formControlName="nivel_academico">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option value="Primaria">
+                <mat-icon>child_care</mat-icon>
+                Primaria
+              </mat-option>
+              <mat-option value="Bachillerato">
+                <mat-icon>school</mat-icon>
+                Bachillerato
+              </mat-option>
+              <mat-option value="Técnico">
+                <mat-icon>build</mat-icon>
+                Técnico
+              </mat-option>
+              <mat-option value="Tecnológico">
+                <mat-icon>computer</mat-icon>
+                Tecnológico
+              </mat-option>
+              <mat-option value="Universitario">
+                <mat-icon>account_balance</mat-icon>
+                Universitario
+              </mat-option>
+              <mat-option value="Especialización">
+                <mat-icon>star</mat-icon>
+                Especialización
+              </mat-option>
+              <mat-option value="Maestría">
+                <mat-icon>emoji_events</mat-icon>
+                Maestría
+              </mat-option>
+              <mat-option value="Doctorado">
+                <mat-icon>workspace_premium</mat-icon>
+                Doctorado
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>school</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Programa académico</mat-label>
+            <input matInput formControlName="programa_academico" placeholder="Ej: Ingeniería de Sistemas">
+            <mat-icon matSuffix>book</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <!-- Columna 2: Información específica -->
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Institución educativa</mat-label>
+            <input matInput formControlName="institucion_educativa" placeholder="Nombre de la institución">
+            <mat-icon matSuffix>location_city</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Semestre actual</mat-label>
+            <mat-select formControlName="semestre_actual">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option value="1">1° Semestre</mat-option>
+              <mat-option value="2">2° Semestre</mat-option>
+              <mat-option value="3">3° Semestre</mat-option>
+              <mat-option value="4">4° Semestre</mat-option>
+              <mat-option value="5">5° Semestre</mat-option>
+              <mat-option value="6">6° Semestre</mat-option>
+              <mat-option value="7">7° Semestre</mat-option>
+              <mat-option value="8">8° Semestre</mat-option>
+              <mat-option value="9">9° Semestre</mat-option>
+              <mat-option value="10">10° Semestre</mat-option>
+              <mat-option value="Graduado">Graduado</mat-option>
+            </mat-select>
+            <mat-icon matSuffix>timeline</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Fecha de graduación (campo completo) -->
+      <div class="graduation-section">
+        <mat-form-field appearance="outline" class="minimal-field full-width">
+          <mat-label>Fecha de graduación (opcional)</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="fecha_grado">
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <!-- Botón para agregar -->
+      <div class="add-button-section">
+        <button mat-raised-button color="accent" class="add-button" (click)="agregarEstudio()" [disabled]="!canAddStudy()">
+          <mat-icon>add</mat-icon>
+          Añadir estudio
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de estudios -->
+    <div class="studies-section" *ngIf="estudios.length > 0">
+      <h3 class="section-title">
+        <mat-icon>list</mat-icon>
+        Estudios Registrados
+      </h3>
+      
+      <div class="studies-list">
+        <mat-card class="study-card" *ngFor="let estudio of estudios; let i = index">
+          <mat-card-content>
+            <div class="study-info">
+              <div class="study-details">
+                <h4 class="study-program">
+                  <mat-icon>book</mat-icon>
+                  {{ estudio.programa_academico }}
+                </h4>
+                <p class="study-level">
+                  <mat-icon>school</mat-icon>
+                  {{ estudio.nivel_academico | titlecase }}
+                </p>
+                <p class="study-institution">
+                  <mat-icon>location_city</mat-icon>
+                  {{ estudio.institucion_educativa }}
+                </p>
+                <div class="study-meta">
+                  <span class="study-semester" *ngIf="estudio.semestre">
+                    <mat-icon>timeline</mat-icon>
+                    <span *ngIf="estudio.semestre === 'Graduado'">Estado: Graduado</span>
+                    <span *ngIf="estudio.semestre !== 'Graduado'">Semestre: {{ estudio.semestre }}</span>
+                  </span>
+                  <span class="study-graduation" *ngIf="estudio.fecha_grado">
+                    <mat-icon>event</mat-icon>
+                    Graduación: {{ estudio.fecha_grado }}
+                  </span>
+                </div>
+              </div>
+              <div class="study-actions">
+                <button mat-icon-button color="warn" (click)="eliminarEstudio(i)" matTooltip="Eliminar estudio">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- Botones minimalistas -->
+  <div class="form-actions">
+    <button mat-stroked-button class="minimal-button secondary" (click)="previous()">
+      <mat-icon>arrow_back</mat-icon>
+      Atrás
+    </button>
+    <button mat-flat-button color="primary" class="minimal-button primary" (click)="validateAndNext()" [disabled]="isLoading">
+      <mat-icon *ngIf="isLoading" class="spinner">refresh</mat-icon>
+      <span *ngIf="!isLoading">Siguiente</span>
+      <span *ngIf="isLoading">Guardando...</span>
+      <mat-icon *ngIf="!isLoading">arrow_forward</mat-icon>
+    </button>
+  </div>
+</div>
+  

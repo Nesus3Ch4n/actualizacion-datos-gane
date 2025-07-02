@@ -1,0 +1,46 @@
+<div class="containerNew">
+    <div class="card">
+        <!-- Menú de pasos horizontal en la parte superior -->
+        <div class="steps-header">
+            <div class="logo-container">
+                <!-- <img class="logo img-fluid" src="../assets/images/logo.png"> -->
+                <span class="header-title">
+                    {{ isConflictOnlyMode() ? 'Actualización de Conflicto de Intereses' : 'Actualización de datos' }}
+                </span>
+            </div>
+            
+            <!-- Mostrar indicador del modo especial -->
+            <div class="mode-indicator" *ngIf="isConflictOnlyMode()">
+                <mat-icon svgIcon="thumbs-up" aria-hidden="false" aria-label="Example thumbs up SVG icon"></mat-icon>
+                <span>Solo puedes actualizar el conflicto de intereses</span>
+            </div>
+        </div>
+       
+        <hr>
+        <div class="steps-navigation">
+            <div class="step-item" 
+                 *ngFor="let step of stepsData; let i = index"
+                 [ngClass]="{
+                   'active': i === currentIndex, 
+                   'completed': i < currentIndex,
+                   'disabled': !step.enabled,
+                   'hidden': isConflictOnlyMode() && !step.enabled
+                 }"
+                 [attr.title]="!step.enabled ? 'Paso no disponible en este modo' : step.title"
+                 (click)="navigateTo(i)">
+                <div class="step-circle">
+                    <i [class]="step.icon" *ngIf="step.enabled"></i>
+                    <mat-icon *ngIf="!step.enabled" class="disabled-icon">block</mat-icon>
+                </div>
+                <span class="step-title">{{step.title}}</span>
+            </div>
+        </div>
+        
+        
+        <!-- Contenido del formulario -->
+        <div class="form-content">
+            <div id="pageMessages"></div>
+            <router-outlet></router-outlet>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,407 @@
+@import '../../shared/styles/variables';
+@import '../../shared/styles/mixins';
+
+.admin-container {
+  padding: $spacing-xl;
+  background: #f5f7fa;
+  min-height: 100vh;
+  font-family: $font-family-primary;
+}
+
+// Header del panel
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xl;
+  padding: $spacing-lg;
+  background: white;
+  border-radius: $border-radius-lg;
+  @include box-shadow(2);
+
+  @include responsive(md) {
+    flex-direction: column;
+    gap: $spacing-lg;
+    text-align: center;
+  }
+}
+
+.header-content {
+  flex: 1;
+}
+
+.admin-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  font-size: $font-size-xxl * 1.5;
+  font-weight: 700;
+  color: $primary-color;
+  margin: 0 0 $spacing-sm 0;
+
+  mat-icon {
+    font-size: 2rem !important;
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+}
+
+.admin-subtitle {
+  color: $gray-medium;
+  font-size: $font-size-large;
+  margin: 0;
+}
+
+.header-actions {
+  button {
+    min-width: 160px;
+    height: 48px;
+    font-weight: 600;
+    border-radius: $border-radius-md;
+    @include transition();
+
+    &:hover {
+      @include button-hover-effect();
+    }
+  }
+}
+
+// Cards generales
+.filters-card, .reports-card, .users-table-card {
+  margin-bottom: $spacing-xl;
+  @include box-shadow(1);
+  border-radius: $border-radius-lg;
+
+  mat-card-header {
+    background: $gray-light;
+    margin: -#{$spacing-lg} -#{$spacing-lg} $spacing-lg -#{$spacing-lg};
+    padding: $spacing-lg;
+    border-radius: $border-radius-lg $border-radius-lg 0 0;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      color: $primary-color;
+      font-weight: 600;
+      margin: 0;
+
+      mat-icon {
+        color: $primary-color;
+      }
+    }
+
+    mat-card-subtitle {
+      color: $gray-medium;
+      margin-top: $spacing-sm;
+    }
+  }
+}
+
+// Filtros
+.filters-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: $spacing-lg;
+  align-items: end;
+
+  @include responsive(md) {
+    grid-template-columns: 1fr;
+    gap: $spacing-md;
+  }
+}
+
+.filter-field {
+  width: 100%;
+}
+
+.filter-actions {
+  display: flex;
+  gap: $spacing-sm;
+  position: relative;
+  bottom: 20px;
+
+  button {
+    height: 56px;
+    @include transition();
+
+    &:hover {
+      @include button-hover-effect(1.02);
+    }
+  }
+}
+
+// Reportes
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: $spacing-lg;
+}
+
+.report-item {
+  @include transition();
+  border-radius: $border-radius-md;
+  @include box-shadow(1);
+
+  &:hover {
+    @include box-shadow(2);
+    transform: translateY(-4px);
+  }
+
+  mat-card-header {
+    background: transparent;
+    margin: 0;
+    padding: $spacing-md;
+
+    mat-icon[mat-card-avatar] {
+      width: 48px;
+      height: 48px;
+      font-size: 24px !important;
+      border-radius: $border-radius-circle;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+
+      &.report-icon-integrantes {
+        background: $primary-color;
+      }
+      &.report-icon-conflicto-intereses {
+        background: $warning-color;
+      }
+      &.report-icon-estudios {
+        background: $success-color;
+      }
+      &.report-icon-contacto {
+        background: $info-color;
+      }
+      &.report-icon-personas-cargo {
+        background: #9c27b0;
+      }
+    }
+  }
+
+  .report-title {
+    font-size: $font-size-large;
+    font-weight: 600;
+    color: $gray-dark;
+    margin: 0;
+  }
+
+  .report-description {
+    color: $gray-medium;
+    font-size: $font-size-base;
+    line-height: 1.5;
+    margin: $spacing-sm 0 0 0;
+  }
+
+  mat-card-actions {
+    padding: $spacing-md;
+    
+    button {
+      width: 100%;
+      height: 44px;
+      font-weight: 500;
+      @include transition();
+
+      &:hover {
+        @include button-hover-effect();
+      }
+    }
+  }
+}
+
+// Tabla de usuarios
+.users-count {
+  color: $gray-medium;
+  font-weight: normal;
+  font-size: $font-size-base;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: $border-radius-md;
+  border: 1px solid $gray-border;
+}
+
+.users-table {
+  width: 100%;
+  background: white;
+
+  .mat-header-cell {
+    background: $gray-light;
+    color: $gray-dark;
+    font-weight: 600;
+    font-size: $font-size-small;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .mat-cell {
+    border-bottom: 1px solid #f0f0f0;
+    padding: $spacing-md $spacing-sm;
+  }
+
+  .mat-row {
+    @include transition();
+
+    &:hover {
+      background-color: #f8f9fa;
+    }
+
+    &.selected-row {
+      background-color: rgba(0, 66, 137, 0.08);
+    }
+  }
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+
+  .user-avatar {
+    color: $gray-medium;
+    font-size: 20px !important;
+  }
+}
+
+.email-link {
+  color: $primary-color;
+  text-decoration: none;
+  @include transition();
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  gap: $spacing-xs;
+
+  button {
+    @include transition();
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+}
+
+.no-data {
+  text-align: center;
+  padding: $spacing-xxl;
+  color: $gray-medium;
+
+  mat-icon {
+    font-size: 4rem !important;
+    width: 4rem !important;
+    height: 4rem !important;
+    margin-bottom: $spacing-md;
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: $font-size-large;
+    margin: 0;
+  }
+}
+
+// Responsive
+@include responsive(md) {
+  .admin-container {
+    padding: $spacing-lg;
+  }
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-title {
+    font-size: $font-size-xxl;
+    justify-content: center;
+  }
+
+  .table-container {
+    font-size: $font-size-small;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+}
+
+@include responsive(sm) {
+  .admin-container {
+    padding: $spacing-md;
+  }
+
+  .admin-title {
+    font-size: $font-size-xl;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  .report-item {
+    mat-card-header {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+}
+
+// Animaciones
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-container > * {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.reports-grid .report-item {
+  animation: fadeInUp 0.6s ease-out;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.1}s;
+    }
+  }
+}
+
+// Mejoras para Material Design
+.mat-form-field-appearance-outline .mat-form-field-outline {
+  color: $gray-border;
+}
+
+.mat-form-field-appearance-outline.mat-focused .mat-form-field-outline-thick {
+  color: $primary-color;
+}
+
+.mat-checkbox-checked .mat-checkbox-background {
+  background-color: $primary-color;
+}
+
+.mat-paginator {
+  border-top: 1px solid $gray-border;
+  background: $gray-light;
+}
+
+// Tooltips personalizados
+.mat-tooltip {
+  font-size: $font-size-small;
+  background: rgba(0, 0, 0, 0.9);
+} 

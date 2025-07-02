@@ -1,0 +1,443 @@
+@import '../../../shared/styles/variables';
+@import '../../../shared/styles/mixins';
+
+.completion-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 2rem;
+  font-family: $font-family-primary;
+}
+
+.completion-card {
+  @include card($spacing-xxl, $border-radius-xl, 3);
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  max-width: 1800px;
+  width: 100%;
+  min-height: 600px;
+  animation: slideInUp 0.8s ease-out;
+
+  @include responsive(md) {
+    grid-template-columns: 1fr;
+    max-width: 500px;
+  }
+}
+
+// Lado izquierdo con logo y decoración
+.left-section {
+  @include gradient($primary-color, darken($primary-color, 10%), 135deg);
+  position: relative;
+  @include flex-center();
+  flex-direction: column;
+  padding: 3rem 2rem;
+  overflow: hidden;
+  border-radius: $border-radius-xl 0 0 $border-radius-xl;
+
+  @include responsive(md) {
+    padding: 2rem 1rem;
+    min-height: 200px;
+    border-radius: $border-radius-xl $border-radius-xl 0 0;
+  }
+}
+
+.logo-container {
+  text-align: center;
+  z-index: 2;
+  position: relative;
+}
+
+.company-logo {
+  max-width: 120px;
+  height: auto;
+  filter: brightness(0) invert(1);
+  animation: logoFloat 3s ease-in-out infinite;
+
+  @include responsive(md) {
+    max-width: 80px;
+  }
+}
+
+.decoration-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.decoration-circle {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: $border-radius-circle;
+  animation: rotate 20s linear infinite;
+}
+
+.decoration-line {
+  position: absolute;
+  bottom: 20%;
+  left: -20px;
+  width: 120px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(45deg);
+}
+
+.decoration-dots {
+  position: absolute;
+  bottom: 30%;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  span {
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: $border-radius-circle;
+    animation: pulse 2s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.3s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.6s;
+    }
+  }
+}
+
+// Lado derecho con contenido
+.right-section {
+  @include flex-center();
+  padding: 3rem;
+
+  @include responsive(md) {
+    padding: 2rem 1.5rem;
+  }
+}
+
+.content-wrapper {
+  text-align: center;
+  max-width: 850px;
+  width: 100%;
+}
+
+.success-icon-container {
+  margin-bottom: 2rem;
+}
+
+.success-icon {
+  font-size: 4rem !important;
+  width: 4rem !important;
+  height: 4rem !important;
+  color: #0ed422;
+  position: relative;
+  left: 20px;
+}
+
+.main-title {
+  font-size: $font-size-xxl * 2.5;
+  font-weight: 900;
+  color: $gray-dark;
+  display: flex;
+  line-height: 1.2;
+  position: relative;
+  left: 130px;
+
+  @include responsive(md) {
+    font-size: $font-size-xxl * 1.5;
+  }
+}
+
+.main-message {
+  font-size: $font-size-xl;
+  color: $gray-medium;
+  margin-bottom: 2.5rem;
+  line-height: 1.5;
+  position: relative;
+  left: 35px;
+
+  @include responsive(md) {
+    font-size: $font-size-large;
+  }
+}
+
+.additional-info {
+  background: $gray-light;
+  border-radius: $border-radius-lg;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.info-title {
+  @include flex(row, center, flex-start);
+  gap: 0.5rem;
+  font-size: $font-size-large;
+  font-weight: 600;
+  color: $primary-color;
+  margin-bottom: 1rem;
+
+  mat-icon {
+    font-size: 1.2rem !important;
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+  }
+}
+
+.info-card {
+  @include flex(row, center, flex-start);
+  gap: 1rem;
+  background: white;
+  padding: 1rem;
+  border-radius: $border-radius-md;
+  @include box-shadow(1);
+}
+
+.info-icon {
+  color: $warning-color;
+  font-size: 2rem !important;
+  width: 2rem !important;
+  height: 2rem !important;
+}
+
+.info-text {
+  text-align: left;
+  
+  p {
+    margin: 0;
+    
+    &:first-child {
+      font-weight: 600;
+      color: $gray-dark;
+    }
+    
+    &:last-child {
+      color: $gray-medium;
+    }
+  }
+}
+
+.update-section {
+  margin-bottom: 2rem;
+}
+
+.update-title {
+  font-size: $font-size-large;
+  font-weight: 500;
+  color: $gray-dark;
+  margin-bottom: 1rem;
+}
+
+.update-actions {
+  margin-bottom: 1.5rem;
+}
+
+.update-button {
+  @include transition();
+  min-width: 200px;
+  height: 48px;
+  font-size: $font-size-base;
+  font-weight: 500;
+  border-radius: $border-radius-md;
+  
+  &:hover {
+    @include button-hover-effect();
+  }
+  
+  mat-icon {
+    margin-right: 0.5rem;
+  }
+}
+
+// Nueva sección administrativa
+.admin-section {
+  margin-bottom: 2rem;
+  animation: fadeInUp 0.8s ease-out 1.5s both;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border-radius: $border-radius-lg;
+  padding: 1.5rem;
+  border: 2px solid rgba(0, 66, 137, 0.1);
+}
+
+.admin-title {
+  @include flex(row, center, center);
+  gap: 0.5rem;
+  font-size: $font-size-large;
+  font-weight: 600;
+  color: $primary-color;
+  margin-bottom: 0.5rem;
+
+  mat-icon {
+    font-size: 1.5rem !important;
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+}
+
+.admin-description {
+  color: $gray-medium;
+  font-size: $font-size-base;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.admin-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.admin-button {
+  @include transition();
+  min-width: 180px;
+  height: 48px;
+  font-size: $font-size-base;
+  font-weight: 600;
+  border-radius: $border-radius-md;
+  background: linear-gradient(135deg, $primary-color 0%, lighten($primary-color, 10%) 100%);
+  
+  &:hover {
+    @include button-hover-effect();
+    background: linear-gradient(135deg, darken($primary-color, 5%) 0%, $primary-color 100%);
+  }
+  
+  mat-icon {
+    margin-right: 0.5rem;
+  }
+}
+
+.exit-section {
+  animation: fadeInUp 0.8s ease-out 1.7s both;
+}
+
+.exit-button {
+  @include transition();
+  min-width: 150px;
+  height: 44px;
+  font-size: $font-size-base;
+  font-weight: 500;
+  border-radius: $border-radius-md;
+  
+  &:hover {
+    @include button-hover-effect();
+  }
+  
+  mat-icon {
+    margin-right: 0.5rem;
+  }
+}
+
+// Animaciones
+@keyframes slideInUp {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// Responsive ajustes adicionales
+@include responsive(xs) {
+  .completion-container {
+    padding: 1rem;
+  }
+  
+  .main-title {
+    font-size: $font-size-xxl * 1.2;
+  }
+  
+  .main-message {
+    font-size: $font-size-base;
+  }
+  
+  .additional-info {
+    padding: 1rem;
+  }
+  
+  .info-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .info-text {
+    text-align: center;
+  }
+
+  .admin-section {
+    padding: 1rem;
+  }
+
+  .admin-title {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .admin-button {
+    min-width: 160px;
+    font-size: $font-size-small;
+  }
+} 

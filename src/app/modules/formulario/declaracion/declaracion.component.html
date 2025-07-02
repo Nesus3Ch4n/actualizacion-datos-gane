@@ -1,0 +1,206 @@
+<div class="minimal-form-container">
+  <!-- Header minimalista -->
+  <div class="form-header">
+    <mat-icon class="header-icon">gavel</mat-icon>
+    <h2 class="header-title">Declaración conflicto de intereses</h2>
+  </div>
+
+  <!-- Formulario principal -->
+  <form [formGroup]="conflictForm" class="minimal-form">
+    
+    <!-- Información general -->
+    <div class="info-section">
+      <h3 class="section-title">
+        <mat-icon>info</mat-icon>
+        Información general
+      </h3>
+      
+      <div class="info-description">
+        <p class="info-text">
+          ¿Tiene usted, algún tipo de relación familiar y/o comercial, hasta el cuarto grado de consanguinidad 
+          (padres, hijos, hermanos, abuelos, nietos, tíos, sobrinos o primos), segundo de afinidad 
+          (cónyuge, cuñado, suegros o abuelos del cónyuge) o primero civil (hijo adoptivo o padre adoptante) 
+          con alguna de las partes interesadas de la compañía?
+        </p>
+      </div>
+
+      <div class="legend-grid">
+        <div class="legend-item">
+          <strong>I:</strong> Integrantes
+        </div>
+        <div class="legend-item">
+          <strong>AC:</strong> Accionistas
+        </div>
+        <div class="legend-item">
+          <strong>CI:</strong> Colocadores Independientes
+        </div>
+        <div class="legend-item">
+          <strong>P:</strong> Proveedores
+        </div>
+        <div class="legend-item">
+          <strong>A:</strong> Arrendadores
+        </div>
+        <div class="legend-item">
+          <strong>AE:</strong> Aliados Estratégicos
+        </div>
+        <div class="legend-item">
+          <strong>CE:</strong> Colaboradores Empresariales
+        </div>
+      </div>
+    </div>
+
+    <!-- Declaración principal -->
+    <div class="declaration-section">
+      <h3 class="section-title">
+        <mat-icon>help_outline</mat-icon>
+        Declaración de conflicto
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>¿Tiene algún conflicto de intereses?</mat-label>
+            <mat-select formControlName="opcion_conflicto">
+              <mat-option value="2">
+                <mat-icon>check_circle</mat-icon>
+                No
+              </mat-option>
+              <mat-option value="1">
+                <mat-icon>warning</mat-icon>
+                Sí
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>assignment</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <!-- Información de conflicto (condicional) -->
+    <div class="conflict-section" *ngIf="conflictForm.get('opcion_conflicto')?.value === '1'">
+      <h3 class="section-title">
+        <mat-icon>person_add</mat-icon>
+        Detalles del Conflicto
+        <span class="info-note">(Agregue las personas con conflicto de intereses)</span>
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Nombre completo</mat-label>
+            <input matInput formControlName="dconf_nombre" placeholder="Ingrese el nombre completo">
+            <mat-icon matSuffix>person</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Parentesco</mat-label>
+            <input matInput formControlName="dconf_parentesco" placeholder="Ej: Hermano, Tío, etc.">
+            <mat-icon matSuffix>family_restroom</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Tipo de parte interesada</mat-label>
+            <mat-select formControlName="dconf_parte">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option value="I">
+                <mat-icon>business</mat-icon>
+                I - Integrantes
+              </mat-option>
+              <mat-option value="AC">
+                <mat-icon>account_balance</mat-icon>
+                AC - Accionistas
+              </mat-option>
+              <mat-option value="CI">
+                <mat-icon>person_pin</mat-icon>
+                CI - Colocadores Independientes
+              </mat-option>
+              <mat-option value="P">
+                <mat-icon>local_shipping</mat-icon>
+                P - Proveedores
+              </mat-option>
+              <mat-option value="A">
+                <mat-icon>home_work</mat-icon>
+                A - Arrendadores
+              </mat-option>
+              <mat-option value="AE">
+                <mat-icon>handshake</mat-icon>
+                AE - Aliados Estratégicos
+              </mat-option>
+              <mat-option value="CE">
+                <mat-icon>groups</mat-icon>
+                CE - Colaboradores Empresariales
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>business</mat-icon>
+          </mat-form-field>
+
+          <div class="add-button-container">
+            <button mat-flat-button color="accent" type="button" (click)="agregarPersona()" 
+                    [disabled]="!isPersonFormValid()" class="add-person-button">
+              <mat-icon>add</mat-icon>
+              Añadir Persona
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de personas agregadas -->
+    <div class="persons-list-section" *ngIf="conflictForm.get('opcion_conflicto')?.value === '1' && personasConflicto.length > 0">
+      <h3 class="section-title">
+        <mat-icon>group</mat-icon>
+        Personas Registradas
+      </h3>
+      
+      <div class="persons-container">
+        <div class="person-card" *ngFor="let persona of personasConflicto; let i = index">
+          <div class="person-info">
+            <div class="person-name">
+              <mat-icon>person</mat-icon>
+              <span>{{ persona.nombre }}</span>
+            </div>
+            <div class="person-details">
+              <span class="detail-item">
+                <mat-icon>family_restroom</mat-icon>
+                {{ persona.parentesco }}
+              </span>
+              <span class="detail-item">
+                <mat-icon>business</mat-icon>
+                {{ persona.tipoParteInteresada }}
+              </span>
+            </div>
+          </div>
+          <button mat-icon-button color="warn" (click)="eliminarPersona(i)" 
+                  matTooltip="Eliminar persona" class="delete-button">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- TEMPORAL: Botón de debugging -->
+  <div class="debug-section" style="margin: 20px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+    <h4 style="margin: 0 0 10px 0; color: #666;">🔧 Debugging Temporal</h4>
+    <button mat-raised-button color="warn" (click)="debugFormulario()" style="margin-right: 10px;">
+      <mat-icon>bug_report</mat-icon>
+      Ver Datos en Consola
+    </button>
+    <small style="color: #666;">Haz clic para ver el contenido completo del FormStateService en la consola del navegador</small>
+  </div>
+
+  <!-- Botones minimalistas -->
+  <div class="form-actions">
+    <button mat-stroked-button class="minimal-button secondary" (click)="previous()">
+      <mat-icon>arrow_back</mat-icon>
+      Atrás
+    </button>
+    <button mat-flat-button color="primary" class="minimal-button primary" (click)="validateAndFinish()">
+      Finalizar
+      <mat-icon>check_circle</mat-icon>
+    </button>
+  </div>
+</div>

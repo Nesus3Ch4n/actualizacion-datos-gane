@@ -1,0 +1,210 @@
+<div class="minimal-form-container">
+  <!-- Header minimalista -->
+  <div class="form-header">
+    <mat-icon class="header-icon">home</mat-icon>
+    <h2 class="header-title">Información de vivienda</h2>
+  </div>
+
+  <!-- Formulario principal -->
+  <form [formGroup]="housingForm" class="minimal-form">
+    
+    <!-- Información de dirección -->
+    <div class="address-section">
+      <h3 class="section-title">
+        <mat-icon>location_on</mat-icon>
+        Dirección de residencia
+      </h3>
+      
+      <!-- Constructor de dirección -->
+      <div class="address-builder">
+        <div class="address-row">
+          <mat-form-field appearance="outline" class="minimal-field address-field-medium">
+            <mat-label>Vía</mat-label>
+            <mat-select formControlName="cdir1">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option value="CRA">Carrera</mat-option>
+              <mat-option value="CL">Calle</mat-option>
+              <mat-option value="AV">Avenida</mat-option>
+              <mat-option value="AUTOPISTA">Autopista</mat-option>
+              <mat-option value="TRANSVERSAL">Transversal</mat-option>
+              <mat-option value="CIRCUNVALAR">Circunvalar</mat-option>
+              <mat-option value="DIAGONAL">Diagonal</mat-option>
+            </mat-select>
+            <mat-icon matSuffix>road</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field address-field-medium">
+            <mat-label>Detalle vía</mat-label>
+            <input matInput formControlName="cdir2" placeholder="Ej: 45">
+            <mat-icon matSuffix>straighten</mat-icon>
+          </mat-form-field>
+
+          <span class="address-separator">#</span>
+
+          <mat-form-field appearance="outline" class="minimal-field address-field-small">
+            <mat-label>Número 1</mat-label>
+            <input matInput formControlName="cdir3" placeholder="23">
+          </mat-form-field>
+
+          <span class="address-separator">-</span>
+
+          <mat-form-field appearance="outline" class="minimal-field address-field-small">
+            <mat-label>Número 2</mat-label>
+            <input matInput formControlName="cdir4" placeholder="45">
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Grid de información adicional -->
+      <div class="form-grid">
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Adicional (opcional)</mat-label>
+            <input matInput formControlName="dir_adicional" placeholder="Ej: Apt 202, Casa 5">
+            <mat-icon matSuffix>add_location</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Barrio</mat-label>
+            <input matInput formControlName="barrio" placeholder="Nombre del barrio">
+            <mat-icon matSuffix>location_city</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Ciudad</mat-label>
+            <input matInput formControlName="ciudad" placeholder="Ciudad de residencia">
+            <mat-icon matSuffix>location_city</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <!-- Información de la vivienda -->
+    <div class="housing-section">
+      <h3 class="section-title">
+        <mat-icon>home_work</mat-icon>
+        Detalles de la vivienda
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Tipo de vivienda</mat-label>
+            <mat-select formControlName="tipovivienda">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option value="Casa">
+                <mat-icon>house</mat-icon>
+                Casa
+              </mat-option>
+              <mat-option value="Apartamento">
+                <mat-icon>apartment</mat-icon>
+                Apartamento
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>home</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Su vivienda es</mat-label>
+            <mat-select formControlName="viviendaes">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option value="Familiar">
+                <mat-icon>family_restroom</mat-icon>
+                Familiar
+              </mat-option>
+              <mat-option value="Alquilada">
+                <mat-icon>key</mat-icon>
+                Alquilada
+              </mat-option>
+              <mat-option value="Propia">
+                <mat-icon>home_filled</mat-icon>
+                Propia
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>business</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <!-- Información de adquisición (condicional) -->
+    <div class="acquisition-section" *ngIf="housingForm.get('viviendaes')?.value === 'Propia'">
+      <h3 class="section-title">
+        <mat-icon>account_balance</mat-icon>
+        Información de adquisición
+        <span class="info-note">(Indique cómo adquirió su vivienda)</span>
+      </h3>
+      
+      <div class="form-grid">
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>A través de</mat-label>
+            <mat-select formControlName="tipo_adquisicion">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option value="1">
+                <mat-icon>savings</mat-icon>
+                Subsidio
+              </mat-option>
+              <mat-option value="2">
+                <mat-icon>account_balance</mat-icon>
+                Préstamo Hipotecario
+              </mat-option>
+              <mat-option value="3">
+                <mat-icon>work</mat-icon>
+                Cesantías
+              </mat-option>
+              <mat-option value="4">
+                <mat-icon>more_horiz</mat-icon>
+                Otro
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>payment</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field" *ngIf="housingForm.get('tipo_adquisicion')?.value === '4'">
+            <mat-label>¿Cuál?</mat-label>
+            <input matInput formControlName="tipo_adquisicion2" placeholder="Especifique">
+            <mat-icon matSuffix>edit</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Entidad</mat-label>
+            <input matInput formControlName="entidad_vivienda" placeholder="Nombre de la entidad">
+            <mat-icon matSuffix>business</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field d">
+            <mat-label>Año de adquisición</mat-label>
+            <mat-select formControlName="año_vivienda">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option *ngFor="let year of years" [value]="year">{{ year }}</mat-option>
+            </mat-select>
+            <mat-icon matSuffix>calendar_today</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- Botones minimalistas -->
+  <div class="form-actions">
+    <button mat-stroked-button class="minimal-button secondary" (click)="previous()">
+      <mat-icon>arrow_back</mat-icon>
+      Atrás
+    </button>
+    <button mat-flat-button color="primary" class="minimal-button primary" (click)="validateAndNext()" [disabled]="isLoading">
+      <mat-icon *ngIf="isLoading" class="spinner">refresh</mat-icon>
+      <span *ngIf="!isLoading">Siguiente</span>
+      <span *ngIf="isLoading">Guardando...</span>
+      <mat-icon *ngIf="!isLoading">arrow_forward</mat-icon>
+    </button>
+  </div>
+</div>
+  

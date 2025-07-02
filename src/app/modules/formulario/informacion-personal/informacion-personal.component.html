@@ -1,0 +1,216 @@
+<div class="minimal-form-container">
+  <!-- Header minimalista -->
+  <div class="form-header">
+    <mat-icon class="header-icon">person</mat-icon>
+    <h2 class="header-title">Información personal</h2>
+  </div>
+
+  <!-- Aviso de privacidad minimalista -->
+  <div class="privacy-card">
+    <mat-icon class="privacy-icon">info_outline</mat-icon>
+    <p class="privacy-text">
+      De acuerdo con la Ley 1581 de 2012, autorizo el tratamiento de mis datos personales según el 
+      <a href="https://www.gane.com.co/#/privacidad" target="_blank" class="privacy-link">Aviso de privacidad</a>.
+    </p>
+  </div>
+
+  <!-- Formulario en columnas -->
+  <form [formGroup]="myForm" class="minimal-form">
+    
+    <!-- Grid de campos en 3 columnas -->
+    <div class="form-grid">
+      
+      <!-- Columna 1: Identificación y datos básicos -->
+      <div class="form-column">
+        <h3 class="column-title">
+          <mat-icon>badge</mat-icon>
+          Identificación
+        </h3>
+        
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Cédula</mat-label>
+          <input matInput formControlName="documento" required>
+          <mat-icon matSuffix>credit_card</mat-icon>
+          <mat-error *ngIf="myForm.get('documento')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Ciudad de expedición</mat-label>
+          <input matInput formControlName="cedula_expedida" required>
+          <mat-icon matSuffix>location_city</mat-icon>
+          <mat-error *ngIf="myForm.get('cedula_expedida')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Nombre completo</mat-label>
+          <input matInput formControlName="nombre_intg" required>
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-error *ngIf="myForm.get('nombre_intg')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Fecha de nacimiento</mat-label>
+          <input matInput formControlName="fecha_nacimiento" placeholder="dd/mm/yyyy">
+          
+          <mat-error *ngIf="myForm.get('fecha_nacimiento')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Correo personal</mat-label>
+          <input matInput formControlName="correo_personal" type="email" required>
+          <mat-icon matSuffix>email</mat-icon>
+          <mat-error *ngIf="myForm.get('correo_personal')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+          <mat-error *ngIf="myForm.get('correo_personal')?.hasError('email')">
+            Formato de correo inválido
+          </mat-error>
+        </mat-form-field>
+
+      </div>
+
+      <!-- Columna 2: Información de nacimiento y laboral -->
+      <div class="form-column">
+        <h3 class="column-title">
+          <mat-icon>public</mat-icon>
+          Origen y trabajo
+        </h3>
+        
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>País de nacimiento</mat-label>
+          <input matInput formControlName="pais_nacimiento" required>
+          <mat-icon matSuffix>public</mat-icon>
+          <mat-error *ngIf="myForm.get('pais_nacimiento')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Ciudad de nacimiento</mat-label>
+          <input matInput formControlName="ciudad_nacimiento" required>
+          <mat-icon matSuffix>location_on</mat-icon>
+          <mat-error *ngIf="myForm.get('ciudad_nacimiento')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Cargo</mat-label>
+          <input matInput formControlName="cargo" required>
+          <mat-icon matSuffix>business_center</mat-icon>
+          <mat-error *ngIf="myForm.get('cargo')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Área</mat-label>
+          <input matInput formControlName="area" required>
+          <mat-icon matSuffix>domain</mat-icon>
+          <mat-error *ngIf="myForm.get('area')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Teléfono corporativo (opcional)</mat-label>
+          <input matInput formControlName="num_corporativo" type="tel">
+          <mat-icon matSuffix>business_center</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- Columna 3: Información personal adicional -->
+      <div class="form-column">
+        <h3 class="column-title">
+          <mat-icon>info</mat-icon>
+          Información adicional
+        </h3>
+        
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Estado civil</mat-label>
+          <mat-select formControlName="estadocivil" required>
+            <mat-option value="">Seleccione</mat-option>
+            <mat-option value="Soltero">
+              <mat-icon>person</mat-icon>
+              Soltero
+            </mat-option>
+            <mat-option value="Casado">
+              <mat-icon>favorite</mat-icon>
+              Casado
+            </mat-option>
+            <mat-option value="Union Libre">
+              <mat-icon>people</mat-icon>
+              Unión Libre
+            </mat-option>
+            <mat-option value="Divorciado y/o separado">
+              <mat-icon>person_remove</mat-icon>
+              Divorciado/Separado
+            </mat-option>
+            <mat-option value="Viudo">
+              <mat-icon>person_outline</mat-icon>
+              Viudo
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>favorite_border</mat-icon>
+          <mat-error *ngIf="myForm.get('estadocivil')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Tipo de sangre</mat-label>
+          <mat-select formControlName="tipo_sangre" required>
+            <mat-option value="">Seleccione</mat-option>
+            <mat-option value="A+">A+</mat-option>
+            <mat-option value="A-">A-</mat-option>
+            <mat-option value="B+">B+</mat-option>
+            <mat-option value="B-">B-</mat-option>
+            <mat-option value="AB+">AB+</mat-option>
+            <mat-option value="AB-">AB-</mat-option>
+            <mat-option value="O+">O+</mat-option>
+            <mat-option value="O-">O-</mat-option>
+          </mat-select>
+          <mat-icon matSuffix>bloodtype</mat-icon>
+          <mat-error *ngIf="myForm.get('tipo_sangre')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Teléfono celular</mat-label>
+          <input matInput formControlName="num_celular" type="tel" required>
+          <mat-icon matSuffix>phone_android</mat-icon>
+          <mat-error *ngIf="myForm.get('num_celular')?.hasError('required')">
+            Campo requerido
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="minimal-field">
+          <mat-label>Teléfono fijo (opcional)</mat-label>
+          <input matInput formControlName="num_fijo" type="tel">
+          <mat-icon matSuffix>phone</mat-icon>
+        </mat-form-field>
+
+      </div>
+
+    </div>
+  </form>
+
+  <!-- Botones minimalistas -->
+  <div class="form-actions">
+    <button mat-flat-button color="primary" class="minimal-button primary" (click)="validateAndNext()" [disabled]="isLoading">
+      <mat-icon *ngIf="isLoading" class="spinner">refresh</mat-icon>
+      <span *ngIf="!isLoading">Siguiente</span>
+      <span *ngIf="isLoading">Guardando...</span>
+      <mat-icon *ngIf="!isLoading">arrow_forward</mat-icon>
+    </button>
+  </div>
+</div>

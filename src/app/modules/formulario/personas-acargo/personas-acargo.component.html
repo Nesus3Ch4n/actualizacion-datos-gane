@@ -1,0 +1,145 @@
+<div class="minimal-form-container">
+  <!-- Header minimalista -->
+  <div class="form-header">
+    <mat-icon class="header-icon">family_restroom</mat-icon>
+    <h2 class="header-title">Personas a cargo</h2>
+  </div>
+
+  <!-- Formulario en columnas -->
+  <form [formGroup]="personasACargoForm" class="minimal-form">
+    
+    <!-- Pregunta principal -->
+    <div class="main-question">
+      <mat-form-field appearance="outline" class="minimal-field">
+        <mat-label>¿Tienes personas a cargo?</mat-label>
+        <mat-select formControlName="persona_acargo" required>
+          <mat-option value="">Seleccione</mat-option>
+          <mat-option value="1">
+            <mat-icon>close</mat-icon>
+            No
+          </mat-option>
+          <mat-option value="2">
+            <mat-icon>check</mat-icon>
+            Sí
+          </mat-option>
+        </mat-select>
+        <mat-icon matSuffix>family_restroom</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <!-- Detalles de las personas (condicional) -->
+    <div class="person-details" *ngIf="personasACargoForm.get('persona_acargo')?.value === '2'">
+      <h3 class="section-title">
+        <mat-icon>info</mat-icon>
+        Información de personas a cargo
+      </h3>
+      
+      <!-- Grid de campos en 2 columnas -->
+      <div class="form-grid">
+        
+        <!-- Columna 1: Información básica -->
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Nombres y apellidos</mat-label>
+            <input matInput formControlName="nombre" placeholder="Nombre completo">
+            <mat-icon matSuffix>person</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Parentesco</mat-label>
+            <mat-select formControlName="parentesco">
+              <mat-option value="">Seleccione</mat-option>
+              <mat-option *ngFor="let parentesco of parentescos" [value]="parentesco">
+                <mat-icon>{{ getParentescoIcon(parentesco) }}</mat-icon>
+                {{ parentesco }}
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>people</mat-icon>
+          </mat-form-field>
+        </div>
+
+        <!-- Columna 2: Información específica -->
+        <div class="form-column">
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Fecha de nacimiento</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="fecha_nacimiento" placeholder="dd/mm/yyyy">
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="minimal-field">
+            <mat-label>Edad</mat-label>
+            <input matInput formControlName="edad" placeholder="Edad en años" type="number">
+            <mat-icon matSuffix>today</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Botón para agregar -->
+      <div class="add-button-section">
+        <button mat-raised-button color="accent" class="add-button" (click)="agregarPersonaACargo()" [disabled]="!canAddPerson()">
+          <mat-icon>add</mat-icon>
+          Añadir persona
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de personas -->
+    <div class="persons-section" *ngIf="personas.length > 0">
+      <h3 class="section-title">
+        <mat-icon>list</mat-icon>
+        Personas Registradas ({{ personas.length }})
+      </h3>
+      
+      <div class="persons-list">
+        <mat-card class="person-card" *ngFor="let persona of personas; let i = index">
+          <mat-card-content>
+            <div class="person-info">
+              <div class="person-details">
+                <h4 class="person-name">
+                  <mat-icon>{{ getParentescoIcon(persona.parentesco) }}</mat-icon>
+                  {{ persona.nombre }}
+                </h4>
+                <p class="person-relation">
+                  <mat-icon>people</mat-icon>
+                  {{ persona.parentesco }}
+                </p>
+                <p class="person-birth">
+                  <mat-icon>cake</mat-icon>
+                  {{ persona.fecha_nacimiento }}
+                </p>
+                <div class="person-meta">
+                  <span class="person-age">
+                    <mat-icon>today</mat-icon>
+                    Edad: {{ persona.edad }} años
+                  </span>
+                </div>
+              </div>
+              <div class="person-actions">
+                <button mat-icon-button color="warn" (click)="eliminarPersona(i)" matTooltip="Eliminar persona">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- Botones minimalistas -->
+  <div class="form-actions">
+    <button mat-stroked-button class="minimal-button secondary" (click)="previous()">
+      <mat-icon>arrow_back</mat-icon>
+      Atrás
+    </button>
+    <button mat-flat-button color="primary" class="minimal-button primary" (click)="validateAndNext()" [disabled]="isLoading">
+      <mat-icon *ngIf="isLoading" class="spinner">refresh</mat-icon>
+      <span *ngIf="!isLoading">Siguiente</span>
+      <span *ngIf="isLoading">Guardando...</span>
+      <mat-icon *ngIf="!isLoading">arrow_forward</mat-icon>
+    </button>
+  </div>
+</div>
+  

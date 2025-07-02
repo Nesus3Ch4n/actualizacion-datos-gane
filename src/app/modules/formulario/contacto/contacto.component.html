@@ -1,0 +1,123 @@
+<div class="minimal-form-container">
+  <!-- Header minimalista -->
+  <div class="form-header">
+    <mat-icon class="header-icon">contact_phone</mat-icon>
+    <h2 class="header-title">Información de contacto</h2>
+  </div>
+
+  <!-- Formulario principal -->
+        <!-- Contactos de emergencia -->
+    <div class="emergency-section">
+      <h3 class="section-title">
+        <mat-icon>emergency</mat-icon>
+        Contactos de emergencia
+        <span class="required-note">(Debes agregar 2 contactos)</span>
+      </h3>
+
+      <!-- Formulario para agregar contacto -->
+      <form [formGroup]="contactoEmergenciaForm" class="add-contact-form">
+        <div class="form-grid">
+          <div class="form-column">
+            <mat-form-field appearance="outline" class="minimal-field">
+              <mat-label>Nombre completo</mat-label>
+              <input matInput formControlName="nombre_dtcontacto" placeholder="Nombre y apellidos" required>
+              <mat-icon matSuffix>person</mat-icon>
+              <mat-error *ngIf="contactoEmergenciaForm.get('nombre_dtcontacto')?.hasError('required')">
+                Campo requerido
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-column">
+            <mat-form-field appearance="outline" class="minimal-field">
+              <mat-label>Parentesco</mat-label>
+              <mat-select formControlName="parentesco_dtcontacto" required>
+                <mat-option value="">Seleccione</mat-option>
+                <mat-option *ngFor="let parentesco of parentescos" [value]="parentesco">
+                  {{ parentesco }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>family_restroom</mat-icon>
+              <mat-error *ngIf="contactoEmergenciaForm.get('parentesco_dtcontacto')?.hasError('required')">
+                Campo requerido
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-column">
+            <mat-form-field appearance="outline" class="minimal-field">
+              <mat-label>Teléfono o celular</mat-label>
+              <input matInput formControlName="telefono_dtcontacto" type="tel" placeholder="3001234567" required>
+              <mat-icon matSuffix>phone</mat-icon>
+              <mat-error *ngIf="contactoEmergenciaForm.get('telefono_dtcontacto')?.hasError('required')">
+                Campo requerido
+              </mat-error>
+              <mat-error *ngIf="contactoEmergenciaForm.get('telefono_dtcontacto')?.hasError('minlength')">
+                Mínimo 7 dígitos
+              </mat-error>
+              <mat-error *ngIf="contactoEmergenciaForm.get('telefono_dtcontacto')?.hasError('maxlength')">
+                Máximo 10 dígitos
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="add-button-section">
+          <button mat-raised-button color="accent" class="add-button" 
+                  (click)="agregarContacto()" 
+                  [disabled]="!canAddContact()"
+                  type="button">
+            <mat-icon>add</mat-icon>
+            Añadir contacto
+          </button>
+        </div>
+      </form>
+
+      <!-- Lista de contactos -->
+      <div class="contacts-list" *ngIf="contactos.length > 0">        
+        <mat-card class="contact-card" *ngFor="let contacto of contactos; let i = index">
+          <mat-card-content>
+            <div class="contact-info">
+              <div class="contact-details">
+                <h4 class="contact-name">
+                  <mat-icon>person</mat-icon>
+                  {{ contacto.nombre }}
+                </h4>
+                <p class="contact-relation">
+                  <mat-icon>family_restroom</mat-icon>
+                  {{ contacto.parentesco }}
+                </p>
+                <p class="contact-phone">
+                  <mat-icon>phone</mat-icon>
+                  {{ contacto.telefono }}
+                </p>
+              </div>
+              <div class="contact-actions">
+                <button mat-icon-button color="warn" (click)="eliminarContacto(i)" matTooltip="Eliminar contacto">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+
+  <!-- Botones minimalistas -->
+  <div class="form-actions">
+    <button mat-stroked-button class="minimal-button secondary" (click)="previous()">
+      <mat-icon>arrow_back</mat-icon>
+      Atrás
+    </button>
+    <button mat-flat-button color="primary" class="minimal-button primary" 
+            (click)="validateAndNext()" 
+            [disabled]="isLoading || contactos.length < 2">
+      <mat-icon *ngIf="isLoading" class="spinner">refresh</mat-icon>
+      <span *ngIf="!isLoading">Siguiente</span>
+      <span *ngIf="isLoading">Validando...</span>
+      <mat-icon *ngIf="!isLoading">arrow_forward</mat-icon>
+    </button>
+  </div>
+</div>
+  

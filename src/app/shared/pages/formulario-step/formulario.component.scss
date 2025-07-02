@@ -1,0 +1,701 @@
+@import "https://fonts.googleapis.com/css2?family=Poppins:wght@200&display=swap";
+@import "http://localhost/act-datos-prod/lib/css/v4.3.1_bootstrap.min.css";
+@import "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css";
+@import '../../../shared/styles/variables';
+@import '../../../shared/styles/mixins';
+
+* {
+  font-family: system-ui;
+}
+.form-label {
+  margin-bottom: .5rem !important;
+  font-weight: 500 !important;
+}
+h2 {
+  color: #004289;
+}
+.colinputs {
+  margin-bottom: 1rem;
+}
+.containerNew {
+  justify-content: center;
+  align-items: center;
+  background-color: #eee;
+}
+.containerNew .card {
+  min-height: 800px;
+  background-color: #fff;
+  position: relative;
+  /* box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); */
+  font-family: "Poppins", sans-serif;
+  border-radius: 0px;
+  overflow: hidden;
+}
+
+/* Estilos para el header de pasos horizontal */
+.steps-header {
+  background: #fff;
+  padding: 20px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 40px;
+}
+
+.logo-container {
+  flex-shrink: 0;
+}
+
+.logo {
+  width: 180px;
+  height: auto;
+}
+
+.steps-navigation {
+  display: flex;
+  gap: 60px;
+  flex: 1;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 20px;
+  position: relative;
+  top: 30px;
+  right: 7px;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  min-width: 80px;
+  text-align: center;
+}
+
+.step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 25px;
+  right: -40px;
+  width: 20px;
+  height: 2px;
+  background-color: #4f6581;
+  transition: all 0.3s ease;
+}
+
+.step-item.active:not(:last-child)::after,
+.step-item.completed:not(:last-child)::after {
+  background-color: #4f6581;
+}
+
+.step-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #0047b3;
+  border: 2px solid #004289;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+
+// Aviso de privacidad minimalista
+.privacy-card {
+  display: flex;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-xxl;
+  background: #f8f9fa;
+  border-left: 3px solid $primary-color;
+  border-radius: 4px;
+
+  .privacy-icon {
+    color: $primary-color;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .privacy-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #666;
+
+    .privacy-link {
+      color: $primary-color;
+      text-decoration: none;
+      font-weight: 500;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.step-circle i {
+  font-size: 18px;
+  color: #fff; // Color por defecto
+  transition: all 0.3s ease;
+  display: block;
+  
+  // Asegurar Font Awesome
+  &.fas {
+    font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "FontAwesome" !important;
+    font-weight: 900 !important;
+    font-style: normal !important;
+    display: inline-block;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+// Estados para cambiar colores fácilmente
+.step-item {
+  &.active .step-circle i {
+    color: #fff; // Blanco para paso activo
+  }
+  
+  &.completed .step-circle i {
+    color: #fff; // Blanco para pasos completados
+  }
+  
+  &:not(.active):not(.completed) .step-circle i {
+    color: rgba(255, 255, 255, 0.7); // Semi-transparente para pasos pendientes
+  }
+  
+  // Hover effect
+  &:hover .step-circle i {
+    color: #fff;
+    transform: scale(1.1);
+  }
+}
+
+// Posicionamiento simple para los iconos
+.step-circle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-title {
+  font-size: 12px;
+  color: #4f6581;
+  text-align: center;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  max-width: 80px;
+  line-height: 1.2;
+}
+
+.header-title {
+  font-size: 32px;
+  color: #004289;
+  text-align: center;
+  font-weight: 500;
+  position: relative;
+  top: 10px;
+  left: 190px;
+}
+
+/* Estados activo y completado */
+.step-item.active .step-circle {
+  background-color: #fff;
+  border-color: #004289;
+  transform: scale(1.1);
+  box-shadow: 0 0 15px 0 rgba(0, 66, 137, 0.3);
+  position: relative;
+  left: 22px;
+}
+
+.step-item.active .step-circle i {
+  color: #004289;
+}
+
+.step-item.active .step-title {
+  color: #4f6581;
+  font-weight: 600;
+  position: relative;
+  left: 8px;
+}
+
+.step-item.completed .step-circle {
+  background-color: #0ed422;
+  border-color: #0ed422;
+}
+
+.step-item.completed .step-circle i {
+  color: #fff;
+}
+
+.step-item.completed .step-title {
+  color: #0ed422;
+}
+
+.step-item:hover:not(.active) .step-circle {
+  transform: scale(1.02);
+  border-color: #fff;
+}
+
+.step-item:hover:not(.active) .step-title {
+  color: #004289;
+}
+
+/* Contenido del formulario */
+.form-content {
+  padding: 40px;
+  width: 90%;
+  position: relative;
+  margin-top: 50px;
+  left: 5%;
+  border: 0px solid #ccc;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* ALERTAS */
+#pageMessages {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  z-index: 10;
+}
+
+.alert {
+  position: relative;
+}
+
+.alert .close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  font-size: 1em;
+}
+
+.alert .fa {
+  margin-right: 0.3em;
+}
+
+/* Estilos para formularios */
+.stepfr {
+  display: none;
+}
+.active {
+  display: block;
+}
+.stepfr {
+  padding: 40px;
+}
+.stepfr small {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2px;
+  height: 30px;
+  width: 30px;
+  background-color: #ccc;
+  border-radius: 50%;
+  color: yellow;
+  font-size: 19px;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: #333;
+  background-image: linear-gradient(to right, #ccc, #333, #ccc);
+}
+
+.text {
+  margin-top: 20px;
+}
+.congrats {
+  text-align: center;
+}
+.text p {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #cbced4;
+}
+.input-text {
+  margin: 30px 0;
+  display: flex;
+  gap: 20px;
+  color: #333;
+}
+
+.input-text .input-div {
+  width: 100%;
+  position: relative;
+}
+
+input[type="text"] {
+  width: 100%;
+  height: 40px;
+  border: none;
+  outline: 0;
+  border-radius: 5px;
+  border: 2px solid #ddd;
+  gap: 20px;
+  box-sizing: border-box;
+  padding: 0px 10px;
+}
+select {
+  width: 100%;
+  height: 40px;
+  border: none;
+  outline: 0;
+  border-radius: 5px;
+  border: 2px solid #ddd;
+  gap: 20px;
+  box-sizing: border-box;
+  padding: 0px 10px;
+  color: #333;
+}
+.input-text .input-div span {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 14px;
+  transition: all 0.5s;
+}
+.input-div input:focus ~ span,
+.input-div input:valid ~ span {
+  top: -15px;
+  left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.input-div span {
+  top: -15px;
+  left: 6px;
+  font-size: 10px;
+}
+.buttons button {
+  height: 40px;
+  width: 100px;
+  border: 2px solid black;
+  border-radius: 5px;
+  background-color: #0075ff;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+}
+.button_space {
+  display: flex;
+  gap: 20px;
+}
+.button_space button:nth-child(1) {
+  background-color: #fff;
+  color: #000;
+  border: 2px solid black;
+}
+.user_card {
+  margin-top: 20px;
+  margin-bottom: 40px;
+  height: 200px;
+  width: 100%;
+  border: 1px solid #c7d3d9;
+  border-radius: 10px;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+.user_card span {
+  height: 80px;
+  width: 100%;
+  background-color: #dfeeff;
+}
+.circle {
+  position: absolute;
+  top: 40px;
+  left: 60px;
+}
+.circle span {
+  height: 70px;
+  width: 70px;
+  background-color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+.circle span img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.social {
+  display: flex;
+  position: absolute;
+  top: 100px;
+  right: 10px;
+}
+.social span {
+  height: 30px;
+  width: 30px;
+  border-radius: 7px;
+  background-color: #fff;
+  border: 1px solid #cbd6dc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: 10px;
+  color: #cbd6dc;
+}
+.social span i {
+  cursor: pointer;
+}
+.heart {
+  color: red !important;
+}
+.share {
+  color: red !important;
+}
+.user_name {
+  position: absolute;
+  top: 110px;
+  margin: 10px;
+  padding: 0 30px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.user_name h3 {
+  color: #4c5b68;
+}
+.detail {
+  display: flex;
+  justify-content: space-between;
+  margin-right: 50px;
+}
+.detail p {
+  font-size: 12px;
+  font-weight: 700;
+}
+.detail p a {
+  text-decoration: none;
+  color: blue;
+}
+
+.checkmark__circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 2;
+  stroke-miterlimit: 10;
+  stroke: #7ac142;
+  fill: none;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 2;
+  stroke: #fff;
+  stroke-miterlimit: 10;
+  margin: 10% auto;
+  box-shadow: inset 0px 0px 0px #7ac142;
+  animation: fill 0.4s ease-in-out 0.4s forwards,
+    scale 0.3s ease-in-out 0.9s both;
+}
+
+.checkmark__check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes scale {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+@keyframes fill {
+  100% {
+    box-shadow: inset 0px 0px 0px 30px #7ac142;
+  }
+}
+
+.warning {
+  border: 1px solid #ee4466 !important;
+}
+
+/* Nuevo indicador de modo especial */
+.mode-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff3cd;
+  color: #856404;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #ffeaa7;
+  font-size: 14px;
+  position: relative;
+  left: 200px;
+  
+  mat-icon {
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
+/* Estilos para pasos deshabilitados y ocultos */
+.step-item {
+  // Paso deshabilitado
+  &.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    
+    .step-circle {
+      background-color: #e0e0e0;
+      border-color: #bdbdbd;
+    }
+    
+    .step-title {
+      color: #9e9e9e;
+    }
+    
+    .disabled-icon {
+      color: #757575 !important;
+      font-size: 18px !important;
+    }
+    
+    &:hover {
+      opacity: 0.4;
+      transform: none;
+      
+      .step-circle i,
+      .disabled-icon {
+        transform: none;
+      }
+    }
+  }
+  
+  // Paso oculto (para modo conflict-only)
+  &.hidden {
+    display: none;
+  }
+  
+  // Ajustar líneas conectoras cuando hay pasos ocultos
+  &.disabled:not(:last-child)::after {
+    background-color: #e0e0e0;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .steps-navigation {
+    gap: 20px;
+  }
+  
+  .step-title {
+    font-size: 11px;
+    max-width: 70px;
+  }
+  
+  .step-circle {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .step-circle i {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .containerNew {
+    padding: 10px;
+  }
+  
+  .containerNew .card {
+    height: auto !important;
+    margin: 10px 0;
+  }
+  
+  .steps-header {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+  }
+  
+  .logo {
+    width: 150px;
+  }
+  
+  .steps-navigation {
+    gap: 15px;
+    margin-left: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .step-item:not(:last-child)::after {
+    display: none;
+  }
+  
+  .step-title {
+    font-size: 10px;
+    max-width: 60px;
+  }
+  
+  .step-circle {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .step-circle i {
+    font-size: 14px;
+  }
+  
+  .form-content {
+    padding: 20px;
+  }
+  
+  .input-text {
+    display: block;
+  }
+
+  .input-text .input-div {
+    margin-top: 20px;
+  }
+
+  .mode-indicator {
+    font-size: 12px;
+    padding: 6px 12px;
+    
+    mat-icon {
+      font-size: 14px !important;
+      width: 14px !important;
+      height: 14px !important;
+    }
+  }
+}
