@@ -6,8 +6,10 @@ import { FormNavigationService } from '../../../services/form-navigation.service
 import { ViviendaService } from '../../../services/vivienda.service';
 import { UserSessionService } from '../../../services/user-session.service';
 import { BackendService } from '../../../services/backend.service';
+import { AuthService } from '../../../services/auth.service';
 import { firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Component({
   selector: 'app-vivienda',
@@ -26,7 +28,8 @@ export class ViviendaComponent implements OnInit {
     private notificationService: NotificationService,
     private viviendaService: ViviendaService,
     private userSessionService: UserSessionService,
-    private backendService: BackendService
+    private backendService: BackendService,
+    private authService: AuthService
   ) {
     this.generateYears();
   }
@@ -115,6 +118,19 @@ export class ViviendaComponent implements OnInit {
     if (this.housingForm.valid) {
       this.isLoading = true;
       
+      // Preparar datos de vivienda
+      const viviendaData = {
+        tipoVivienda: this.housingForm.get('tipovivienda')?.value,
+        direccion: `${this.housingForm.get('cdir1')?.value} ${this.housingForm.get('cdir2')?.value} # ${this.housingForm.get('cdir3')?.value} - ${this.housingForm.get('cdir4')?.value}`,
+        infoAdicional: this.housingForm.get('dir_adicional')?.value || '',
+        barrio: this.housingForm.get('barrio')?.value,
+        ciudad: this.housingForm.get('ciudad')?.value,
+        vivienda: this.housingForm.get('viviendaes')?.value,
+        entidad: this.housingForm.get('entidad_vivienda')?.value || '',
+        anio: this.housingForm.get('año_vivienda')?.value || null,
+        tipoAdquisicion: this.getTipoAdquisicionValue()
+      };
+      
       try {
         // Obtener el ID del usuario actual
         const idUsuario = this.userSessionService.getCurrentUserId();
@@ -127,30 +143,20 @@ export class ViviendaComponent implements OnInit {
         }
 
         console.log('🏠 Guardando vivienda en base de datos...');
-        
-        // Preparar datos de vivienda
-        const viviendaData = {
-          tipoVivienda: this.housingForm.get('tipovivienda')?.value,
-          direccion: `${this.housingForm.get('cdir1')?.value} ${this.housingForm.get('cdir2')?.value} # ${this.housingForm.get('cdir3')?.value} - ${this.housingForm.get('cdir4')?.value}`,
-          infoAdicional: this.housingForm.get('dir_adicional')?.value || '',
-          barrio: this.housingForm.get('barrio')?.value,
-          ciudad: this.housingForm.get('ciudad')?.value,
-          vivienda: this.housingForm.get('viviendaes')?.value,
-          entidad: this.housingForm.get('entidad_vivienda')?.value || '',
-          anio: this.housingForm.get('año_vivienda')?.value || null,
-          tipoAdquisicion: this.getTipoAdquisicionValue()
-        };
-
         console.log('📤 Datos de vivienda a guardar:', viviendaData);
 
-        // Guardar en el backend usando el nuevo endpoint directo
+        // Guardar en el backend usando el endpoint directo
         const response = await firstValueFrom(
           this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
             `${this.backendService.getApiUrl()}/formulario/vivienda/guardar?idUsuario=${idUsuario}`, 
             viviendaData,
             this.backendService.getHttpOptions()
           ).pipe(
-            map((res: any) => res)
+            map((res: any) => res),
+            catchError((error) => {
+              console.error('❌ Error en backend:', error);
+              throw error;
+            })
           )
         );
         
@@ -173,6 +179,7 @@ export class ViviendaComponent implements OnInit {
 
       } catch (error) {
         console.error('❌ Error al guardar vivienda:', error);
+        
         this.notificationService.showError(
           '❌ Error',
           'No se pudo guardar la vivienda: ' + (error as Error).message

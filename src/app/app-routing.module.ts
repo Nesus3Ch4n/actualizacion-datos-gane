@@ -10,9 +10,18 @@ import { ContactoComponent } from './modules/formulario/contacto/contacto.compon
 import { DeclaracionComponent } from './modules/formulario/declaracion/declaracion.component';
 import { FormularioCompletadoComponent } from './modules/formulario/declaracion/formulario-completado.component';
 import { AdminPanelComponent } from './modules/admin/admin-panel.component';
+import { AuthGuard } from './guards/auth.guard';
+import { WelcomeComponent } from './components/welcome.component';
 
 const routes: Routes = [
-  { path: '', component: FormularioComponent,
+  // Ruta de bienvenida (sin autenticación)
+  { path: 'welcome', component: WelcomeComponent },
+  
+  // Ruta principal del formulario (requiere autenticación)
+  { 
+    path: 'formulario', 
+    component: FormularioComponent,
+    canActivate: [AuthGuard],
     children: [
       { path: '', redirectTo: 'personal', pathMatch: 'full' },
       { path: 'personal', component: InformacionPersonalComponent },
@@ -24,8 +33,31 @@ const routes: Routes = [
       { path: 'declaracion', component: DeclaracionComponent },
     ]
    },
-   { path: 'completado', component: FormularioCompletadoComponent },
-   { path: 'admin', component: AdminPanelComponent },
+   
+   // Redirecciones directas a rutas del formulario (para compatibilidad)
+   { path: 'personal', redirectTo: '/formulario/personal', pathMatch: 'full' },
+   { path: 'academico', redirectTo: '/formulario/academico', pathMatch: 'full' },
+   { path: 'vehiculo', redirectTo: '/formulario/vehiculo', pathMatch: 'full' },
+   { path: 'vivienda', redirectTo: '/formulario/vivienda', pathMatch: 'full' },
+   { path: 'personas-acargo', redirectTo: '/formulario/personas-acargo', pathMatch: 'full' },
+   { path: 'contacto', redirectTo: '/formulario/contacto', pathMatch: 'full' },
+   { path: 'declaracion', redirectTo: '/formulario/declaracion', pathMatch: 'full' },
+   
+   { 
+     path: 'completado', 
+     component: FormularioCompletadoComponent,
+     canActivate: [AuthGuard]
+   },
+   
+   { 
+     path: 'admin', 
+     component: AdminPanelComponent,
+     canActivate: [AuthGuard]
+   },
+   
+   // Redirigir a welcome si no hay autenticación
+   { path: '', redirectTo: '/welcome', pathMatch: 'full' },
+   { path: '**', redirectTo: 'welcome' }
 ];
 
 @NgModule({

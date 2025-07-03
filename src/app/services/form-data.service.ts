@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
 import { FormStateService, FormularioCompleto } from './form-state.service';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,69 +14,269 @@ export class FormDataService {
   constructor(
     private backendService: BackendService,
     private notificationService: NotificationService,
-    private formStateService: FormStateService
+    private formStateService: FormStateService,
+    private authService: AuthService
   ) {}
 
   // ========== MÉTODO PRINCIPAL - GUARDAR FORMULARIO COMPLETO ==========
   
-  // MÉTODO TEMPORAL DE DEBUGGING
-  debugFormularioCompleto(): void {
-    console.log('🔍 DEBUG: Estado actual del FormStateService:');
-    const formulario = this.formStateService.getFormularioCompleto();
-    console.log('📋 Formulario completo:', formulario);
-    console.log('👤 Información personal:', formulario.informacionPersonal);
-    
-    // También verificar el resumen
-    const resumen = this.formStateService.getResumenFormulario();
-    console.log('📊 Resumen:', resumen);
-  }
-  
-  async guardarFormularioCompleto(): Promise<boolean> {
+  /**
+   * Guardar formulario completo (paso a paso)
+   */
+  async guardarFormularioCompleto(formulario: any): Promise<boolean> {
     try {
       console.log('📝 Iniciando guardado de formulario completo...');
-      
-      const formulario = this.formStateService.getFormularioCompleto();
       console.log('📋 Formulario obtenido:', formulario);
 
-      // Validar formulario antes de proceder
-      if (!this.validarFormularioCompleto(formulario)) {
-        throw new Error('El formulario no tiene la información mínima requerida');
-      }
-
-      // ========== PASO 1: CREAR/ACTUALIZAR USUARIO BÁSICO ==========
-      console.log('👤 Paso 1: Guardando información personal...');
-      const usuarioBasico = this.prepararUsuarioBasico(formulario.informacionPersonal);
-      
-      let usuarioId: string;
+      // Paso 1: Verificar si el usuario existe y obtener su ID
+      console.log('👤 Paso 1: Verificando usuario existente...');
       const usuarioExistente = await this.verificarUsuarioExistente(formulario.informacionPersonal.cedula);
       
       if (usuarioExistente) {
+        console.log('✅ Usuario encontrado, actualizando datos...');
         // Actualizar usuario existente
-        console.log('🔄 Usuario existente encontrado, actualizando...');
+        const resultado = await this.actualizarUsuarioExistente(usuarioExistente.id, formulario);
+        return resultado;
+      } else {
+        console.log('🆕 Usuario no encontrado, creando nuevo...');
+        // Crear nuevo usuario
+        const resultado = await this.crearNuevoUsuario(formulario);
+        return resultado;
+      }
+    } catch (error) {
+      console.error('❌ Error al guardar formulario completo:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Actualizar usuario existente
+   */
+  private async actualizarUsuarioExistente(usuarioId: number, formulario: any): Promise<boolean> {
+    try {
+      console.log('🔄 Actualizando usuario ID:', usuarioId);
+      
+      // Preparar datos para actualización
+      const datosActualizacion = {
+        id: usuarioId,
+        nombre: formulario.informacionPersonal.nombre,
+        cedula: formulario.informacionPersonal.cedula,
+        correo: formulario.informacionPersonal.correo,
+        telefono: formulario.informacionPersonal.telefono,
+        direccion: formulario.informacionPersonal.direccion,
+        // Agregar otros campos según sea necesario
+        informacionCompleta: formulario
+      };
+
+      const resultado = await firstValueFrom(
+        this.backendService.actualizarUsuario(usuarioId, datosActualizacion)
+      );
+
+      if (resultado.success) {
+        console.log('✅ Usuario actualizado exitosamente');
+        return true;
+      } else {
+        console.error('❌ Error actualizando usuario:', resultado.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error en actualización:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Crear nuevo usuario
+   */
+  private async crearNuevoUsuario(formulario: any): Promise<boolean> {
+    try {
+      console.log('🆕 Creando nuevo usuario...');
+      
+      // Preparar los datos del usuario usando el método existente
+      const usuarioBasico = this.prepararUsuarioBasico(formulario.informacionPersonal);
+      
+      // Agregar la información completa del formulario
+      const datosUsuario = {
+        ...usuarioBasico,
+        informacionCompleta: formulario
+      };
+
+      console.log('📋 Datos del usuario a crear:', datosUsuario);
+
+      const resultado = await firstValueFrom(
+        this.backendService.crearUsuarioCompleto(datosUsuario)
+      );
+
+      console.log('✅ Respuesta del backend:', resultado);
+
+      if (resultado.success) {
+        console.log('✅ Usuario creado exitosamente con ID:', resultado.data?.id);
+        // Guardar el ID del usuario creado
+        if (resultado.data?.id) {
+          this.setCurrentUserId(resultado.data.id.toString());
+        }
+        return true;
+      } else {
+        console.error('❌ Error creando usuario:', resultado.error || resultado.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error en creación:', error);
+      return false;
+    }
+  }
+
+  // ========== MÉTODOS DE GUARDADO PASO A PASO ==========
+
+  /**
+   * Guardar información personal (Paso 1)
+   */
+  async guardarInformacionPersonal(data: any): Promise<string> {
+    try {
+      console.log('👤 Guardando información personal...');
+      
+      const usuarioBasico = this.prepararUsuarioBasico(data);
+      let usuarioId: string;
+      
+      const usuarioExistente = await this.verificarUsuarioExistente(data.cedula);
+      
+      if (usuarioExistente) {
+        console.log('🔄 Usuario existente, actualizando...');
         usuarioId = usuarioExistente.id.toString();
         await firstValueFrom(this.backendService.actualizarUsuario(Number(usuarioId), usuarioBasico));
-        console.log('✅ Usuario actualizado exitosamente');
       } else {
-        // Crear nuevo usuario
         console.log('🆕 Creando nuevo usuario...');
         const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
         usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
-        console.log('✅ Usuario creado exitosamente con ID:', usuarioId);
       }
-
-      // Guardar ID del usuario actual
+      
       this.setCurrentUserId(usuarioId);
-
-      console.log('🎉 Formulario completo guardado exitosamente');
+      this.notificationService.showSuccess('✅ Éxito', 'Información personal guardada exitosamente');
       
-      // Mostrar notificación de éxito
-      this.notificationService.showSuccess('Exito','Información personal guardada exitosamente');
-      
-      return true;
-
+      return usuarioId;
     } catch (error) {
-      console.error('❌ Error al guardar formulario completo:', error);
-      this.notificationService.showError('Error','Error al guardar el formulario: ' + (error as Error).message);
+      console.error('❌ Error guardando información personal:', error);
+      this.notificationService.showError('❌ Error', 'Error al guardar información personal');
+      throw error;
+    }
+  }
+
+  /**
+   * Guardar estudio académico
+   */
+  async guardarEstudioAcademico(estudio: any, usuarioId: string): Promise<void> {
+    try {
+      const estudioData = {
+        ...estudio,
+        usuarioId: Number(usuarioId)
+      };
+      
+      // Usar el método correcto del BackendService
+      await firstValueFrom(this.backendService.guardarEstudios(Number(usuarioId), [estudioData]));
+      
+      console.log('✅ Estudio académico guardado:', estudio.titulo);
+    } catch (error) {
+      console.error('❌ Error guardando estudio académico:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guardar vehículo
+   */
+  async guardarVehiculo(vehiculo: any, usuarioId: string): Promise<void> {
+    try {
+      const vehiculoData = {
+        ...vehiculo,
+        usuarioId: Number(usuarioId)
+      };
+      
+      // Usar el método correcto del BackendService
+      await firstValueFrom(this.backendService.guardarVehiculos(Number(usuarioId), [vehiculoData]));
+      
+      console.log('✅ Vehículo guardado:', vehiculo.placa);
+    } catch (error) {
+      console.error('❌ Error guardando vehículo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guardar vivienda
+   */
+  async guardarVivienda(vivienda: any, usuarioId: string): Promise<void> {
+    try {
+      const viviendaData = {
+        ...vivienda,
+        usuarioId: Number(usuarioId)
+      };
+      
+      // Usar el método correcto del BackendService
+      await firstValueFrom(this.backendService.guardarVivienda(Number(usuarioId), viviendaData));
+      
+      console.log('✅ Vivienda guardada:', vivienda.direccion);
+    } catch (error) {
+      console.error('❌ Error guardando vivienda:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guardar persona a cargo
+   */
+  async guardarPersonaACargo(persona: any, usuarioId: string): Promise<void> {
+    try {
+      const personaData = {
+        ...persona,
+        usuarioId: Number(usuarioId)
+      };
+      
+      // Usar el método correcto del BackendService
+      await firstValueFrom(this.backendService.guardarPersonasACargo(Number(usuarioId), [personaData]));
+      
+      console.log('✅ Persona a cargo guardada:', persona.nombre);
+    } catch (error) {
+      console.error('❌ Error guardando persona a cargo:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guardar contacto de emergencia
+   */
+  async guardarContactoEmergencia(contacto: any, usuarioId: string): Promise<void> {
+    try {
+      const contactoData = {
+        ...contacto,
+        usuarioId: Number(usuarioId)
+      };
+      
+      // Usar el método correcto del BackendService
+      await firstValueFrom(this.backendService.guardarContactos(Number(usuarioId), [contactoData]));
+      
+      console.log('✅ Contacto de emergencia guardado:', contacto.nombre);
+    } catch (error) {
+      console.error('❌ Error guardando contacto de emergencia:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guardar declaración de conflicto
+   */
+  async guardarDeclaracionConflicto(declaracion: any, usuarioId: string): Promise<void> {
+    try {
+      const declaracionData = {
+        ...declaracion,
+        usuarioId: Number(usuarioId)
+      };
+      
+      // Usar el método correcto del BackendService
+      await firstValueFrom(this.backendService.guardarDeclaraciones(Number(usuarioId), [declaracionData]));
+      
+      console.log('✅ Declaración de conflicto guardada:', declaracion.tipoConflicto);
+    } catch (error) {
+      console.error('❌ Error guardando declaración de conflicto:', error);
       throw error;
     }
   }
@@ -211,36 +412,30 @@ export class FormDataService {
     }
   }
 
-  // Verificar conexión con backend
+  // Verificar conexión con el backend
   async verificarConexionBackend(): Promise<boolean> {
     try {
       return await this.backendService.verificarConexion();
     } catch (error) {
-      console.error('❌ Error al verificar conexión con backend:', error);
+      console.error('❌ Error verificando conexión con backend:', error);
       return false;
     }
   }
 
   // ========== MÉTODOS DE UTILIDAD ==========
 
-  // Método para limpiar el formulario después del guardado exitoso
   limpiarFormularioDespuesDeGuardar(): void {
     this.formStateService.limpiarFormulario();
-    this.setCurrentUserId(null);
   }
 
-  // Obtener resumen del formulario
   obtenerResumenFormulario(): any {
     return this.formStateService.getResumenFormulario();
   }
 
-  // Obtener formulario completo
   getFormularioCompleto(): FormularioCompleto {
     return this.formStateService.getFormularioCompleto();
   }
 
-  // ========== GESTIÓN DE USUARIO ACTUAL ==========
-  
   getCurrentUserId(): Observable<string | null> {
     return this.currentUserId$.asObservable();
   }
@@ -253,100 +448,39 @@ export class FormDataService {
     return this.currentUserId$.value;
   }
 
-  // ========== MÉTODOS DEPRECATED (mantener para compatibilidad temporal) ==========
-
-  async saveUsuario(data: any): Promise<string> {
-    console.warn('⚠️ saveUsuario está deprecated. Usa guardarFormularioCompleto()');
-    try {
-      const resultado = await firstValueFrom(this.backendService.crearUsuarioCompleto(data));
-      return resultado.id?.toString() || 'unknown';
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async saveEstudio(data: any): Promise<void> {
-    console.warn('⚠️ saveEstudio está deprecated. Los estudios se guardan en memoria hasta guardarFormularioCompleto()');
-    // No hacer nada - los estudios se guardan en memoria
-  }
-
-  async saveVehiculo(data: any): Promise<void> {
-    console.warn('⚠️ saveVehiculo está deprecated. Los vehículos se guardan en memoria hasta guardarFormularioCompleto()');
-    // No hacer nada - los vehículos se guardan en memoria
-  }
-
-  async saveVivienda(data: any): Promise<void> {
-    console.warn('⚠️ saveVivienda está deprecated. La vivienda se guarda en memoria hasta guardarFormularioCompleto()');
-    // No hacer nada - la vivienda se guarda en memoria
-  }
-
-  async savePersonaACargo(data: any): Promise<void> {
-    console.warn('⚠️ savePersonaACargo está deprecated. Las personas se guardan en memoria hasta guardarFormularioCompleto()');
-    // No hacer nada - las personas se guardan en memoria
-  }
-
-  async saveContacto(data: any): Promise<void> {
-    console.warn('⚠️ saveContacto está deprecated. Los contactos se guardan en memoria hasta guardarFormularioCompleto()');
-    // No hacer nada - los contactos se guardan en memoria
-  }
-
-  async saveDeclaracion(data: any): Promise<void> {
-    console.warn('⚠️ saveDeclaracion está deprecated. Las declaraciones se guardan en memoria hasta guardarFormularioCompleto()');
-    // No hacer nada - las declaraciones se guardan en memoria
-  }
-
-  getFormData(): any {
-    console.warn('⚠️ getFormData está deprecated. Usa getFormularioCompleto() o FormStateService.getFormularioCompleto()');
-    return this.formStateService.getFormularioCompleto();
-  }
-
-  clearFormData(): void {
-    console.warn('⚠️ clearFormData está deprecated. Usa limpiarFormularioDespuesDeGuardar()');
-    this.limpiarFormularioDespuesDeGuardar();
-  }
-
-  // Método auxiliar para limpiar arrays
-  private limpiarArray(arr: any[] | undefined): any[] {
-    if (!Array.isArray(arr)) return [];
-    return arr.map(item => this.limpiarObjeto(item)).filter(item => item !== null && Object.keys(item).length > 0);
-  }
-
-  // Método auxiliar para limpiar objetos de valores undefined/null
-  private limpiarObjeto(obj: any): any {
-    if (obj === null || obj === undefined) {
-      return null;
-    }
-    
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.limpiarObjeto(item)).filter(item => item !== null && item !== undefined);
-    }
-    
-    if (typeof obj === 'object') {
-      const objetoLimpio: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (value !== undefined && value !== null && value !== '') {
-          if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-            const valorLimpio = this.limpiarObjeto(value);
-            if (valorLimpio !== null && Object.keys(valorLimpio).length > 0) {
-              objetoLimpio[key] = valorLimpio;
-            }
-          } else {
-            objetoLimpio[key] = value;
-          }
-        }
-      }
-      return objetoLimpio;
-    }
-    
-    return obj;
-  }
+  // ========== MÉTODOS DE VERIFICACIÓN ==========
 
   async verificarUsuarioExistente(cedula: string): Promise<any> {
     try {
-      return await firstValueFrom(this.backendService.obtenerUsuarioPorCedula(cedula));
+      console.log('🔍 Verificando usuario existente con cédula:', cedula);
+      
+      const usuarios = await this.obtenerUsuarios();
+      
+      // Verificar que usuarios sea un array válido
+      if (!Array.isArray(usuarios)) {
+        console.warn('⚠️ La respuesta de usuarios no es un array:', usuarios);
+        return null;
+      }
+      
+      console.log('📋 Usuarios encontrados:', usuarios.length);
+      
+      // Buscar usuario por cédula
+      const usuarioEncontrado = usuarios.find(usuario => {
+        // Convertir ambos a string para comparación
+        const usuarioCedula = String(usuario.cedula);
+        const cedulaBuscada = String(cedula);
+        return usuarioCedula === cedulaBuscada;
+      });
+      
+      if (usuarioEncontrado) {
+        console.log('✅ Usuario encontrado:', usuarioEncontrado);
+        return usuarioEncontrado;
+      } else {
+        console.log('❌ Usuario no encontrado');
+        return null;
+      }
     } catch (error) {
-      // Si el usuario no existe, retornamos null en lugar de lanzar error
-      console.log('ℹ️ Usuario no existe, se creará uno nuevo');
+      console.error('❌ Error verificando usuario existente:', error);
       return null;
     }
   }

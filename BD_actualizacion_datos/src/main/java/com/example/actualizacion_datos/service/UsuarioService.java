@@ -213,9 +213,10 @@ public class UsuarioService {
     
     // ========== MÉTODOS DE CONSULTA ==========
     
-    @Transactional(readOnly = true)
+    /**
+     * Obtener todos los usuarios
+     */
     public List<Usuario> obtenerTodosLosUsuarios() {
-        logger.info("📋 Obteniendo todos los usuarios");
         return usuarioRepository.findAll();
     }
     

@@ -216,72 +216,55 @@ export class DeclaracionComponent implements OnInit {
     try {
       this.isLoading = true;
 
-      console.log('🚀 Iniciando envío completo del formulario...');
+      console.log('🚀 Iniciando envío de declaraciones de conflicto...');
 
-      // DEBUGGING: Verificar estado antes del guardado
-      this.formDataService.debugFormularioCompleto();
-
-      // Si estamos en modo conflict-only, solo actualizar declaraciones
-      if (this.navigationModeService.isConflictOnlyMode()) {
-        // Guardar solo las declaraciones de conflicto
-        const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-        if (!idUsuario) {
-          throw new Error('No hay usuario activo. Complete primero la información personal.');
-        }
-
-        if (this.conflictForm.get('opcion_conflicto')?.value === '1' && this.personasConflicto.length > 0) {
-          // Guardar declaraciones de conflicto en la base de datos
-          const resultado = await this.declaracionConflictoService.guardarDeclaracionesConflicto(idUsuario, this.personasConflicto);
-          
-          if (resultado && resultado.success) {
-            this.notificationService.showSuccess(
-              '✅ Declaraciones actualizadas',
-              'Las declaraciones de conflicto han sido actualizadas correctamente en la base de datos'
-            );
-          }
-        }
-        
-        this.navigationModeService.resetToCompleteMode();
-        this.router.navigate(['/completado']);
-        return;
+      // Obtener el ID del usuario actual
+      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      if (!idUsuario) {
+        throw new Error('No hay usuario activo. Complete primero la información personal.');
       }
 
-      // Modo normal: guardar formulario completo
-      const exito = await this.formDataService.guardarFormularioCompleto();
-      
-      if (exito) {
-        // Si hay declaraciones de conflicto, guardarlas también
-        const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-        if (idUsuario && this.conflictForm.get('opcion_conflicto')?.value === '1' && this.personasConflicto.length > 0) {
-          try {
-            await this.declaracionConflictoService.guardarDeclaracionesConflicto(idUsuario, this.personasConflicto);
-            console.log('✅ Declaraciones de conflicto guardadas exitosamente');
-          } catch (error) {
-            console.error('⚠️ Error al guardar declaraciones de conflicto:', error);
-            // No fallar el formulario completo por este error
-          }
-        }
+      console.log('👤 Usuario ID:', idUsuario);
 
-        this.notificationService.showSuccess(
-          '🎉 ¡Formulario completado!',
-          'Todos tus datos han sido guardados exitosamente en la base de datos'
+      // Guardar solo las declaraciones de conflicto si las hay
+      if (this.conflictForm.get('opcion_conflicto')?.value === '1' && this.personasConflicto.length > 0) {
+        console.log('📝 Guardando declaraciones de conflicto...');
+        
+        // Guardar declaraciones de conflicto en la base de datos
+        const resultado = await this.declaracionConflictoService.guardarDeclaracionesConflicto(idUsuario, this.personasConflicto);
+        
+        if (resultado && resultado.success) {
+          this.notificationService.showSuccess(
+            '✅ Declaraciones guardadas',
+            'Las declaraciones de conflicto han sido guardadas correctamente en la base de datos'
+          );
+        } else {
+          throw new Error('Error al guardar declaraciones de conflicto');
+        }
+      } else {
+        console.log('ℹ️ No hay declaraciones de conflicto para guardar');
+        this.notificationService.showInfo(
+          'ℹ️ Sin declaraciones',
+          'No se encontraron declaraciones de conflicto para guardar'
         );
-
-        // Limpiar formulario después del guardado exitoso
-        this.formDataService.limpiarFormularioDespuesDeGuardar();
-
-        console.log('✅ Formulario enviado exitosamente');
-        
-        // Navegar a página de confirmación o inicio
-        this.router.navigate(['/completado']);
       }
+
+      // Si estamos en modo conflict-only, resetear el modo
+      if (this.navigationModeService.isConflictOnlyMode()) {
+        this.navigationModeService.resetToCompleteMode();
+      }
+
+      console.log('✅ Proceso completado exitosamente');
+      
+      // Navegar a página de confirmación
+      this.router.navigate(['/completado']);
 
     } catch (error) {
-      console.error('❌ Error al enviar formulario:', error);
+      console.error('❌ Error al enviar declaraciones:', error);
       
       this.notificationService.showError(
         '❌ Error al guardar',
-        'No se pudo guardar el formulario completo. Verifica tu conexión e intenta de nuevo.'
+        'No se pudieron guardar las declaraciones de conflicto. Verifica tu conexión e intenta de nuevo.'
       );
     } finally {
       this.isLoading = false;
@@ -300,7 +283,7 @@ export class DeclaracionComponent implements OnInit {
 
   // TEMPORAL: Método para debugging
   debugFormulario(): void {
-    this.formDataService.debugFormularioCompleto();
+    console.log('Formulario completo:', this.formDataService.getFormularioCompleto());
   }
 
   cargarPersonasConflicto(): void {

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
@@ -46,12 +46,35 @@ export class FormNavigationService {
     }
   }
 
-  // Navegar a un paso específico
+  // Navegar a un paso específico usando rutas absolutas
   navigateTo(index: number): void {
     if (index >= 0 && index < this.components.length) {
       this.setCurrentIndex(index);
-      // Navegar usando ruta absoluta
-      this.router.navigate([this.components[index]]);
+      const targetRoute = this.components[index];
+      const fullRoute = `/formulario/${targetRoute}`;
+      console.log(`🔄 FormNavigationService: Navegando a ${fullRoute}`);
+      
+      // Usar navegación absoluta con ruta completa
+      this.router.navigate([fullRoute], { 
+        skipLocationChange: false,
+        replaceUrl: false
+      });
+    }
+  }
+
+  // Navegar a un paso específico con ActivatedRoute (mantener para compatibilidad)
+  navigateToWithRoute(index: number, route: ActivatedRoute): void {
+    if (index >= 0 && index < this.components.length) {
+      this.setCurrentIndex(index);
+      const targetRoute = this.components[index];
+      const fullRoute = `/formulario/${targetRoute}`;
+      console.log(`🔄 FormNavigationService: Navegando a ${fullRoute} (con route)`);
+      
+      // Usar navegación absoluta con ruta completa
+      this.router.navigate([fullRoute], { 
+        skipLocationChange: false,
+        replaceUrl: false
+      });
     }
   }
 

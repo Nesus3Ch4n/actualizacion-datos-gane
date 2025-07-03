@@ -6,8 +6,10 @@ import { FormNavigationService } from '../../../services/form-navigation.service
 import { VehiculoService } from '../../../services/vehiculo.service';
 import { UserSessionService } from '../../../services/user-session.service';
 import { BackendService } from '../../../services/backend.service';
+import { AuthService } from '../../../services/auth.service';
 import { firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Component({
   selector: 'app-vehiculo',
@@ -27,7 +29,8 @@ export class VehiculoComponent implements OnInit {
     private notificationService: NotificationService,
     private vehiculoService: VehiculoService,
     private userSessionService: UserSessionService,
-    private backendService: BackendService
+    private backendService: BackendService,
+    private authService: AuthService
   ) {
     this.generateYears();
   }
@@ -191,14 +194,18 @@ export class VehiculoComponent implements OnInit {
 
       console.log('📤 Datos de vehículos a guardar:', vehiculosData);
 
-      // Guardar en el backend usando el nuevo endpoint directo
+      // Guardar en el backend usando el endpoint directo
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
           `${this.backendService.getApiUrl()}/formulario/vehiculo/guardar?idUsuario=${idUsuario}`, 
           vehiculosData,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res)
+          map((res: any) => res),
+          catchError((error) => {
+            console.error('❌ Error en backend:', error);
+            throw error;
+          })
         )
       );
       
@@ -221,6 +228,7 @@ export class VehiculoComponent implements OnInit {
 
     } catch (error) {
       console.error('❌ Error al guardar vehículos:', error);
+      
       this.notificationService.showError(
         '❌ Error',
         'No se pudieron guardar los vehículos: ' + (error as Error).message

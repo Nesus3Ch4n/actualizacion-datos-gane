@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
+import { AuthService } from './auth.service';
 import { firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +12,8 @@ export class DeclaracionConflictoService {
   
   constructor(
     private backendService: BackendService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private authService: AuthService
   ) {}
 
   /**
@@ -38,7 +40,11 @@ export class DeclaracionConflictoService {
           declaracionesData,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res)
+          map((res: any) => res),
+          catchError((error: any) => {
+            console.error('❌ Error HTTP en declaraciones de conflicto:', error);
+            throw error;
+          })
         )
       );
       
@@ -84,7 +90,11 @@ export class DeclaracionConflictoService {
           `${this.backendService.getApiUrl()}/declaraciones-conflicto/usuario/${idUsuario}`,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res)
+          map((res: any) => res),
+          catchError((error: any) => {
+            console.error('❌ Error HTTP al obtener declaraciones de conflicto:', error);
+            throw error;
+          })
         )
       );
       
@@ -98,18 +108,7 @@ export class DeclaracionConflictoService {
 
     } catch (error) {
       console.error('❌ Error al obtener declaraciones de conflicto:', error);
-      
-      // No mostrar error si no hay declaraciones (es normal)
-      if (error instanceof Error && error.message.includes('404')) {
-        return [];
-      }
-      
-      this.notificationService.showError(
-        '❌ Error',
-        'No se pudieron obtener las declaraciones de conflicto: ' + (error as Error).message
-      );
-      
-      throw error;
+      return []; // Retorna array vacío si no hay declaraciones
     }
   }
 

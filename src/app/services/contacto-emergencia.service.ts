@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
+import { AuthService } from './auth.service';
 import { firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +12,8 @@ export class ContactoEmergenciaService {
   
   constructor(
     private backendService: BackendService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private authService: AuthService
   ) {}
 
   /**
@@ -38,16 +40,20 @@ export class ContactoEmergenciaService {
           contactosData,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res)
+          map((res: any) => res),
+          catchError((error) => {
+            console.error('❌ Error en backend:', error);
+            throw error;
+          })
         )
       );
       
-      console.log('✅ Contactos guardados exitosamente en base de datos:', response);
+      console.log('✅ Contactos guardados exitosamente:', response);
       
       if (response.success) {
         this.notificationService.showSuccess(
           '✅ Éxito',
-          'Contactos de emergencia guardados exitosamente en la base de datos'
+          response.message || 'Contactos de emergencia guardados exitosamente'
         );
         
         return response; // Retorna la respuesta completa
@@ -84,7 +90,11 @@ export class ContactoEmergenciaService {
           `${this.backendService.getApiUrl()}/contactos-emergencia/usuario/${idUsuario}`,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res)
+          map((res: any) => res),
+          catchError((error) => {
+            console.error('❌ Error en backend:', error);
+            throw error;
+          })
         )
       );
       
@@ -104,12 +114,7 @@ export class ContactoEmergenciaService {
         return [];
       }
       
-      this.notificationService.showError(
-        '❌ Error',
-        'No se pudieron obtener los contactos de emergencia: ' + (error as Error).message
-      );
-      
-      throw error;
+      return []; // Retorna lista vacía si no hay contactos
     }
   }
 

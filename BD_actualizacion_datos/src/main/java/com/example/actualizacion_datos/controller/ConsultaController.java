@@ -2,6 +2,7 @@ package com.example.actualizacion_datos.controller;
 
 import com.example.actualizacion_datos.entity.*;
 import com.example.actualizacion_datos.service.FormularioService;
+import com.example.actualizacion_datos.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,8 +22,30 @@ public class ConsultaController {
 
     @Autowired
     private FormularioService formularioService;
+    
+    @Autowired
+    private UsuarioService usuarioService;
 
     // ========== ENDPOINTS DE CONSULTA DE BASE DE DATOS ==========
+
+    @GetMapping("/bd/usuarios")
+    @Operation(summary = "Obtener todos los usuarios",
+               description = "Recupera la lista de todos los usuarios registrados en la base de datos")
+    public ResponseEntity<Map<String, Object>> obtenerTodosLosUsuarios() {
+        try {
+            List<Usuario> usuarios = usuarioService.obtenerTodosLosUsuarios();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "usuarios", usuarios,
+                "total", usuarios.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of(
+                "success", false,
+                "error", "Error al obtener usuarios: " + e.getMessage()
+            ));
+        }
+    }
 
     @GetMapping("/bd/{cedula}/informacion-personal")
     @Operation(summary = "Obtener información personal desde base de datos",

@@ -24,6 +24,11 @@
       "dom"
     ]
   },
+  "exclude": [
+    "src/actualizacion-datos-empleado/**/*",
+    "src/shared-kernel/**/*",
+    "src/admin-panel/**/*"
+  ],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

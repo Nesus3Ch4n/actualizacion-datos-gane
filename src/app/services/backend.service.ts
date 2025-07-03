@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, map, delay } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
 
 export interface BackendResponse<T = any> {
@@ -17,7 +17,6 @@ export interface BackendResponse<T = any> {
 })
 export class BackendService {
   private readonly API_URL = 'http://localhost:8080/api';
-  private readonly MOCK_MODE = false;
   
   private httpOptions = {
     headers: new HttpHeaders({
@@ -39,35 +38,6 @@ export class BackendService {
     console.log('🌐 URL del API:', this.API_URL);
     console.log('📡 Headers:', this.httpOptions);
     
-    if (this.MOCK_MODE) {
-      // Simular respuesta exitosa del backend
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: 'Usuario creado exitosamente',
-        data: {
-          id: Math.floor(Math.random() * 1000) + 1,
-          cedula: usuarioData.cedula,
-          nombre: usuarioData.nombre,
-          correo: usuarioData.correo,
-          fechaCreacion: new Date().toISOString(),
-          estado: 'activo'
-        }
-      };
-      
-      return of(mockResponse).pipe(
-        delay(800), // Simular latencia de red
-        map(response => {
-          console.log('✅ Usuario creado exitosamente:', response);
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error desconocido');
-          }
-        })
-      );
-    }
-    
-    // Código para backend real - usar el endpoint correcto
     console.log('🚀 Enviando petición HTTP POST a:', `${this.API_URL}/formulario/paso1/informacion-personal`);
     
     return this.http.post<any>(`${this.API_URL}/formulario/paso1/informacion-personal`, usuarioData, this.httpOptions)
@@ -105,11 +75,7 @@ export class BackendService {
    */
   async verificarConexion(): Promise<boolean> {
     try {
-      if (this.MOCK_MODE) {
-        return true;
-      }
-      
-      const response = await this.http.get(`${this.API_URL}/health`, this.httpOptions).toPromise();
+      const response = await this.http.get(`${this.API_URL}/auth/health`, this.httpOptions).toPromise();
       return true;
     } catch (error) {
       console.error('❌ Backend no disponible:', error);
@@ -124,13 +90,6 @@ export class BackendService {
    */
   getApiUrl(): string {
     return this.API_URL;
-  }
-
-  /**
-   * Verificar si está en modo simulado
-   */
-  isMockMode(): boolean {
-    return this.MOCK_MODE;
   }
 
   /**
@@ -153,38 +112,8 @@ export class BackendService {
    * Crear usuario completo con toda la información del formulario
    */
   crearUsuarioCompleto(usuarioData: any): Observable<any> {
-    console.log('🚀 Enviando datos al backend (MODO SIMULADO):', usuarioData);
+    console.log('🚀 Enviando datos al backend:', usuarioData);
     
-    if (this.MOCK_MODE) {
-      // Simular respuesta exitosa del backend
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: 'Usuario creado exitosamente',
-        data: {
-          id: Math.floor(Math.random() * 1000) + 1,
-          cedula: usuarioData.informacionPersonal?.cedula || '12345678',
-          nombre: usuarioData.informacionPersonal?.nombre || 'Usuario',
-          apellido: usuarioData.informacionPersonal?.apellido || 'Test',
-          email: usuarioData.informacionPersonal?.email || 'test@example.com',
-          fechaCreacion: new Date().toISOString(),
-          estado: 'activo'
-        }
-      };
-      
-      return of(mockResponse).pipe(
-        delay(1000), // Simular latencia de red
-        map(response => {
-          console.log('✅ Respuesta simulada del backend:', response);
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error desconocido');
-          }
-        })
-      );
-    }
-    
-    // Código original para cuando se active el backend real
     return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/crear-completo`, usuarioData, this.httpOptions)
       .pipe(
         map(response => {
@@ -207,55 +136,22 @@ export class BackendService {
    * Obtener todos los usuarios
    */
   obtenerUsuarios(): Observable<any[]> {
-    if (this.MOCK_MODE) {
-      // Datos simulados de usuarios
-      const mockUsuarios = [
-        {
-          id: 1,
-          cedula: '12345678',
-          nombre: 'Juan',
-          apellido: 'Pérez',
-          email: 'juan.perez@example.com',
-          departamento: 'Tecnología',
-          estado: 'activo',
-          fechaCreacion: '2024-01-15'
-        },
-        {
-          id: 2,
-          cedula: '87654321',
-          nombre: 'María',
-          apellido: 'González',
-          email: 'maria.gonzalez@example.com',
-          departamento: 'Recursos Humanos',
-          estado: 'activo',
-          fechaCreacion: '2024-01-20'
-        },
-        {
-          id: 3,
-          cedula: '11223344',
-          nombre: 'Carlos',
-          apellido: 'Rodríguez',
-          email: 'carlos.rodriguez@example.com',
-          departamento: 'Marketing',
-          estado: 'inactivo',
-          fechaCreacion: '2024-01-25'
-        }
-      ];
-      
-      return of(mockUsuarios).pipe(delay(500));
-    }
-    
-    // Usar el endpoint correcto del backend Spring Boot
-    return this.http.get<any[]>(`${this.API_URL}/consulta/bd/usuarios`, this.httpOptions)
+    return this.http.get<any>(`${this.API_URL}/consulta/bd/usuarios`, this.httpOptions)
       .pipe(
         map(response => {
-          console.log('✅ Usuarios obtenidos:', response);
-          return response;
+          console.log('✅ Respuesta completa de usuarios:', response);
+          // El backend devuelve {success: boolean, usuarios: any[], total: number}
+          if (response.success && response.usuarios && Array.isArray(response.usuarios)) {
+            console.log('✅ Usuarios obtenidos:', response.usuarios);
+            return response.usuarios;
+          } else {
+            console.warn('⚠️ Respuesta inesperada del backend:', response);
+            return [];
+          }
         }),
         catchError(error => {
           console.error('❌ Error al obtener usuarios:', error);
-          // Si falla, devolver array vacío en lugar de error
-          return of([]);
+          return throwError(() => new Error('Error al obtener usuarios'));
         })
       );
   }
@@ -264,21 +160,6 @@ export class BackendService {
    * Obtener usuario por ID
    */
   obtenerUsuarioPorId(id: number): Observable<any> {
-    if (this.MOCK_MODE) {
-      const mockUsuario = {
-        id: id,
-        cedula: '12345678',
-        nombre: 'Usuario',
-        apellido: 'Test',
-        email: 'usuario.test@example.com',
-        departamento: 'Tecnología',
-        estado: 'activo',
-        fechaCreacion: '2024-01-15'
-      };
-      
-      return of(mockUsuario).pipe(delay(300));
-    }
-    
     return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/${id}`, this.httpOptions)
       .pipe(
         map(response => {
@@ -296,32 +177,16 @@ export class BackendService {
    * Obtener usuario por cédula
    */
   obtenerUsuarioPorCedula(cedula: string): Observable<any> {
-    if (this.MOCK_MODE) {
-      const mockUsuario = {
-        id: 1,
-        cedula: cedula,
-        nombre: 'Usuario',
-        apellido: 'Test',
-        email: 'usuario.test@example.com',
-        departamento: 'Tecnología',
-        estado: 'activo',
-        fechaCreacion: '2024-01-15'
-      };
-      
-      return of(mockUsuario).pipe(delay(300));
-    }
-    
-    // Usar el endpoint correcto del backend Spring Boot
-    return this.http.get<any>(`${this.API_URL}/consulta/bd/${cedula}/informacion-personal`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/cedula/${cedula}`, this.httpOptions)
       .pipe(
         map(response => {
-          console.log('✅ Usuario obtenido por cédula:', response);
-          return response;
+          if (response.success && response.data) {
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Usuario no encontrado');
+          }
         }),
-        catchError(error => {
-          console.error('❌ Error al obtener usuario por cédula:', error);
-          throw error;
-        })
+        catchError(this.handleError)
       );
   }
 
@@ -329,29 +194,13 @@ export class BackendService {
    * Buscar usuarios por nombre
    */
   buscarUsuariosPorNombre(nombre: string): Observable<any[]> {
-    if (this.MOCK_MODE) {
-      const mockResultados = [
-        {
-          id: 1,
-          cedula: '12345678',
-          nombre: nombre,
-          apellido: 'Test',
-          email: 'test@example.com',
-          departamento: 'Tecnología',
-          estado: 'activo'
-        }
-      ];
-      
-      return of(mockResultados).pipe(delay(400));
-    }
-    
-    return this.http.get<BackendResponse<any[]>>(`${this.API_URL}/USUARIO/buscar?nombre=${encodeURIComponent(nombre)}`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/buscar?nombre=${nombre}`, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success && response.data) {
             return response.data;
           } else {
-            throw new Error(response.message || 'Error en la búsqueda');
+            return [];
           }
         }),
         catchError(this.handleError)
@@ -359,50 +208,32 @@ export class BackendService {
   }
 
   /**
-   * Actualizar usuario
+   * Actualizar usuario existente
    */
-  actualizarUsuario(id: number, usuarioData: any): Observable<any> {
-    if (this.MOCK_MODE) {
-      const mockResponse = {
-        id: id,
-        ...usuarioData,
-        fechaActualizacion: new Date().toISOString()
-      };
-      
-      return of(mockResponse).pipe(delay(600));
-    }
+  actualizarUsuario(usuarioId: number, datos: any): Observable<any> {
+    console.log('🔄 Actualizando usuario ID:', usuarioId, 'con datos:', datos);
     
-    return this.http.put<BackendResponse>(`${this.API_URL}/USUARIO/${id}`, usuarioData, this.httpOptions)
-      .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al actualizar usuario');
-          }
-        }),
-        catchError(this.handleError)
-      );
+    return this.http.put(`${this.API_URL}/USUARIO/${usuarioId}`, datos, this.httpOptions).pipe(
+      map((response: any) => {
+        console.log('✅ Usuario actualizado exitosamente:', response);
+        return { success: true, data: response };
+      }),
+      catchError((error) => {
+        console.error('❌ Error actualizando usuario:', error);
+        return of({ success: false, error: error.error?.message || 'Error al actualizar usuario' });
+      })
+    );
   }
 
   /**
-   * Eliminar usuario (eliminación lógica)
+   * Eliminar usuario
    */
   eliminarUsuario(id: number): Observable<any> {
-    if (this.MOCK_MODE) {
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: 'Usuario eliminado exitosamente'
-      };
-      
-      return of(mockResponse).pipe(delay(400));
-    }
-    
     return this.http.delete<BackendResponse>(`${this.API_URL}/USUARIO/${id}`, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success) {
-            return response;
+            return response.data;
           } else {
             throw new Error(response.message || 'Error al eliminar usuario');
           }
@@ -415,23 +246,10 @@ export class BackendService {
    * Obtener estadísticas
    */
   obtenerEstadisticas(): Observable<any> {
-    if (this.MOCK_MODE) {
-      const mockEstadisticas = {
-        totalUsuarios: 150,
-        usuariosActivos: 142,
-        usuariosInactivos: 8,
-        registrosHoy: 5,
-        registrosSemana: 23,
-        registrosMes: 87
-      };
-      
-      return of(mockEstadisticas).pipe(delay(300));
-    }
-    
-    return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/estadisticas`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/estadisticas`, this.httpOptions)
       .pipe(
         map(response => {
-          if (response.success && response.data) {
+          if (response.success) {
             return response.data;
           } else {
             throw new Error(response.message || 'Error al obtener estadísticas');
@@ -442,26 +260,18 @@ export class BackendService {
   }
 
   /**
-   * Verificar salud del servicio
+   * Verificar salud del backend
    */
   verificarSalud(): Observable<any> {
-    if (this.MOCK_MODE) {
-      const mockHealth: BackendResponse = {
-        success: true,
-        message: 'Servicio funcionando correctamente (modo simulado)',
-        data: {
-          status: 'healthy',
-          timestamp: new Date().toISOString(),
-          version: '1.0.0-mock'
-        }
-      };
-      
-      return of(mockHealth).pipe(delay(200));
-    }
-    
-    return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/health`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/auth/health`, this.httpOptions)
       .pipe(
-        map(response => response),
+        map(response => {
+          if (response.success) {
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al verificar salud del backend');
+          }
+        }),
         catchError(this.handleError)
       );
   }
@@ -470,17 +280,10 @@ export class BackendService {
   
   private handleError = (error: any): Observable<never> => {
     console.error('❌ Error en BackendService:', error);
-    
     let errorMessage = 'Error de conexión con el servidor';
     
-    if (error.error) {
-      if (typeof error.error === 'string') {
-        errorMessage = error.error;
-      } else if (error.error.message) {
-        errorMessage = error.error.message;
-      } else if (error.error.error) {
-        errorMessage = error.error.error;
-      }
+    if (error.error?.message) {
+      errorMessage = error.error.message;
     } else if (error.message) {
       errorMessage = error.message;
     }
@@ -488,36 +291,13 @@ export class BackendService {
     return throwError(() => new Error(errorMessage));
   };
 
-  // ========== ESTUDIOS ACADÉMICOS ==========
-  
+  // ========== MÉTODOS PARA GUARDAR DATOS DEL FORMULARIO ==========
+
   /**
-   * Guardar estudios académicos para un usuario
+   * Guardar estudios académicos
    */
   guardarEstudios(usuarioId: number, estudios: any[]): Observable<any> {
-    console.log('📚 Guardando estudios académicos para usuario:', usuarioId, estudios);
-    
-    if (this.MOCK_MODE) {
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: `${estudios.length} estudios académicos guardados exitosamente`,
-        data: estudios.map((estudio, index) => ({
-          id: Math.floor(Math.random() * 1000) + index,
-          usuarioId: usuarioId,
-          ...estudio,
-          fechaCreacion: new Date().toISOString()
-        }))
-      };
-      
-      return of(mockResponse).pipe(
-        delay(400),
-        map(response => {
-          console.log('✅ Estudios guardados:', response);
-          return response.data;
-        })
-      );
-    }
-    
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/${usuarioId}/estudios`, estudios, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/estudios/usuario/${usuarioId}`, estudios, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success) {
@@ -530,36 +310,11 @@ export class BackendService {
       );
   }
 
-  // ========== VEHÍCULOS ==========
-  
   /**
-   * Guardar vehículos para un usuario
+   * Guardar vehículos
    */
   guardarVehiculos(usuarioId: number, vehiculos: any[]): Observable<any> {
-    console.log('🚗 Guardando vehículos para usuario:', usuarioId, vehiculos);
-    
-    if (this.MOCK_MODE) {
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: `${vehiculos.length} vehículos guardados exitosamente`,
-        data: vehiculos.map((vehiculo, index) => ({
-          id: Math.floor(Math.random() * 1000) + index,
-          usuarioId: usuarioId,
-          ...vehiculo,
-          fechaCreacion: new Date().toISOString()
-        }))
-      };
-      
-      return of(mockResponse).pipe(
-        delay(300),
-        map(response => {
-          console.log('✅ Vehículos guardados:', response);
-          return response.data;
-        })
-      );
-    }
-    
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/${usuarioId}/vehiculos`, vehiculos, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/vehiculos/usuario/${usuarioId}`, vehiculos, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success) {
@@ -572,36 +327,11 @@ export class BackendService {
       );
   }
 
-  // ========== VIVIENDA ==========
-  
   /**
-   * Guardar información de vivienda para un usuario
+   * Guardar vivienda
    */
   guardarVivienda(usuarioId: number, vivienda: any): Observable<any> {
-    console.log('🏠 Guardando vivienda para usuario:', usuarioId, vivienda);
-    
-    if (this.MOCK_MODE) {
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: 'Información de vivienda guardada exitosamente',
-        data: {
-          id: Math.floor(Math.random() * 1000),
-          usuarioId: usuarioId,
-          ...vivienda,
-          fechaCreacion: new Date().toISOString()
-        }
-      };
-      
-      return of(mockResponse).pipe(
-        delay(300),
-        map(response => {
-          console.log('✅ Vivienda guardada:', response);
-          return response.data;
-        })
-      );
-    }
-    
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/${usuarioId}/vivienda`, vivienda, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/vivienda/usuario/${usuarioId}`, vivienda, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success) {
@@ -614,36 +344,11 @@ export class BackendService {
       );
   }
 
-  // ========== PERSONAS A CARGO ==========
-  
   /**
-   * Guardar personas a cargo para un usuario
+   * Guardar personas a cargo
    */
   guardarPersonasACargo(usuarioId: number, personas: any[]): Observable<any> {
-    console.log('👨‍👩‍👧‍👦 Guardando personas a cargo para usuario:', usuarioId, personas);
-    
-    if (this.MOCK_MODE) {
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: `${personas.length} personas a cargo guardadas exitosamente`,
-        data: personas.map((persona, index) => ({
-          id: Math.floor(Math.random() * 1000) + index,
-          usuarioId: usuarioId,
-          ...persona,
-          fechaCreacion: new Date().toISOString()
-        }))
-      };
-      
-      return of(mockResponse).pipe(
-        delay(300),
-        map(response => {
-          console.log('✅ Personas a cargo guardadas:', response);
-          return response.data;
-        })
-      );
-    }
-    
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/${usuarioId}/personas-cargo`, personas, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/personas-cargo/usuario/${usuarioId}`, personas, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success) {
@@ -656,36 +361,11 @@ export class BackendService {
       );
   }
 
-  // ========== CONTACTOS DE EMERGENCIA ==========
-  
   /**
-   * Guardar contactos de emergencia para un usuario
+   * Guardar contactos de emergencia
    */
   guardarContactos(usuarioId: number, contactos: any[]): Observable<any> {
-    console.log('📞 Guardando contactos de emergencia para usuario:', usuarioId, contactos);
-    
-    if (this.MOCK_MODE) {
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: `${contactos.length} contactos de emergencia guardados exitosamente`,
-        data: contactos.map((contacto, index) => ({
-          id: Math.floor(Math.random() * 1000) + index,
-          usuarioId: usuarioId,
-          ...contacto,
-          fechaCreacion: new Date().toISOString()
-        }))
-      };
-      
-      return of(mockResponse).pipe(
-        delay(300),
-        map(response => {
-          console.log('✅ Contactos guardados:', response);
-          return response.data;
-        })
-      );
-    }
-    
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/${usuarioId}/contactos`, contactos, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/contactos-emergencia/usuario/${usuarioId}`, contactos, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success) {
@@ -698,36 +378,11 @@ export class BackendService {
       );
   }
 
-  // ========== DECLARACIONES DE CONFLICTO ==========
-  
   /**
-   * Guardar declaraciones de conflicto para un usuario
+   * Guardar declaraciones de conflicto
    */
   guardarDeclaraciones(usuarioId: number, declaraciones: any[]): Observable<any> {
-    console.log('⚖️ Guardando declaraciones de conflicto para usuario:', usuarioId, declaraciones);
-    
-    if (this.MOCK_MODE) {
-      const mockResponse: BackendResponse = {
-        success: true,
-        message: `${declaraciones.length} declaraciones de conflicto guardadas exitosamente`,
-        data: declaraciones.map((declaracion, index) => ({
-          id: Math.floor(Math.random() * 1000) + index,
-          usuarioId: usuarioId,
-          ...declaracion,
-          fechaCreacion: new Date().toISOString()
-        }))
-      };
-      
-      return of(mockResponse).pipe(
-        delay(300),
-        map(response => {
-          console.log('✅ Declaraciones guardadas:', response);
-          return response.data;
-        })
-      );
-    }
-    
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/${usuarioId}/declaraciones`, declaraciones, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/declaraciones-conflicto/usuario/${usuarioId}`, declaraciones, this.httpOptions)
       .pipe(
         map(response => {
           if (response.success) {

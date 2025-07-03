@@ -101,33 +101,7 @@ public class UsuarioController {
     }
     
     // ========== OBTENER TODOS LOS USUARIOS ==========
-    @GetMapping
-    @Operation(summary = "Obtener todos los usuarios", description = "Obtiene la lista de todos los usuarios activos")
-    public ResponseEntity<Map<String, Object>> obtenerTodosLosUsuarios() {
-        logger.info("📋 Obteniendo todos los usuarios");
-        
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            List<Usuario> usuarios = usuarioService.obtenerTodosLosUsuarios();
-            
-            response.put("success", true);
-            response.put("message", "Usuarios obtenidos exitosamente");
-            response.put("data", usuarios);
-            response.put("total", usuarios.size());
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            logger.error("❌ Error al obtener usuarios: {}", e.getMessage(), e);
-            
-            response.put("success", false);
-            response.put("message", "Error al obtener usuarios: " + e.getMessage());
-            response.put("error", e.getMessage());
-            
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
+    // (Método movido a ConsultaController para evitar duplicación)
     
     // ========== OBTENER USUARIO POR ID ==========
     @GetMapping("/{id}")
@@ -416,6 +390,87 @@ public class UsuarioController {
             response.put("message", "Error en verificación: " + e.getMessage());
             response.put("error", e.getMessage());
             response.put("fullStackTrace", java.util.Arrays.toString(e.getStackTrace()));
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+    
+    // ========== ENDPOINT DE PRUEBA (SIN AUTENTICACIÓN) ==========
+    @PostMapping("/test/crear-usuario")
+    @Operation(summary = "Crear usuario de prueba", description = "Endpoint de prueba para crear usuarios sin autenticación")
+    public ResponseEntity<Map<String, Object>> crearUsuarioPrueba(@RequestBody Map<String, Object> usuarioData) {
+        logger.info("🧪 Creando usuario de prueba: {}", usuarioData.get("nombre"));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Usuario usuarioCreado = usuarioService.crearUsuarioBasico(usuarioData);
+            
+            response.put("success", true);
+            response.put("message", "Usuario de prueba creado exitosamente");
+            response.put("data", Map.of(
+                "id", usuarioCreado.getId(),
+                "nombre", usuarioCreado.getNombre(),
+                "cedula", usuarioCreado.getCedula(),
+                "correo", usuarioCreado.getCorreo(),
+                "version", usuarioCreado.getVersion()
+            ));
+            
+            logger.info("✅ Usuario de prueba creado exitosamente con ID: {}", usuarioCreado.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al crear usuario de prueba: {}", e.getMessage(), e);
+            
+            response.put("success", false);
+            response.put("message", "Error al crear usuario de prueba: " + e.getMessage());
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+    }
+    
+    // ========== ENDPOINT DE PRUEBA PARA VERIFICAR USUARIO ==========
+    @GetMapping("/test/cedula/{cedula}")
+    @Operation(summary = "Verificar usuario de prueba", description = "Endpoint de prueba para verificar usuarios sin autenticación")
+    public ResponseEntity<Map<String, Object>> verificarUsuarioPrueba(
+            @Parameter(description = "Cédula del usuario") @PathVariable String cedulaStr) {
+        logger.info("🧪 Verificando usuario de prueba por cédula: {}", cedulaStr);
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Convertir cédula String a Long
+            Long cedula;
+            try {
+                cedula = Long.parseLong(cedulaStr);
+            } catch (NumberFormatException e) {
+                response.put("success", false);
+                response.put("message", "La cédula debe ser un número válido");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            Optional<Usuario> usuario = usuarioService.obtenerUsuarioPorCedula(cedula);
+            
+            if (usuario.isPresent()) {
+                response.put("success", true);
+                response.put("message", "Usuario de prueba encontrado");
+                response.put("data", usuario.get());
+                
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "Usuario de prueba no encontrado con cédula: " + cedulaStr);
+                
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al verificar usuario de prueba: {}", e.getMessage(), e);
+            
+            response.put("success", false);
+            response.put("message", "Error al verificar usuario de prueba: " + e.getMessage());
+            response.put("error", e.getMessage());
             
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }

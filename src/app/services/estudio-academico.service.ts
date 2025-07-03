@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
+import { AuthService } from './auth.service';
 import { firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +13,8 @@ export class EstudioAcademicoService {
 
   constructor(
     private backendService: BackendService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private authService: AuthService
   ) {}
 
   /**
@@ -28,16 +31,20 @@ export class EstudioAcademicoService {
           estudios,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res)
+          map((res: any) => res),
+          catchError((error) => {
+            console.error('❌ Error en backend:', error);
+            throw error;
+          })
         )
       );
       
-      console.log('✅ Estudios académicos guardados exitosamente en base de datos:', response);
+      console.log('✅ Estudios académicos guardados exitosamente:', response);
       
       if (response.success) {
         this.notificationService.showSuccess(
           '✅ Éxito',
-          'Estudios académicos guardados exitosamente en la base de datos'
+          response.message || 'Estudios académicos guardados exitosamente'
         );
         
         return response.data; // Retorna los estudios guardados
@@ -70,7 +77,11 @@ export class EstudioAcademicoService {
           `${this.backendService.getApiUrl()}/formulario/academico/obtener?idUsuario=${idUsuario}`,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res)
+          map((res: any) => res),
+          catchError((error) => {
+            console.error('❌ Error en backend:', error);
+            throw error;
+          })
         )
       );
       

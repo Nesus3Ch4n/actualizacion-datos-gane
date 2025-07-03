@@ -90,7 +90,7 @@ export class FormularioComponent implements OnInit, OnDestroy {
   navigateTo(index: number) {
     if (index >= 0 && index < this.stepsData.length && this.stepsData[index].enabled) {
       console.log(`Navegando al paso ${index}: ${this.stepsData[index].title}`);
-      this.formNavigationService.navigateTo(index);
+      this.formNavigationService.navigateToWithRoute(index, this.route);
     } else {
       console.warn(`Paso ${index} no disponible en el modo actual`);
     }
