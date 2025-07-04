@@ -65,9 +65,9 @@ import { AuthService } from '../services/auth.service';
             
             <button 
               *ngIf="isAuthenticated" 
-              class="btn btn-secondary" 
-              (click)="goToSimulation()">
-              🎭 Ver Simulación PAU
+              class="btn btn-warning" 
+              (click)="regenerateToken()">
+              🔄 Regenerar Token
             </button>
             
             <button 
@@ -244,6 +244,15 @@ import { AuthService } from '../services/auth.service';
       background-color: #dc3545;
       color: white;
     }
+    
+    .btn-warning {
+      background-color: #ffc107;
+      color: #212529;
+    }
+    
+    .btn-warning:hover {
+      background-color: #e0a800;
+    }
   `]
 })
 export class WelcomeComponent implements OnInit {
@@ -280,8 +289,6 @@ export class WelcomeComponent implements OnInit {
   }
 
   forceAuth(): void {
-    console.log('🔄 Iniciando autenticación manual...');
-    
     // Token válido generado con el secreto del backend (24 horas de duración)
     const validToken = 'eyJhbGciOiJIUzUxMiJ9.eyJhcGVsbGlkb3MiOiJDT1JET0JBIEVDSEFORElBIiwic3ViIjoiQ1AxMDA2MTAxMjExIiwiaWR0aXBvZG9jdW1lbnRvIjoiMSIsImlkcGFudGFsbGFzIjoiMTYsNjcsNDIsMTIsMTMsMTQsMTUiLCJpZGVudGlmaWNhY2lvbiI6IjEwMDYxMDEyMTEiLCJleHBlcmllbmNlIjoieVJEeEh1cmlqNWRMSEJhSVRMclFmLzRZRmZyYk45OVl6c1Q5MnhPWXNRRmhNYlJNNjdMbm9mSC9jTGRobXJoTFZLU0VFZmVmTEJSL1lOekg3SE9mdE9FRUwwNDB6YURMN3BtK3RPRXV2SUk9Iiwibm9tYnJlcyI6IkpFU1VTIEZFTElQRSIsImlkcm9sZXMiOiI1IiwiaWF0IjoxNzUxNTc5NDczLCJleHAiOjE3NTE2NjU4NzN9.c-7cq8i7uSzlt2XW5U4ipTVydAHg1lHhbpQT7Dnl2obuRiyzHwcmGoDyLVgQ5TIKre3VGdc0pYTg6UyqCrsTrw';
     
@@ -289,26 +296,35 @@ export class WelcomeComponent implements OnInit {
     this.authService.processTokenFromPAU(validToken).subscribe(
       isValid => {
         if (isValid) {
-          console.log('✅ Autenticación manual exitosa');
           this.router.navigate(['/formulario']);
-        } else {
-          console.log('❌ Autenticación manual fallida');
         }
       }
     );
   }
 
   goToForm(): void {
-    console.log('🔄 Navegando al formulario...');
     this.router.navigate(['/personal']);
-  }
-
-  goToSimulation(): void {
-    console.log('🔄 Navegando a simulación PAU...');
-    this.router.navigate(['/pau-simulation']);
   }
 
   logout(): void {
     this.authService.logout();
+  }
+
+  regenerateToken(): void {
+    console.log('🔄 Regenerando token desde WelcomeComponent...');
+    this.authService.regenerateToken().subscribe(
+      (success) => {
+        if (success) {
+          console.log('✅ Token regenerado exitosamente');
+          // Actualizar la información del usuario
+          this.currentUser = this.authService.getCurrentUserValue();
+        } else {
+          console.log('❌ No se pudo regenerar el token');
+        }
+      },
+      (error) => {
+        console.error('❌ Error regenerando token:', error);
+      }
+    );
   }
 } 

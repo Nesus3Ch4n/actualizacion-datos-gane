@@ -1,46 +1,91 @@
 {
-  "name": "portal-actdatos",
-  "version": "0.0.0",
+  "name": "portal-actualizacion-datos",
+  "version": "1.0.0",
+  "description": "Sistema integrado de actualización de datos de empleados con autenticación JWT y regeneración automática de tokens",
+  "keywords": [
+    "angular",
+    "spring-boot",
+    "jwt",
+    "authentication",
+    "employee-portal",
+    "data-update"
+  ],
+  "author": {
+    "name": "Jesús Felipe Córdoba Echandía",
+    "email": "jesus.cordoba@empresa.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/actdatos-en-angular.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/actdatos-en-angular/issues"
+  },
+  "homepage": "https://github.com/tu-usuario/actdatos-en-angular#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:coverage": "ng test --code-coverage",
+    "lint": "ng lint",
+    "lint:fix": "ng lint --fix",
+    "e2e": "ng e2e",
+    "docs": "compodoc -p tsconfig.json -s",
+    "docs:serve": "compodoc -p tsconfig.json -s -w",
+    "backend:start": "cd BD_actualizacion_datos && ./mvnw spring-boot:run",
+    "backend:build": "cd BD_actualizacion_datos && ./mvnw clean package",
+    "backend:test": "cd BD_actualizacion_datos && ./mvnw test",
+    "dev": "concurrently \"npm run backend:start\" \"npm run start\"",
+    "setup": "npm install && cd BD_actualizacion_datos && ./mvnw clean install",
+    "clean": "rm -rf node_modules dist && cd BD_actualizacion_datos && ./mvnw clean",
+    "token:generate": "python generate_token.py",
+    "token:test": "python test_token_regeneration.py",
+    "user:create": "python create_user_simple.py",
+    "user:check": "python check_user.py"
   },
-  "private": true,
   "dependencies": {
     "@angular/animations": "^16.2.0",
-    "@angular/cdk": "^16.2.14",
+    "@angular/cdk": "^16.2.0",
     "@angular/common": "^16.2.0",
     "@angular/compiler": "^16.2.0",
     "@angular/core": "^16.2.0",
     "@angular/forms": "^16.2.0",
-    "@angular/material": "^16.2.14",
+    "@angular/material": "^16.2.0",
     "@angular/platform-browser": "^16.2.0",
     "@angular/platform-browser-dynamic": "^16.2.0",
     "@angular/router": "^16.2.0",
-    "@fortawesome/fontawesome-free": "^6.7.2",
-    "@popperjs/core": "^2.11.6",
-    "bootstrap": "^5.3.3",
-    "jsonwebtoken": "^9.0.2",
-    "ngx-bootstrap": "^11.0.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.13.0"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^16.2.4",
-    "@angular/cli": "^16.2.4",
+    "@angular-devkit/build-angular": "^16.2.0",
+    "@angular/cli": "^16.2.0",
     "@angular/compiler-cli": "^16.2.0",
-    "@angular/localize": "^16.2.0",
     "@types/jasmine": "~4.3.0",
+    "@types/node": "^18.0.0",
     "jasmine-core": "~4.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.1.3"
-  }
+    "typescript": "~5.1.3",
+    "concurrently": "^8.0.0",
+    "compodoc": "^1.1.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead",
+    "not op_mini all"
+  ]
 }

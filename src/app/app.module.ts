@@ -1,16 +1,22 @@
-import { NgModule } from '@angular/core';
+import { NgModule, NO_ERRORS_SCHEMA } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { WelcomeComponent } from './components/welcome.component';
+import { SharedModule } from './shared/shared.module';
 import { FormularioModule } from './modules/formulario/formulario.module';
 import { AdminModule } from './modules/admin/admin.module';
-import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { NotificationContainerComponent } from './components/notification-container.component';
+
+// Guards
+import { AuthGuard } from './guards/auth.guard';
+
+// Interceptors
 import { AuthInterceptor } from './interceptors/auth.interceptor';
-import { WelcomeComponent } from './components/welcome.component';
 
 @NgModule({
   declarations: [
@@ -19,21 +25,24 @@ import { WelcomeComponent } from './components/welcome.component';
   ],
   imports: [
     BrowserModule,
+    BrowserAnimationsModule,
     HttpClientModule,
-    AppRoutingModule,
+    ReactiveFormsModule,
+    CommonModule,
+    SharedModule,
     FormularioModule,
     AdminModule,
-    BsDatepickerModule.forRoot(),
-    BrowserAnimationsModule,
-    NotificationContainerComponent
+    AppRoutingModule
   ],
   providers: [
+    AuthGuard,
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
       multi: true
     }
   ],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent],
+  schemas: [NO_ERRORS_SCHEMA]
 })
 export class AppModule { }

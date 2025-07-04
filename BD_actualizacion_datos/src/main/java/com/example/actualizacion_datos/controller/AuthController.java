@@ -29,18 +29,79 @@ public class AuthController {
             // Limpiar el token
             String token = jwtService.cleanToken(authHeader);
             
-            // Validar el token
-            if (!jwtService.isTokenValid(token)) {
+            // Intentar extraer información del usuario del token (aunque esté expirado)
+            Map<String, String> userInfo = null;
+            String cedula = null;
+            boolean tokenExpired = false;
+            
+            try {
+                userInfo = jwtService.extractUserInfo(token);
+                cedula = userInfo.get("identificacion");
+            } catch (Exception e) {
+                // Si no se puede extraer información, el token es completamente inválido
                 return ResponseEntity.status(401).body(Map.of(
                     "valid", false,
-                    "error", "Token inválido o expirado"
+                    "error", "Token completamente inválido"
                 ));
             }
-
-            // Extraer información del usuario
-            Map<String, String> userInfo = jwtService.extractUserInfo(token);
-            String cedula = userInfo.get("identificacion");
             
+            // Validar si el token está expirado
+            if (!jwtService.isTokenValid(token)) {
+                tokenExpired = true;
+                
+                // En modo demo, regenerar automáticamente el token si está expirado
+                if (cedula != null && !cedula.isEmpty()) {
+                    try {
+                        // Generar nuevo token con la misma información del usuario
+                        Map<String, Object> claims = new HashMap<>();
+                        claims.put("sub", "CP" + cedula);
+                        claims.put("idtipodocumento", userInfo.get("tipoDocumento"));
+                        claims.put("identificacion", cedula);
+                        claims.put("nombres", userInfo.get("nombres"));
+                        claims.put("apellidos", userInfo.get("apellidos"));
+                        claims.put("idroles", userInfo.get("roles"));
+                        claims.put("idpantallas", userInfo.get("pantallas"));
+                        claims.put("experience", userInfo.get("experience"));
+                        
+                        String newToken = jwtService.generateToken(claims);
+                        
+                        // Buscar usuario en la base de datos
+                        Long cedulaLong = Long.parseLong(cedula);
+                        var usuario = usuarioService.obtenerUsuarioPorCedula(cedulaLong);
+                        
+                        if (usuario == null || usuario.isEmpty()) {
+                            return ResponseEntity.status(401).body(Map.of(
+                                "valid", false,
+                                "error", "Usuario no encontrado en la base de datos"
+                            ));
+                        }
+                        
+                        // Preparar respuesta con nuevo token
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("valid", true);
+                        response.put("user", usuario.get());
+                        response.put("tokenInfo", userInfo);
+                        response.put("newToken", newToken);
+                        response.put("tokenRegenerated", true);
+                        response.put("message", "Token regenerado automáticamente en modo demo");
+                        
+                        return ResponseEntity.ok(response);
+                        
+                    } catch (Exception e) {
+                        return ResponseEntity.status(500).body(Map.of(
+                            "valid", false,
+                            "error", "Error regenerando token: " + e.getMessage()
+                        ));
+                    }
+                } else {
+                    return ResponseEntity.status(401).body(Map.of(
+                        "valid", false,
+                        "error", "Token expirado y no se pudo extraer información para regenerar"
+                    ));
+                }
+            }
+
+            // Si el token es válido, proceder normalmente
             if (cedula == null || cedula.isEmpty()) {
                 return ResponseEntity.status(401).body(Map.of(
                     "valid", false,
@@ -299,6 +360,130 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of(
                 "error", "Error generando token: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Regenerar token automáticamente cuando está expirado (MODO DEMO)
+     */
+    @PostMapping("/regenerate-token")
+    public ResponseEntity<?> regenerateToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = jwtService.cleanToken(authHeader);
+            
+            // Intentar extraer información del token expirado
+            Map<String, String> userInfo;
+            try {
+                userInfo = jwtService.extractUserInfo(token);
+            } catch (Exception e) {
+                return ResponseEntity.status(401).body(Map.of(
+                    "valid", false,
+                    "error", "No se pudo extraer información del token expirado"
+                ));
+            }
+            
+            String cedula = userInfo.get("identificacion");
+            if (cedula == null || cedula.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of(
+                    "valid", false,
+                    "error", "No se pudo extraer la cédula del token"
+                ));
+            }
+            
+            // Generar nuevo token con la misma información
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("sub", "CP" + cedula);
+            claims.put("idtipodocumento", userInfo.get("tipoDocumento"));
+            claims.put("identificacion", cedula);
+            claims.put("nombres", userInfo.get("nombres"));
+            claims.put("apellidos", userInfo.get("apellidos"));
+            claims.put("idroles", userInfo.get("roles"));
+            claims.put("idpantallas", userInfo.get("pantallas"));
+            claims.put("experience", userInfo.get("experience"));
+            
+            String newToken = jwtService.generateToken(claims);
+            
+            // Buscar usuario en la base de datos
+            try {
+                Long cedulaLong = Long.parseLong(cedula);
+                var usuario = usuarioService.obtenerUsuarioPorCedula(cedulaLong);
+                
+                if (usuario == null || usuario.isEmpty()) {
+                    return ResponseEntity.status(401).body(Map.of(
+                        "valid", false,
+                        "error", "Usuario no encontrado en la base de datos"
+                    ));
+                }
+                
+                // Preparar respuesta con nuevo token
+                Map<String, Object> response = new HashMap<>();
+                response.put("valid", true);
+                response.put("user", usuario.get());
+                response.put("tokenInfo", userInfo);
+                response.put("newToken", newToken);
+                response.put("tokenRegenerated", true);
+                response.put("message", "Token regenerado exitosamente en modo demo");
+                response.put("timestamp", System.currentTimeMillis());
+                
+                return ResponseEntity.ok(response);
+                
+            } catch (NumberFormatException e) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "valid", false,
+                    "error", "Cédula inválida en el token"
+                ));
+            } catch (Exception e) {
+                return ResponseEntity.status(500).body(Map.of(
+                    "valid", false,
+                    "error", "Error interno del servidor: " + e.getMessage()
+                ));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "valid", false,
+                "error", "Error interno del servidor: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Crear usuario de prueba para modo demo (SOLO PARA DESARROLLO)
+     */
+    @PostMapping("/create-test-user")
+    public ResponseEntity<?> createTestUser() {
+        try {
+            // Datos del usuario de prueba
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("nombre", "JESUS FELIPE CORDOBA ECHANDIA");
+            userData.put("cedula", 1006101211L);
+            userData.put("correo", "jesus.cordoba@test.com");
+            userData.put("numeroFijo", 1234567L);
+            userData.put("numeroCelular", 3001234567L);
+            userData.put("numeroCorp", 123456L);
+            userData.put("cedulaExpedicion", "BOGOTA");
+            userData.put("paisNacimiento", "COLOMBIA");
+            userData.put("ciudadNacimiento", "BOGOTA");
+            userData.put("cargo", "DESARROLLADOR");
+            userData.put("area", "TECNOLOGIA");
+            userData.put("estadoCivil", "SOLTERO");
+            userData.put("tipoSangre", "O+");
+            
+            // Crear el usuario
+            var usuario = usuarioService.crearUsuarioBasico(userData);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Usuario de prueba creado exitosamente",
+                "user", usuario,
+                "timestamp", System.currentTimeMillis()
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", "Error creando usuario de prueba: " + e.getMessage()
             ));
         }
     }

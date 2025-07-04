@@ -164,8 +164,19 @@ export class AuthService {
 
     return this.http.post(`${this.API_URL}/auth/validate`, {}, { headers }).pipe(
       map((response: any) => {
-        console.log('✅ Token válido:', response);
+        console.log('✅ Respuesta de validación:', response);
         this.validatingToken = false;
+        
+        // Verificar si el token fue regenerado automáticamente
+        if (response.tokenRegenerated && response.newToken) {
+          console.log('🔄 Token regenerado automáticamente en modo demo');
+          console.log('📝 Mensaje:', response.message);
+          
+          // Actualizar el token con el nuevo
+          this.storeToken(response.newToken);
+          this.tokenSubject.next(response.newToken);
+        }
+        
         this.isAuthenticatedSubject.next(true);
         
         // Extraer información del usuario del token
@@ -336,5 +347,48 @@ export class AuthService {
       console.error('❌ Error decodificando token:', error);
       return null;
     }
+  }
+
+  /**
+   * Regenerar token manualmente (para modo demo)
+   */
+  regenerateToken(): Observable<boolean> {
+    const token = this.tokenSubject.value;
+    if (!token) {
+      console.log('❌ No hay token para regenerar');
+      return of(false);
+    }
+
+    console.log('🔄 Regenerando token manualmente...');
+    
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+
+    return this.http.post(`${this.API_URL}/auth/regenerate-token`, {}, { headers }).pipe(
+      map((response: any) => {
+        console.log('✅ Token regenerado exitosamente:', response);
+        
+        if (response.newToken) {
+          // Actualizar el token con el nuevo
+          this.storeToken(response.newToken);
+          this.tokenSubject.next(response.newToken);
+          this.isAuthenticatedSubject.next(true);
+          
+          if (response.user) {
+            this.currentUserSubject.next(response.user);
+          }
+          
+          return true;
+        }
+        
+        return false;
+      }),
+      catchError((error) => {
+        console.error('❌ Error regenerando token:', error);
+        return of(false);
+      })
+    );
   }
 } 
