@@ -4,19 +4,9 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatDialog } from '@angular/material/dialog';
 import { SelectionModel } from '@angular/cdk/collections';
-
-export interface Usuario {
-  id: number;
-  nombre: string;
-  apellido: string;
-  email: string;
-  cargo: string;
-  departamento: string;
-  fechaIngreso: Date;
-  estado: 'activo' | 'inactivo';
-  ultimaActualizacion: Date;
-  tieneConflictoIntereses: boolean;
-}
+import { AdminService, UsuarioAdmin } from '../../services/admin.service';
+import { UsuarioDetalleModalComponent } from '../../../admin-panel/presentation/components/usuario-detalle-modal.component';
+import { ObtenerUsuarioDetalleCompletoUseCase } from '../../../admin-panel/application/use-cases/obtener-usuario-detalle-completo.use-case';
 
 export interface ReporteConfig {
   tipo: string;
@@ -37,88 +27,20 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
 
   displayedColumns: string[] = [
     'select',
-    'id',
     'nombre',
-    'apellido', 
     'email',
     'cargo',
     'departamento',
-    'fechaIngreso',
     'estado',
-    'ultimaActualizacion',
     'conflictoIntereses',
     'acciones'
   ];
 
-  dataSource = new MatTableDataSource<Usuario>();
-  selection = new SelectionModel<Usuario>(true, []);
+  dataSource = new MatTableDataSource<UsuarioAdmin>();
+  selection = new SelectionModel<UsuarioAdmin>(true, []);
   filtroTexto = '';
   filtroEstado = '';
   filtroDepartamento = '';
-
-  // Datos quemados de usuarios para prueba
-  usuariosData: Usuario[] = [
-    {
-      id: 1,
-      nombre: 'María',
-      apellido: 'García López',
-      email: 'maria.garcia@empresa.com',
-      cargo: 'Gerente de Ventas',
-      departamento: 'Ventas',
-      fechaIngreso: new Date('2020-03-15'),
-      estado: 'activo',
-      ultimaActualizacion: new Date('2024-01-15'),
-      tieneConflictoIntereses: false
-    },
-    {
-      id: 2,
-      nombre: 'Carlos',
-      apellido: 'Rodríguez Martín',
-      email: 'carlos.rodriguez@empresa.com',
-      cargo: 'Desarrollador Senior',
-      departamento: 'Tecnología',
-      fechaIngreso: new Date('2019-07-22'),
-      estado: 'activo',
-      ultimaActualizacion: new Date('2024-02-20'),
-      tieneConflictoIntereses: true
-    },
-    {
-      id: 3,
-      nombre: 'Ana',
-      apellido: 'Fernández Cruz',
-      email: 'ana.fernandez@empresa.com',
-      cargo: 'Coordinadora de RRHH',
-      departamento: 'Recursos Humanos',
-      fechaIngreso: new Date('2021-01-10'),
-      estado: 'activo',
-      ultimaActualizacion: new Date('2024-01-30'),
-      tieneConflictoIntereses: false
-    },
-    {
-      id: 4,
-      nombre: 'Luis',
-      apellido: 'Mendoza Silva',
-      email: 'luis.mendoza@empresa.com',
-      cargo: 'Analista Financiero',
-      departamento: 'Finanzas',
-      fechaIngreso: new Date('2018-11-05'),
-      estado: 'inactivo',
-      ultimaActualizacion: new Date('2023-12-01'),
-      tieneConflictoIntereses: false
-    },
-    {
-      id: 5,
-      nombre: 'Patricia',
-      apellido: 'Jiménez Torres',
-      email: 'patricia.jimenez@empresa.com',
-      cargo: 'Jefe de Marketing',
-      departamento: 'Marketing',
-      fechaIngreso: new Date('2022-05-18'),
-      estado: 'activo',
-      ultimaActualizacion: new Date('2024-02-28'),
-      tieneConflictoIntereses: true
-    }
-  ];
 
   // Configuración de reportes disponibles
   reportesConfig: ReporteConfig[] = [
@@ -162,16 +84,49 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   departamentos = ['Todos', 'Ventas', 'Tecnología', 'Recursos Humanos', 'Finanzas', 'Marketing'];
   estados = ['Todos', 'activo', 'inactivo'];
 
-  constructor(private dialog: MatDialog) {}
+  cargando = false;
+  error = '';
+
+  constructor(
+    private dialog: MatDialog,
+    private adminService: AdminService,
+    private obtenerUsuarioDetalleCompleto: ObtenerUsuarioDetalleCompletoUseCase
+  ) {}
 
   ngOnInit(): void {
-    this.dataSource.data = this.usuariosData;
+    this.cargarUsuarios();
     this.dataSource.filterPredicate = this.createFilter();
   }
 
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
+  }
+
+  /**
+   * Cargar usuarios de la base de datos
+   */
+  cargarUsuarios(): void {
+    this.cargando = true;
+    this.error = '';
+
+    this.adminService.obtenerUsuarios().subscribe({
+      next: (usuarios) => {
+        console.log('Usuarios cargados:', usuarios);
+        this.dataSource.data = usuarios;
+        this.cargando = false;
+      },
+      error: (error) => {
+        console.error('Error cargando usuarios:', error);
+        this.error = 'Error al cargar usuarios: ' + error.message;
+        this.cargando = false;
+        
+        // Si hay error, usar usuarios de prueba
+        this.adminService.obtenerUsuariosPrueba().subscribe(usuariosPrueba => {
+          this.dataSource.data = usuariosPrueba;
+        });
+      }
+    });
   }
 
   // Filtros
@@ -191,16 +146,16 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
     this.dataSource.filter = '';
   }
 
-  private createFilter(): (data: Usuario, filter: string) => boolean {
-    return (data: Usuario, filter: string): boolean => {
+  private createFilter(): (data: UsuarioAdmin, filter: string) => boolean {
+    return (data: UsuarioAdmin, filter: string): boolean => {
       if (!filter) return true;
 
       const filtroObj = JSON.parse(filter);
       
       // Filtro por texto
+      const nombreCompleto = `${data.nombre} ${data.apellido}`.toLowerCase();
       const textoMatch = !filtroObj.texto || 
-        data.nombre.toLowerCase().includes(filtroObj.texto) ||
-        data.apellido.toLowerCase().includes(filtroObj.texto) ||
+        nombreCompleto.includes(filtroObj.texto) ||
         data.email.toLowerCase().includes(filtroObj.texto) ||
         data.cargo.toLowerCase().includes(filtroObj.texto);
 
@@ -231,7 +186,7 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
     this.selection.select(...this.dataSource.data);
   }
 
-  checkboxLabel(row?: Usuario): string {
+  checkboxLabel(row?: UsuarioAdmin): string {
     if (!row) {
       return `${this.isAllSelected() ? 'deseleccionar' : 'seleccionar'} todos`;
     }
@@ -251,7 +206,7 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
     this.simularDescargaExcel(tipoReporte, usuariosSeleccionados);
   }
 
-  private simularDescargaExcel(tipoReporte: string, usuarios: Usuario[]): void {
+  private simularDescargaExcel(tipoReporte: string, usuarios: UsuarioAdmin[]): void {
     const reporteConfig = this.reportesConfig.find(r => r.tipo === tipoReporte);
     if (!reporteConfig) return;
 
@@ -276,17 +231,35 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   }
 
   // Acciones de usuario
-  verDetalle(usuario: Usuario): void {
-    console.log('Ver detalle del usuario:', usuario);
-    alert(`Ver detalle de: ${usuario.nombre} ${usuario.apellido}\nEmail: ${usuario.email}\nCargo: ${usuario.cargo}`);
+  verDetalle(usuario: UsuarioAdmin): void {
+    console.log('=== SOLICITANDO DETALLE DE USUARIO ===');
+    console.log('Usuario seleccionado:', usuario);
+    console.log('ID del usuario:', usuario.id);
+    
+    this.obtenerUsuarioDetalleCompleto.execute(usuario.id).subscribe({
+      next: (detalle) => {
+        console.log('=== DETALLE OBTENIDO DEL BACKEND ===');
+        console.log('Detalle completo recibido:', detalle);
+        console.log('=====================================');
+        
+        this.dialog.open(UsuarioDetalleModalComponent, {
+          width: '600px',
+          data: detalle
+        });
+      },
+      error: (error) => {
+        console.error('Error obteniendo detalle del usuario:', error);
+        alert('Error al obtener los detalles del usuario: ' + error.message);
+      }
+    });
   }
 
-  editarUsuario(usuario: Usuario): void {
+  editarUsuario(usuario: UsuarioAdmin): void {
     console.log('Editar usuario:', usuario);
     alert(`Editar usuario: ${usuario.nombre} ${usuario.apellido}\n(Funcionalidad pendiente de implementar)`);
   }
 
-  eliminarUsuario(usuario: Usuario): void {
+  eliminarUsuario(usuario: UsuarioAdmin): void {
     if (confirm(`¿Estás seguro de eliminar al usuario ${usuario.nombre} ${usuario.apellido}?`)) {
       console.log('Eliminar usuario:', usuario);
       // Aquí haríamos la eliminación real
@@ -310,6 +283,6 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   exportarTodo(): void {
     console.log('Exportando todos los datos...');
     // Generar un reporte completo con todos los usuarios
-    this.generarReporte('completo');
+    this.generarReporte('integrantes');
   }
-} 
+}

@@ -1,8 +1,21 @@
 package com.example.actualizacion_datos.controller;
 
 import com.example.actualizacion_datos.dto.UsuarioCompletoDTO;
+import com.example.actualizacion_datos.dto.UsuarioDetalleCompletoDTO;
 import com.example.actualizacion_datos.entity.Usuario;
+import com.example.actualizacion_datos.entity.ContactoEmergencia;
+import com.example.actualizacion_datos.entity.EstudioAcademico;
+import com.example.actualizacion_datos.entity.PersonaACargo;
+import com.example.actualizacion_datos.entity.RelacionConf;
+import com.example.actualizacion_datos.entity.Vehiculo;
+import com.example.actualizacion_datos.entity.Vivienda;
 import com.example.actualizacion_datos.service.UsuarioService;
+import com.example.actualizacion_datos.repository.ContactoEmergenciaRepository;
+import com.example.actualizacion_datos.repository.EstudioAcademicoRepository;
+import com.example.actualizacion_datos.repository.PersonaACargoRepository;
+import com.example.actualizacion_datos.repository.RelacionConfRepository;
+import com.example.actualizacion_datos.repository.VehiculoRepository;
+import com.example.actualizacion_datos.repository.ViviendaRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +42,24 @@ public class UsuarioController {
     
     @Autowired
     private UsuarioService usuarioService;
+    
+    @Autowired
+    private ContactoEmergenciaRepository contactoEmergenciaRepository;
+    
+    @Autowired
+    private EstudioAcademicoRepository estudioAcademicoRepository;
+    
+    @Autowired
+    private PersonaACargoRepository personaACargoRepository;
+    
+    @Autowired
+    private RelacionConfRepository relacionConfRepository;
+    
+    @Autowired
+    private VehiculoRepository vehiculoRepository;
+    
+    @Autowired
+    private ViviendaRepository viviendaRepository;
     
     // ========== CREAR USUARIO COMPLETO ==========
     @PostMapping("/crear-completo")
@@ -101,8 +132,35 @@ public class UsuarioController {
     }
     
     // ========== OBTENER TODOS LOS USUARIOS ==========
-    // (Método movido a ConsultaController para evitar duplicación)
-    
+    @GetMapping("/todos")
+    @Operation(summary = "Obtener todos los usuarios", description = "Obtiene la lista completa de todos los usuarios registrados")
+    public ResponseEntity<Map<String, Object>> obtenerTodosLosUsuarios() {
+        logger.info("🔍 Obteniendo todos los usuarios");
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            List<Usuario> usuarios = usuarioService.obtenerTodosLosUsuarios();
+            
+            response.put("success", true);
+            response.put("message", "Usuarios obtenidos exitosamente");
+            response.put("total", usuarios.size());
+            response.put("data", usuarios);
+            
+            logger.info("✅ Se obtuvieron {} usuarios exitosamente", usuarios.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener usuarios: {}", e.getMessage(), e);
+            
+            response.put("success", false);
+            response.put("message", "Error al obtener usuarios: " + e.getMessage());
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
     // ========== OBTENER USUARIO POR ID ==========
     @GetMapping("/{id}")
     @Operation(summary = "Obtener usuario por ID", description = "Obtiene un usuario específico por su ID")
@@ -430,6 +488,178 @@ public class UsuarioController {
         }
     }
     
+    // ========== OBTENER DETALLE COMPLETO DE USUARIO ==========
+    @GetMapping("/detalle-completo/{id_usuario}")
+    @Operation(summary = "Obtener detalle completo de usuario", description = "Obtiene toda la información relacionada de un usuario por id_usuario")
+    public ResponseEntity<Map<String, Object>> obtenerDetalleCompletoUsuario(
+            @Parameter(description = "ID del usuario") @PathVariable("id_usuario") Long idUsuario) {
+        logger.info("🔍 Obteniendo detalle completo de usuario por id_usuario: {}", idUsuario);
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Obtener usuario por ID
+            Optional<Usuario> usuarioOpt = usuarioService.obtenerUsuarioPorId(idUsuario);
+            
+            if (usuarioOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Usuario no encontrado con id_usuario: " + idUsuario);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
+            Usuario usuario = usuarioOpt.get();
+            
+            // Obtener todos los datos relacionados
+            List<ContactoEmergencia> contactosEmergencia = contactoEmergenciaRepository.findByIdUsuario(idUsuario);
+            List<EstudioAcademico> estudiosAcademicos = estudioAcademicoRepository.findByIdUsuario(idUsuario);
+            List<PersonaACargo> personasACargo = personaACargoRepository.findByIdUsuario(idUsuario);
+            List<RelacionConf> relacionesConflicto = relacionConfRepository.findByIdUsuario(idUsuario);
+            List<Vehiculo> vehiculos = vehiculoRepository.findByIdUsuario(idUsuario);
+            Optional<Vivienda> viviendaOpt = viviendaRepository.findByIdUsuario(idUsuario);
+            
+            // Crear el DTO con toda la información
+            UsuarioDetalleCompletoDTO detalleCompleto = new UsuarioDetalleCompletoDTO();
+            detalleCompleto.setUsuario(usuario);
+            detalleCompleto.setContactosEmergencia(contactosEmergencia);
+            detalleCompleto.setEstudiosAcademicos(estudiosAcademicos);
+            detalleCompleto.setPersonasACargo(personasACargo);
+            detalleCompleto.setRelacionesConflicto(relacionesConflicto);
+            detalleCompleto.setVehiculos(vehiculos);
+            detalleCompleto.setVivienda(viviendaOpt.orElse(null));
+            
+            response.put("success", true);
+            response.put("message", "Detalle completo obtenido exitosamente");
+            response.put("data", detalleCompleto);
+            
+            logger.info("✅ Detalle completo obtenido exitosamente para id_usuario: {}", idUsuario);
+            logger.info("📊 Resumen: {} contactos, {} estudios, {} personas a cargo, {} conflictos, {} vehículos, vivienda: {}", 
+                contactosEmergencia.size(), estudiosAcademicos.size(), personasACargo.size(), 
+                relacionesConflicto.size(), vehiculos.size(), viviendaOpt.isPresent() ? "Sí" : "No");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener detalle completo: {}", e.getMessage(), e);
+            
+            response.put("success", false);
+            response.put("message", "Error al obtener detalle completo: " + e.getMessage());
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    // ========== ENDPOINT DE PRUEBA PARA OBTENER TODOS LOS USUARIOS ==========
+    @GetMapping("/test/todos")
+    @Operation(summary = "Obtener todos los usuarios (prueba)", description = "Endpoint de prueba para obtener todos los usuarios sin autenticación")
+    public ResponseEntity<Map<String, Object>> obtenerTodosLosUsuariosPrueba() {
+        logger.info("🧪 Obteniendo todos los usuarios (prueba)");
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            List<Usuario> usuarios = usuarioService.obtenerTodosLosUsuarios();
+            
+            response.put("success", true);
+            response.put("message", "Usuarios obtenidos exitosamente");
+            response.put("total", usuarios.size());
+            response.put("data", usuarios);
+            
+            logger.info("✅ Se obtuvieron {} usuarios exitosamente (prueba)", usuarios.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener usuarios (prueba): {}", e.getMessage(), e);
+            
+            response.put("success", false);
+            response.put("message", "Error al obtener usuarios: " + e.getMessage());
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    // ========== ENDPOINT DE PRUEBA PARA OBTENER DETALLE COMPLETO ==========
+    @GetMapping("/test/detalle-completo/{id_usuario}")
+    @Operation(summary = "Obtener detalle completo de usuario (prueba)", description = "Endpoint de prueba para obtener toda la información relacionada de un usuario por id_usuario sin autenticación")
+    public ResponseEntity<Map<String, Object>> obtenerDetalleCompletoUsuarioPrueba(
+            @Parameter(description = "ID del usuario") @PathVariable("id_usuario") Long idUsuario) {
+        logger.info("🧪 Obteniendo detalle completo de usuario por id_usuario (prueba): {}", idUsuario);
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Obtener usuario por ID
+            Optional<Usuario> usuarioOpt = usuarioService.obtenerUsuarioPorId(idUsuario);
+            
+            if (usuarioOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Usuario no encontrado con id_usuario: " + idUsuario);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
+            Usuario usuario = usuarioOpt.get();
+            
+            // Obtener todos los datos relacionados
+            List<ContactoEmergencia> contactosEmergencia = contactoEmergenciaRepository.findByIdUsuario(idUsuario);
+            List<EstudioAcademico> estudiosAcademicos = estudioAcademicoRepository.findByIdUsuario(idUsuario);
+            List<PersonaACargo> personasACargo = personaACargoRepository.findByIdUsuario(idUsuario);
+            List<RelacionConf> relacionesConflicto = relacionConfRepository.findByIdUsuario(idUsuario);
+            List<Vehiculo> vehiculos = vehiculoRepository.findByIdUsuario(idUsuario);
+            Optional<Vivienda> viviendaOpt = viviendaRepository.findByIdUsuario(idUsuario);
+            
+            // Crear el DTO con toda la información
+            UsuarioDetalleCompletoDTO detalleCompleto = new UsuarioDetalleCompletoDTO();
+            detalleCompleto.setUsuario(usuario);
+            detalleCompleto.setContactosEmergencia(contactosEmergencia);
+            detalleCompleto.setEstudiosAcademicos(estudiosAcademicos);
+            detalleCompleto.setPersonasACargo(personasACargo);
+            detalleCompleto.setRelacionesConflicto(relacionesConflicto);
+            detalleCompleto.setVehiculos(vehiculos);
+            detalleCompleto.setVivienda(viviendaOpt.orElse(null));
+            
+            // Logs detallados de los datos
+            logger.info("🔍 DATOS DETALLADOS DEL USUARIO {}:", idUsuario);
+            logger.info("👤 Usuario: ID={}, Nombre={}, Cédula={}", usuario.getId(), usuario.getNombre(), usuario.getCedula());
+            logger.info("📞 Contactos de emergencia: {} registros", contactosEmergencia.size());
+            contactosEmergencia.forEach(contacto -> logger.info("   - Contacto: {}", contacto.toString()));
+            logger.info("🎓 Estudios académicos: {} registros", estudiosAcademicos.size());
+            estudiosAcademicos.forEach(estudio -> logger.info("   - Estudio: {}", estudio.toString()));
+            logger.info("👨‍👩‍👧‍👦 Personas a cargo: {} registros", personasACargo.size());
+            personasACargo.forEach(persona -> logger.info("   - Persona: {}", persona.toString()));
+            logger.info("⚖️ Relaciones de conflicto: {} registros", relacionesConflicto.size());
+            relacionesConflicto.forEach(relacion -> logger.info("   - Relación: {}", relacion.toString()));
+            logger.info("🚗 Vehículos: {} registros", vehiculos.size());
+            vehiculos.forEach(vehiculo -> logger.info("   - Vehículo: {}", vehiculo.toString()));
+            if (viviendaOpt.isPresent()) {
+                Vivienda vivienda = viviendaOpt.get();
+                logger.info("🏠 Vivienda: {}", vivienda.toString());
+            } else {
+                logger.info("🏠 Vivienda: No registrada");
+            }
+            
+            response.put("success", true);
+            response.put("message", "Detalle completo obtenido exitosamente");
+            response.put("data", detalleCompleto);
+            
+            logger.info("✅ Detalle completo obtenido exitosamente para id_usuario: {} (prueba)", idUsuario);
+            logger.info("📊 Resumen: {} contactos, {} estudios, {} personas a cargo, {} conflictos, {} vehículos, vivienda: {}", 
+                contactosEmergencia.size(), estudiosAcademicos.size(), personasACargo.size(), 
+                relacionesConflicto.size(), vehiculos.size(), viviendaOpt.isPresent() ? "Sí" : "No");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener detalle completo (prueba): {}", e.getMessage(), e);
+            
+            response.put("success", false);
+            response.put("message", "Error al obtener detalle completo: " + e.getMessage());
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
     // ========== ENDPOINT DE PRUEBA PARA VERIFICAR USUARIO ==========
     @GetMapping("/test/cedula/{cedula}")
     @Operation(summary = "Verificar usuario de prueba", description = "Endpoint de prueba para verificar usuarios sin autenticación")

@@ -15,14 +15,14 @@
       </h3>
 
       <!-- Formulario para agregar contacto -->
-      <form [formGroup]="contactoEmergenciaForm" class="add-contact-form">
+      <form [formGroup]="emergencyContactForm" class="add-contact-form">
         <div class="form-grid">
           <div class="form-column">
             <mat-form-field appearance="outline" class="minimal-field">
               <mat-label>Nombre completo</mat-label>
-              <input matInput formControlName="nombre_dtcontacto" placeholder="Nombre y apellidos" required>
+              <input matInput formControlName="nombre" placeholder="Nombre y apellidos" required>
               <mat-icon matSuffix>person</mat-icon>
-              <mat-error *ngIf="contactoEmergenciaForm.get('nombre_dtcontacto')?.hasError('required')">
+              <mat-error *ngIf="emergencyContactForm.get('nombre')?.hasError('required')">
                 Campo requerido
               </mat-error>
             </mat-form-field>
@@ -31,14 +31,14 @@
           <div class="form-column">
             <mat-form-field appearance="outline" class="minimal-field">
               <mat-label>Parentesco</mat-label>
-              <mat-select formControlName="parentesco_dtcontacto" required>
+              <mat-select formControlName="parentesco" required>
                 <mat-option value="">Seleccione</mat-option>
                 <mat-option *ngFor="let parentesco of parentescos" [value]="parentesco">
                   {{ parentesco }}
                 </mat-option>
               </mat-select>
               <mat-icon matSuffix>family_restroom</mat-icon>
-              <mat-error *ngIf="contactoEmergenciaForm.get('parentesco_dtcontacto')?.hasError('required')">
+              <mat-error *ngIf="emergencyContactForm.get('parentesco')?.hasError('required')">
                 Campo requerido
               </mat-error>
             </mat-form-field>
@@ -46,17 +46,11 @@
 
           <div class="form-column">
             <mat-form-field appearance="outline" class="minimal-field">
-              <mat-label>Teléfono o celular</mat-label>
-              <input matInput formControlName="telefono_dtcontacto" type="tel" placeholder="3001234567" required>
+              <mat-label>Teléfono</mat-label>
+              <input matInput formControlName="telefono" type="tel" placeholder="3001234567" required>
               <mat-icon matSuffix>phone</mat-icon>
-              <mat-error *ngIf="contactoEmergenciaForm.get('telefono_dtcontacto')?.hasError('required')">
+              <mat-error *ngIf="emergencyContactForm.get('telefono')?.hasError('required')">
                 Campo requerido
-              </mat-error>
-              <mat-error *ngIf="contactoEmergenciaForm.get('telefono_dtcontacto')?.hasError('minlength')">
-                Mínimo 7 dígitos
-              </mat-error>
-              <mat-error *ngIf="contactoEmergenciaForm.get('telefono_dtcontacto')?.hasError('maxlength')">
-                Máximo 10 dígitos
               </mat-error>
             </mat-form-field>
           </div>

@@ -115,13 +115,13 @@ public class UsuarioService {
     // ========== MAPEAR CAMPOS ADICIONALES ==========
     private void mapearCamposAdicionales(Map<String, Object> datos, Usuario usuario) {
         if (datos.get("numeroFijo") != null) {
-            usuario.setNumeroFijo(convertirALong(datos.get("numeroFijo")));
+            usuario.setNumeroFijo(convertirAString(datos.get("numeroFijo")));
         }
         if (datos.get("numeroCelular") != null) {
-            usuario.setNumeroCelular(convertirALong(datos.get("numeroCelular")));
+            usuario.setNumeroCelular(convertirAString(datos.get("numeroCelular")));
         }
         if (datos.get("numeroCorp") != null) {
-            usuario.setNumeroCorp(convertirALong(datos.get("numeroCorp")));
+            usuario.setNumeroCorp(convertirAString(datos.get("numeroCorp")));
         }
         if (datos.get("cedulaExpedicion") != null) {
             usuario.setCedulaExpedicion(convertirAString(datos.get("cedulaExpedicion")));

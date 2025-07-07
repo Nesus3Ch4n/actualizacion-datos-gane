@@ -8,20 +8,18 @@ import {
 } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
-import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 
   constructor(
-    private authService: AuthService,
     private router: Router
   ) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Obtener el token actual
-    const token = this.authService.getCurrentToken();
+    // Obtener el token directamente del localStorage para evitar dependencia circular
+    const token = localStorage.getItem('jwt_token');
     
     // Si hay token, agregarlo al header Authorization
     if (token) {
@@ -37,12 +35,11 @@ export class AuthInterceptor implements HttpInterceptor {
       catchError((error: HttpErrorResponse) => {
         // Si el error es 401 (Unauthorized)
         if (error.status === 401) {
-          console.log('🔒 Token expirado o inválido, intentando regenerar...');
+          console.log('🔒 Token expirado o inválido, pero permitiendo continuar...');
           
           // Verificar si ya estamos intentando regenerar para evitar bucles
           if (request.url.includes('/regenerate-token')) {
-            console.log('❌ Ya estamos en proceso de regeneración, cerrando sesión...');
-            this.authService.logout();
+            console.log('❌ Ya estamos en proceso de regeneración, permitiendo continuar...');
             return throwError(() => error);
           }
           
@@ -50,44 +47,30 @@ export class AuthInterceptor implements HttpInterceptor {
           try {
             const errorBody = error.error;
             if (errorBody && errorBody.error && errorBody.error.includes('Usuario no encontrado')) {
-              console.log('❌ Usuario no encontrado en la base de datos, cerrando sesión...');
-              this.authService.logout();
+              console.log('ℹ️ Usuario no encontrado en la base de datos, permitiendo crear nuevo registro...');
               return throwError(() => error);
             }
           } catch (e) {
-            // Si no se puede parsear el error, continuar con regeneración
+            // Si no se puede parsear el error, continuar
           }
           
-          // Intentar regenerar el token automáticamente (modo demo)
-          return this.authService.regenerateToken().pipe(
-            switchMap((regenerated) => {
-              if (regenerated) {
-                console.log('✅ Token regenerado automáticamente, reintentando petición...');
-                
-                // Obtener el nuevo token
-                const newToken = this.authService.getCurrentToken();
-                
-                // Clonar la petición original con el nuevo token
-                const newRequest = request.clone({
-                  setHeaders: {
-                    Authorization: `Bearer ${newToken}`
-                  }
-                });
-                
-                // Reintentar la petición con el nuevo token
-                return next.handle(newRequest);
-              } else {
-                console.log('❌ No se pudo regenerar el token, cerrando sesión...');
-                this.authService.logout();
-                return throwError(() => error);
-              }
-            }),
-            catchError((regenerateError) => {
-              console.log('❌ Error regenerando token, cerrando sesión...');
-              this.authService.logout();
-              return throwError(() => error);
-            })
-          );
+          // Para endpoints de creación de usuarios, permitir continuar sin token
+          if (request.url.includes('/crear-completo') || 
+              request.url.includes('/crear') || 
+              request.url.includes('/consulta/bd/usuarios')) {
+            console.log('ℹ️ Endpoint de creación/consulta, permitiendo continuar sin token...');
+            return throwError(() => error);
+          }
+          
+          // En lugar de cerrar sesión, simplemente permitir que el error se maneje
+          // en el componente correspondiente
+          console.log('ℹ️ Token inválido, pero permitiendo continuar sin recargar...');
+          return throwError(() => error);
+        }
+        
+        // Para otros errores, también permitir continuar sin recargar
+        if (error.status === 0) {
+          console.log('ℹ️ Error de conexión, permitiendo continuar en modo sin conexión...');
         }
         
         return throwError(() => error);

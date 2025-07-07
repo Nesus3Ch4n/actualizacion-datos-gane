@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { InformacionPersonalComponent } from './informacion-personal/informacion-personal.component';
 import { ViviendaComponent } from './vivienda/vivienda.component';
 import { VehiculoComponent } from './vehiculo/vehiculo.component';
@@ -12,8 +13,7 @@ import { ConfirmationModalComponent } from './declaracion/confirmation-modal.com
 import { FormularioCompletadoComponent } from './declaracion/formulario-completado.component';
 import { OnlyNumbersDirective } from '../../directives/only-numbers.directive';
 import { AppRoutingModule } from '../../app-routing.module';
-import { BsDatepickerModule, BsLocaleService } from 'ngx-bootstrap/datepicker';
-import { SharedModule } from '../../shared/shared.module';
+import { MaterialModule } from '../../shared/material.module';
 
 @NgModule({
   declarations: [
@@ -29,15 +29,13 @@ import { SharedModule } from '../../shared/shared.module';
     OnlyNumbersDirective
   ],
   imports: [
-    SharedModule,
     RouterModule,
+    FormsModule,
+    ReactiveFormsModule,
     AppRoutingModule,
-    BsDatepickerModule.forRoot()
+    MaterialModule,
+    CommonModule
   ],
   providers: [DatePipe]
 })
-export class FormularioModule {
-  constructor( private bsLocaleService: BsLocaleService){
-    this.bsLocaleService.use('es');
-  }
-}
+export class FormularioModule { }

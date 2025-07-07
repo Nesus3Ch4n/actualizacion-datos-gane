@@ -6,6 +6,7 @@ import { FormNavigationService } from '../../../services/form-navigation.service
 import { ContactoEmergenciaService } from '../../../services/contacto-emergencia.service';
 import { UsuarioSessionService } from '../../../services/usuario-session.service';
 import { firstValueFrom } from 'rxjs';
+import { FormDataService } from '../../../services/form-data.service'; // Added import
 
 @Component({
   selector: 'app-contacto',
@@ -13,14 +14,11 @@ import { firstValueFrom } from 'rxjs';
   styleUrls: ['./contacto.component.scss']
 })
 export class ContactoComponent implements OnInit {
-  contactoEmergenciaForm!: FormGroup;
+  emergencyContactForm!: FormGroup; // Changed variable name
   contactos: Array<{ 
     nombre: string, 
     parentesco: string, 
-    telefono: string,
-    email?: string,
-    direccion?: string,
-    observaciones?: string
+    telefono: string
   }> = [];
   isLoading = false;
 
@@ -44,53 +42,93 @@ export class ContactoComponent implements OnInit {
     private notificationService: NotificationService,
     private formNavigationService: FormNavigationService,
     private contactoEmergenciaService: ContactoEmergenciaService,
-    private usuarioSessionService: UsuarioSessionService
+    private usuarioSessionService: UsuarioSessionService,
+    private formDataService: FormDataService // Added injection
   ) {}
 
   ngOnInit(): void {
-    this.contactoEmergenciaForm = this.fb.group({
-      nombre_dtcontacto: ['', Validators.required],
-      parentesco_dtcontacto: ['', Validators.required],
-      telefono_dtcontacto: ['', [Validators.required, Validators.minLength(7), Validators.maxLength(10)]]
+    this.emergencyContactForm = this.fb.group({
+      nombre: ['', Validators.required],
+      parentesco: ['', Validators.required],
+      telefono: ['', Validators.required]
     });
 
     // Cargar datos guardados si existen
     this.loadFormState();
-    this.loadExistingContacts();
-  }
-
-  async loadExistingContacts(): Promise<void> {
-    try {
-      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-      if (idUsuario) {
-        console.log('📋 Cargando contactos de emergencia existentes para usuario ID:', idUsuario);
-        const contactosExistentes = await this.contactoEmergenciaService.obtenerContactosPorUsuario(idUsuario);
-        
-        if (contactosExistentes && contactosExistentes.length > 0) {
-          this.contactos = contactosExistentes;
-          console.log('✅ Contactos de emergencia cargados desde BD:', this.contactos);
-          this.notificationService.showInfo(
-            '📋 Contactos cargados',
-            `Se cargaron ${this.contactos.length} contacto(s) de emergencia existente(s)`
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar contactos existentes:', error);
-      // No mostrar error si no hay contactos (es normal)
-    }
+    
+    // Cargar datos de contacto de emergencia automáticamente
+    this.cargarContactoExistente();
   }
 
   loadFormState(): void {
-    // Componente simplificado - no cargar datos de contactos ya que el proyecto 
-    // se enfoca solo en información personal
-    console.log('ℹ️ Componente de contacto disponible pero no utilizado en el flujo simplificado');
+    // Cargar datos del estado del formulario si existen
+    const contactosGuardados = this.formStateService.getContactosEmergencia();
+    if (contactosGuardados && contactosGuardados.length > 0) {
+      console.log('📋 Contactos de emergencia cargados desde estado del formulario:', contactosGuardados);
+      // Tomar el primer contacto si existe
+      const primerContacto = contactosGuardados[0];
+      this.cargarDatosEnFormulario(primerContacto);
+    }
+  }
+
+  async cargarContactoExistente(): Promise<void> {
+    try {
+      this.isLoading = true;
+      console.log('📞 Cargando datos de contacto de emergencia existentes...');
+      
+      // Obtener la cédula del usuario desde el servicio de sesión
+      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
+      if (!cedula) {
+        console.log('⚠️ No hay cédula disponible para cargar contacto de emergencia');
+        return;
+      }
+
+      // Obtener todos los datos del usuario incluyendo contacto de emergencia
+      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      
+      if (datosCompletos && datosCompletos.contactosEmergencia) {
+        const contactos = datosCompletos.contactosEmergencia;
+        console.log('✅ Contactos de emergencia cargados desde datos completos:', contactos);
+        
+        // Convertir los contactos al formato del componente
+        this.contactos = contactos.map((contacto: any) => ({
+          nombre: contacto.nombreCompleto || contacto.nombre || '',
+          parentesco: contacto.parentesco || '',
+          telefono: contacto.numeroCelular || contacto.telefono || ''
+        }));
+        
+        this.notificationService.showSuccess(
+          '✅ Datos cargados',
+          `Se cargaron ${this.contactos.length} contactos de emergencia`
+        );
+      } else {
+        console.log('ℹ️ No se encontraron datos de contacto de emergencia en los datos completos');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al cargar datos de contacto de emergencia:', error);
+      this.notificationService.showWarning(
+        '⚠️ Error al cargar datos',
+        'No se pudieron cargar los datos de contacto de emergencia'
+      );
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  cargarDatosEnFormulario(contacto: any): void {
+    // Cargar datos en el formulario
+    this.emergencyContactForm.patchValue({
+      nombre: contacto.nombre || '',
+      parentesco: contacto.parentesco || '',
+      telefono: contacto.telefono || ''
+    });
   }
 
   canAddContact(): boolean {
-    const requiredFields = ['nombre_dtcontacto', 'parentesco_dtcontacto', 'telefono_dtcontacto'];
+    const requiredFields = ['nombre', 'parentesco', 'telefono'];
     return requiredFields.every(field => {
-      const control = this.contactoEmergenciaForm.get(field);
+      const control = this.emergencyContactForm.get(field);
       return control && control.value && control.value.toString().trim() !== '';
     });
   }
@@ -98,8 +136,8 @@ export class ContactoComponent implements OnInit {
   agregarContacto(): void {
     if (!this.canAddContact()) {
       // Marcar todos los campos como tocados para mostrar errores
-      Object.keys(this.contactoEmergenciaForm.controls).forEach(key => {
-        this.contactoEmergenciaForm.get(key)?.markAsTouched();
+      Object.keys(this.emergencyContactForm.controls).forEach(key => { // Changed variable name
+        this.emergencyContactForm.get(key)?.markAsTouched();
       });
       
       this.notificationService.showWarning(
@@ -111,9 +149,9 @@ export class ContactoComponent implements OnInit {
 
     try {
       const nuevoContacto = {
-        nombre: this.contactoEmergenciaForm.get('nombre_dtcontacto')?.value,
-        parentesco: this.contactoEmergenciaForm.get('parentesco_dtcontacto')?.value,
-        telefono: this.contactoEmergenciaForm.get('telefono_dtcontacto')?.value
+        nombre: this.emergencyContactForm.get('nombre')?.value, // Changed variable name
+        parentesco: this.emergencyContactForm.get('parentesco')?.value, // Changed variable name
+        telefono: this.emergencyContactForm.get('telefono')?.value // Changed variable name
       };
 
       // En el flujo simplificado, solo guardamos localmente
@@ -125,7 +163,7 @@ export class ContactoComponent implements OnInit {
       );
 
       // Limpiar el formulario
-      this.contactoEmergenciaForm.reset();
+      this.emergencyContactForm.reset(); // Changed variable name
       
     } catch (error) {
       console.error('Error al agregar contacto:', error);
@@ -174,6 +212,10 @@ export class ContactoComponent implements OnInit {
 
       console.log('👤 Usuario ID para guardar contactos:', idUsuario);
       
+      // Verificar si ya existen contactos de emergencia para este usuario
+      const contactosExistentes = await this.contactoEmergenciaService.obtenerContactosPorUsuario(idUsuario);
+      const tieneContactosExistentes = contactosExistentes && contactosExistentes.length > 0;
+      
       // Guardar contactos de emergencia en el backend usando el servicio
       const resultado = await this.contactoEmergenciaService.guardarContactosEmergencia(idUsuario, this.contactos);
       
@@ -181,10 +223,18 @@ export class ContactoComponent implements OnInit {
       
       // Verificar que se guardaron correctamente
       if (resultado && resultado.success) {
+        // Mostrar mensaje apropiado según si existían datos previos
+        if (tieneContactosExistentes) {
+          this.notificationService.showSuccess(
+            '✅ Contactos de emergencia actualizados',
+            `Se actualizaron ${this.contactos.length} contactos de emergencia en la base de datos`
+          );
+        } else {
         this.notificationService.showSuccess(
           '✅ Contactos de emergencia guardados',
           `Se registraron ${this.contactos.length} contactos de emergencia en la base de datos`
         );
+        }
         
         // Continuar al siguiente paso
         this.formNavigationService.next();

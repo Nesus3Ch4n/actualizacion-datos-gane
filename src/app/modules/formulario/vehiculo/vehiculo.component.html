@@ -24,9 +24,6 @@
           </mat-option>
         </mat-select>
         <mat-icon matSuffix>directions_car</mat-icon>
-        <mat-error *ngIf="vehicleForm.get('vehiculo')?.hasError('required')">
-          Campo requerido
-        </mat-error>
       </mat-form-field>
     </div>
 
@@ -34,8 +31,7 @@
     <div class="vehicle-details" *ngIf="vehicleForm.get('vehiculo')?.value === '2'">
       <h3 class="section-title">
         <mat-icon>info</mat-icon>
-        Agregar vehículo
-        <span class="help-text" *ngIf="vehiculos.length > 0">(Puedes agregar más vehículos)</span>
+        Información de Vehículo
       </h3>
       
       <!-- Grid de campos en 2 columnas -->
@@ -69,18 +65,12 @@
               </mat-option>
             </mat-select>
             <mat-icon matSuffix>category</mat-icon>
-            <mat-error *ngIf="vehicleForm.get('tipo_vehiculo')?.hasError('required')">
-              Campo requerido
-            </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="minimal-field">
             <mat-label>Marca</mat-label>
             <input matInput formControlName="marca" placeholder="Ej: Toyota, Honda, Yamaha">
             <mat-icon matSuffix>branding_watermark</mat-icon>
-            <mat-error *ngIf="vehicleForm.get('marca')?.hasError('required')">
-              Campo requerido
-            </mat-error>
           </mat-form-field>
         </div>
 
@@ -90,9 +80,6 @@
             <mat-label>Placa</mat-label>
             <input matInput formControlName="placa" placeholder="Ej: ABC123" style="text-transform: uppercase;">
             <mat-icon matSuffix>pin</mat-icon>
-            <mat-error *ngIf="vehicleForm.get('placa')?.hasError('required')">
-              Campo requerido
-            </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="minimal-field">
@@ -102,9 +89,6 @@
               <mat-option *ngFor="let year of years" [value]="year">{{ year }}</mat-option>
             </mat-select>
             <mat-icon matSuffix>calendar_today</mat-icon>
-            <mat-error *ngIf="vehicleForm.get('año')?.hasError('required')">
-              Campo requerido
-            </mat-error>
           </mat-form-field>
         </div>
       </div>
@@ -115,30 +99,26 @@
           <mat-label>A nombre de quién está el vehículo</mat-label>
           <input matInput formControlName="prop_vehiculo" placeholder="Nombre completo del propietario">
           <mat-icon matSuffix>person</mat-icon>
-          <mat-error *ngIf="vehicleForm.get('prop_vehiculo')?.hasError('required')">
-            Campo requerido
-          </mat-error>
         </mat-form-field>
       </div>
 
-      <!-- Botón agregar vehículo -->
+      <!-- Botón para agregar -->
       <div class="add-button-section">
-        <button mat-raised-button color="accent" class="add-button" 
-                (click)="agregarVehiculo()" 
-                [disabled]="!canAddVehicle()"
-                type="button">
+        <button mat-raised-button color="accent" class="add-button" (click)="agregarVehiculo()" [disabled]="!canAddVehicle()">
           <mat-icon>add</mat-icon>
-          Agregar vehículo
+          Añadir vehículo
         </button>
       </div>
+    </div>
 
-      <!-- Lista de vehículos agregados -->
-      <div class="vehicles-list" *ngIf="vehiculos.length > 0">
-        <h3 class="section-title">
-          <mat-icon>list</mat-icon>
-          Vehículos registrados ({{ vehiculos.length }})
-        </h3>
-        
+    <!-- Lista de vehículos -->
+    <div class="vehicles-section" *ngIf="vehiculos.length > 0">
+      <h3 class="section-title">
+        <mat-icon>list</mat-icon>
+        Vehículos Registrados
+      </h3>
+      
+      <div class="vehicles-list">
         <mat-card class="vehicle-card" *ngFor="let vehiculo of vehiculos; let i = index">
           <mat-card-content>
             <div class="vehicle-info">
@@ -149,12 +129,18 @@
                 </h4>
                 <p class="vehicle-type">
                   <mat-icon>category</mat-icon>
-                  {{ vehiculo.tipo_vehiculo }} ({{ vehiculo.anio }})
+                  {{ vehiculo.tipo_vehiculo | titlecase }}
                 </p>
-                <p class="vehicle-owner">
+                <p class="vehicle-institution">
                   <mat-icon>person</mat-icon>
-                  Propietario: {{ vehiculo.propietario }}
+                  {{ vehiculo.propietario }}
                 </p>
+                <div class="vehicle-meta">
+                  <span class="vehicle-year" *ngIf="vehiculo.anio">
+                    <mat-icon>calendar_today</mat-icon>
+                    Año: {{ vehiculo.anio }}
+                  </span>
+                </div>
               </div>
               <div class="vehicle-actions">
                 <button mat-icon-button color="warn" (click)="eliminarVehiculo(i)" matTooltip="Eliminar vehículo">
@@ -175,12 +161,10 @@
       <mat-icon>arrow_back</mat-icon>
       Atrás
     </button>
-    <button mat-flat-button color="primary" class="minimal-button primary" 
-            (click)="validateAndNext()" 
-            [disabled]="isLoading || (vehicleForm.get('vehiculo')?.value === '2' && vehiculos.length === 0)">
+    <button mat-flat-button color="primary" class="minimal-button primary" (click)="validateAndNext()" [disabled]="isLoading">
       <mat-icon *ngIf="isLoading" class="spinner">refresh</mat-icon>
       <span *ngIf="!isLoading">Siguiente</span>
-      <span *ngIf="isLoading">Procesando...</span>
+      <span *ngIf="isLoading">Guardando...</span>
       <mat-icon *ngIf="!isLoading">arrow_forward</mat-icon>
     </button>
   </div>

@@ -10,13 +10,27 @@ import { ContactoComponent } from './modules/formulario/contacto/contacto.compon
 import { DeclaracionComponent } from './modules/formulario/declaracion/declaracion.component';
 import { FormularioCompletadoComponent } from './modules/formulario/declaracion/formulario-completado.component';
 import { AdminPanelComponent } from './modules/admin/admin-panel.component';
+import { AuditoriaComponent } from './components/auditoria/auditoria.component';
 import { AuthGuard } from './guards/auth.guard';
-import { WelcomeComponent } from './components/welcome.component';
+import { AdminGuard } from './guards/admin.guard';
 
 const routes: Routes = [
-  // Ruta de bienvenida (sin autenticación)
-  { path: 'welcome', component: WelcomeComponent },
-  
+  // Ruta de bienvenida (pública, sin autenticación)
+  { 
+    path: 'welcome', 
+    component: FormularioComponent,
+    children: [
+      { path: '', redirectTo: 'personal', pathMatch: 'full' },
+      { path: 'personal', component: InformacionPersonalComponent },
+      { path: 'academico', component: AcademicoComponent },
+      { path: 'vehiculo', component: VehiculoComponent },
+      { path: 'vivienda', component: ViviendaComponent },
+      { path: 'personas-acargo', component: PersonasAcargoComponent },
+      { path: 'contacto', component: ContactoComponent },
+      { path: 'declaracion', component: DeclaracionComponent },
+    ]
+  },
+
   // Ruta principal del formulario (requiere autenticación)
   { 
     path: 'formulario', 
@@ -52,12 +66,18 @@ const routes: Routes = [
    { 
      path: 'admin', 
      component: AdminPanelComponent,
-     canActivate: [AuthGuard]
+     canActivate: [AdminGuard]
    },
    
-   // Redirigir a welcome si no hay autenticación
-   { path: '', redirectTo: '/welcome', pathMatch: 'full' },
-   { path: '**', redirectTo: 'welcome' }
+   { 
+     path: 'auditoria', 
+     component: AuditoriaComponent,
+     canActivate: [AdminGuard]
+   },
+   
+   // Redirigir directamente al formulario
+   { path: '', redirectTo: '/formulario', pathMatch: 'full' },
+   { path: '**', redirectTo: '/welcome' }
 ];
 
 @NgModule({

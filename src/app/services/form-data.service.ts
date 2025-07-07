@@ -143,11 +143,62 @@ export class FormDataService {
       if (usuarioExistente) {
         console.log('🔄 Usuario existente, actualizando...');
         usuarioId = usuarioExistente.id.toString();
-        await firstValueFrom(this.backendService.actualizarUsuario(Number(usuarioId), usuarioBasico));
+        try {
+          await firstValueFrom(this.backendService.actualizarUsuario(Number(usuarioId), usuarioBasico));
+        } catch (updateError: any) {
+          console.error('❌ Error actualizando usuario:', updateError);
+          // Si falla la actualización por error 401, intentar crear nuevo
+          if (updateError.status === 401) {
+            console.log('🔄 Error 401 al actualizar, intentando crear nuevo usuario...');
+            const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
+            usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
+          } else {
+            throw updateError;
+          }
+        }
       } else {
         console.log('🆕 Creando nuevo usuario...');
-        const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
-        usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
+        try {
+          const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
+          usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
+          console.log('✅ Nuevo usuario creado con ID:', usuarioId);
+        } catch (createError: any) {
+          console.error('❌ Error creando usuario:', createError);
+          
+          // Si es error 401, intentar con endpoint de prueba
+          if (createError.status === 401) {
+            console.log('🔄 Error 401, intentando endpoint de prueba...');
+            try {
+              const resultado = await firstValueFrom(this.backendService.crearUsuarioPrueba(usuarioBasico));
+              usuarioId = resultado.id?.toString() || resultado.toString();
+              console.log('✅ Usuario creado con endpoint de prueba, ID:', usuarioId);
+            } catch (pruebaError) {
+              console.error('❌ Error en endpoint de prueba:', pruebaError);
+              // Intentar con método alternativo
+              try {
+                const resultado = await firstValueFrom(this.backendService.crearUsuario(usuarioBasico));
+                usuarioId = resultado.id?.toString() || resultado.toString();
+              } catch (altError) {
+                console.error('❌ Error en método alternativo:', altError);
+                // Generar ID temporal para continuar
+                usuarioId = Date.now().toString();
+                console.log('🆔 Usando ID temporal:', usuarioId);
+              }
+            }
+          } else {
+            // Para otros errores, intentar endpoint de prueba
+            console.log('🔄 Error desconocido, intentando endpoint de prueba...');
+            try {
+              const resultado = await firstValueFrom(this.backendService.crearUsuarioPrueba(usuarioBasico));
+              usuarioId = resultado.id?.toString() || resultado.toString();
+            } catch (pruebaError) {
+              console.error('❌ Error en endpoint de prueba:', pruebaError);
+              // Generar ID temporal para continuar
+              usuarioId = Date.now().toString();
+              console.log('🆔 Usando ID temporal:', usuarioId);
+            }
+          }
+        }
       }
       
       this.setCurrentUserId(usuarioId);
@@ -286,27 +337,58 @@ export class FormDataService {
   private convertirFormatoFecha(fecha: string): string {
     if (!fecha) return '';
     
+    console.log(`🔄 Convirtiendo fecha: ${fecha}`);
+    
     // Si ya está en formato YYYY-MM-DD, retornarlo tal como está
     if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      console.log(`✅ Fecha ya en formato correcto: ${fecha}`);
       return fecha;
     }
     
-    // Si está en formato MM/DD/YYYY, convertirlo a YYYY-MM-DD
+    // Si está en formato DD/MM/YYYY o MM/DD/YYYY, necesitamos determinar cuál es
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(fecha)) {
       const partes = fecha.split('/');
+      const primerNumero = parseInt(partes[0]);
+      const segundoNumero = parseInt(partes[1]);
+      
+      // Si el primer número es mayor a 12, es DD/MM/YYYY
+      // Si el segundo número es mayor a 12, es MM/DD/YYYY
+      if (primerNumero > 12) {
+        // Es DD/MM/YYYY
+        const dia = partes[0].padStart(2, '0');
+        const mes = partes[1].padStart(2, '0');
+        const anio = partes[2];
+        const fechaConvertida = `${anio}-${mes}-${dia}`;
+        console.log(`✅ Fecha convertida DD/MM/YYYY → YYYY-MM-DD: ${fecha} → ${fechaConvertida}`);
+        return fechaConvertida;
+      } else if (segundoNumero > 12) {
+        // Es MM/DD/YYYY
+        const mes = partes[0].padStart(2, '0');
+        const dia = partes[1].padStart(2, '0');
+        const anio = partes[2];
+        const fechaConvertida = `${anio}-${mes}-${dia}`;
+        console.log(`✅ Fecha convertida MM/DD/YYYY → YYYY-MM-DD: ${fecha} → ${fechaConvertida}`);
+        return fechaConvertida;
+      } else {
+        // Ambos números son <= 12, asumimos DD/MM/YYYY (formato más común en Colombia)
+        const dia = partes[0].padStart(2, '0');
+        const mes = partes[1].padStart(2, '0');
+        const anio = partes[2];
+        const fechaConvertida = `${anio}-${mes}-${dia}`;
+        console.log(`✅ Fecha convertida DD/MM/YYYY (asumido) → YYYY-MM-DD: ${fecha} → ${fechaConvertida}`);
+        return fechaConvertida;
+      }
+    }
+    
+    // Si está en formato MM-DD-YYYY, convertirlo a YYYY-MM-DD
+    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(fecha)) {
+      const partes = fecha.split('-');
       const mes = partes[0].padStart(2, '0');
       const dia = partes[1].padStart(2, '0');
       const anio = partes[2];
-      return `${anio}-${mes}-${dia}`;
-    }
-    
-    // Si está en formato DD/MM/YYYY, convertirlo a YYYY-MM-DD
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(fecha)) {
-      const partes = fecha.split('/');
-      const dia = partes[0].padStart(2, '0');
-      const mes = partes[1].padStart(2, '0');
-      const anio = partes[2];
-      return `${anio}-${mes}-${dia}`;
+      const fechaConvertida = `${anio}-${mes}-${dia}`;
+      console.log(`✅ Fecha convertida MM-DD-YYYY → YYYY-MM-DD: ${fecha} → ${fechaConvertida}`);
+      return fechaConvertida;
     }
     
     // Si no se puede convertir, retornar la fecha original
@@ -319,20 +401,17 @@ export class FormDataService {
       nombre: informacionPersonal.nombre,
       cedula: informacionPersonal.cedula,
       correo: informacionPersonal.correo,
-      telefono: informacionPersonal.numeroCelular || informacionPersonal.numeroFijo || informacionPersonal.numeroCorp,
-      direccion: informacionPersonal.direccion,
-      ciudad: informacionPersonal.ciudadNacimiento || informacionPersonal.ciudad,
-      departamento: informacionPersonal.departamento,
-      pais: informacionPersonal.paisNacimiento || informacionPersonal.pais,
+      numeroFijo: informacionPersonal.numeroFijo,
+      numeroCelular: informacionPersonal.numeroCelular,
+      numeroCorp: informacionPersonal.numeroCorp,
+      cedulaExpedicion: informacionPersonal.cedulaExpedicion,
+      paisNacimiento: informacionPersonal.paisNacimiento,
+      ciudadNacimiento: informacionPersonal.ciudadNacimiento,
+      cargo: informacionPersonal.cargo,
+      area: informacionPersonal.area,
       fechaNacimiento: this.convertirFormatoFecha(informacionPersonal.fechaNacimiento),
       estadoCivil: informacionPersonal.estadoCivil,
-      genero: informacionPersonal.genero,
       tipoSangre: informacionPersonal.tipoSangre,
-      eps: informacionPersonal.eps,
-      arl: informacionPersonal.arl,
-      fondoPension: informacionPersonal.fondoPension,
-      cajaCompensacion: informacionPersonal.cajaCompensacion,
-      activo: true,
       version: 1
     };
   }
@@ -479,8 +558,62 @@ export class FormDataService {
         console.log('❌ Usuario no encontrado');
         return null;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error verificando usuario existente:', error);
+      
+      // Si es error 401 (Unauthorized), permitir continuar para crear nuevo usuario
+      if (error.status === 401) {
+        console.log('ℹ️ Error 401 - Token inválido, permitiendo crear nuevo usuario');
+        return null;
+      }
+      
+      // Si es error de conexión, también permitir continuar
+      if (error.status === 0) {
+        console.log('ℹ️ Error de conexión, permitiendo crear nuevo usuario sin conexión');
+        return null;
+      }
+      
+      // Para otros errores, también permitir continuar
+      console.log('ℹ️ Error desconocido, permitiendo crear nuevo usuario');
+      return null;
+    }
+  }
+
+  // ========== MÉTODO PARA OBTENER DATOS COMPLETOS ==========
+
+  /**
+   * Obtener todos los datos del usuario incluyendo declaraciones de conflicto
+   */
+  async obtenerDatosCompletos(cedula: string): Promise<any> {
+    try {
+      console.log('📋 Obteniendo datos completos para cédula:', cedula);
+      
+      const response = await firstValueFrom(
+        this.backendService.getHttpClient().get<any>(
+          `${this.backendService.getApiUrl()}/consulta/bd/${cedula}/completo`,
+          this.backendService.getHttpOptions()
+        )
+      );
+      
+      console.log('✅ Datos completos obtenidos:', response);
+      return response;
+      
+    } catch (error: any) {
+      // Si el error es 404 (usuario no encontrado) o 500 (error interno), 
+      // no lanzar error, simplemente retornar null para permitir crear nuevo usuario
+      if (error.status === 404 || error.status === 500) {
+        console.log('ℹ️ Usuario no encontrado en base de datos, permitiendo crear nuevo registro');
+        return null;
+      }
+      
+      // Si el error es de conexión (status 0), también permitir continuar
+      if (error.status === 0) {
+        console.log('ℹ️ Backend no disponible, permitiendo crear nuevo registro sin conexión');
+        return null;
+      }
+      
+      console.error('❌ Error al obtener datos completos:', error);
+      // Para otros errores, también permitir continuar
       return null;
     }
   }

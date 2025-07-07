@@ -38,13 +38,17 @@ export class BackendService {
     console.log('🌐 URL del API:', this.API_URL);
     console.log('📡 Headers:', this.httpOptions);
     
-    console.log('🚀 Enviando petición HTTP POST a:', `${this.API_URL}/formulario/paso1/informacion-personal`);
+    console.log('🚀 Enviando petición HTTP POST a:', `${this.API_URL}/USUARIO`);
     
-    return this.http.post<any>(`${this.API_URL}/formulario/paso1/informacion-personal`, usuarioData, this.httpOptions)
+    return this.http.post<any>(`${this.API_URL}/USUARIO`, usuarioData, this.httpOptions)
       .pipe(
         map(response => {
           console.log('✅ Respuesta del backend:', response);
-          return response;
+          if (response.success) {
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al crear usuario');
+          }
         }),
         catchError(error => {
           console.error('❌ Error completo:', error);
@@ -126,6 +130,30 @@ export class BackendService {
         }),
         catchError(error => {
           console.error('❌ Error en backend service:', error);
+          const errorMessage = error.error?.message || error.message || 'Error de conexión con el servidor';
+          return throwError(() => new Error(errorMessage));
+        })
+      );
+  }
+
+  /**
+   * Crear usuario usando endpoint de prueba (sin autenticación)
+   */
+  crearUsuarioPrueba(usuarioData: any): Observable<any> {
+    console.log('🚀 Enviando datos al backend (prueba):', usuarioData);
+    
+    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/test/crear-usuario`, usuarioData, this.httpOptions)
+      .pipe(
+        map(response => {
+          console.log('✅ Respuesta del backend (prueba):', response);
+          if (response.success) {
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error desconocido');
+          }
+        }),
+        catchError(error => {
+          console.error('❌ Error en backend service (prueba):', error);
           const errorMessage = error.error?.message || error.message || 'Error de conexión con el servidor';
           return throwError(() => new Error(errorMessage));
         })

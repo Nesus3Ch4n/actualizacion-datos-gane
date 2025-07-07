@@ -17,15 +17,7 @@ export class AppComponent implements OnInit {
     // Verificar si hay un token en la URL (cuando viene de la plataforma PAU)
     this.authService.checkForTokenInUrl();
     
-    // Verificar conexión con el backend
-    this.authService.checkBackendConnection().subscribe(
-      connected => {
-        if (connected) {
-          console.log('✅ Conexión con backend establecida');
-        } else {
-          console.warn('⚠️ No se pudo conectar con el backend');
-        }
-      }
-    );
+    // No verificar conexión con backend para evitar recargas
+    console.log('ℹ️ Modo sin verificación de backend - evitando recargas');
   }
 }

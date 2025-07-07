@@ -57,6 +57,9 @@ export class DeclaracionComponent implements OnInit {
 
     // Cargar datos guardados si existen
     this.loadFormState();
+    
+    // Cargar declaraciones de conflicto automáticamente
+    this.cargarDeclaracionesConflicto();
   }
 
   saveFormState(): void {
@@ -67,8 +70,14 @@ export class DeclaracionComponent implements OnInit {
   }
 
   loadFormState(): void {
-    // En el flujo simplificado, no cargar datos de declaraciones
-    console.log('ℹ️ Componente de declaraciones disponible pero simplificado');
+    // Cargar datos del estado del formulario si existen
+    const declaracionesGuardadas = this.formStateService.getDeclaraciones();
+    if (declaracionesGuardadas && declaracionesGuardadas.length > 0) {
+      console.log('📋 Declaraciones de conflicto cargadas desde estado del formulario:', declaracionesGuardadas);
+      // Tomar la primera declaración si existe
+      const primeraDeclaracion = declaracionesGuardadas[0];
+      this.cargarDatosEnFormulario(primeraDeclaracion);
+    }
   }
 
   toggleConflictFields(value: string): void {
@@ -226,6 +235,10 @@ export class DeclaracionComponent implements OnInit {
 
       console.log('👤 Usuario ID:', idUsuario);
 
+      // Verificar si ya existen declaraciones de conflicto para este usuario
+      const declaracionesExistentes = await this.declaracionConflictoService.obtenerDeclaracionesPorUsuario(idUsuario);
+      const tieneDeclaracionesExistentes = declaracionesExistentes && declaracionesExistentes.length > 0;
+
       // Guardar solo las declaraciones de conflicto si las hay
       if (this.conflictForm.get('opcion_conflicto')?.value === '1' && this.personasConflicto.length > 0) {
         console.log('📝 Guardando declaraciones de conflicto...');
@@ -234,19 +247,37 @@ export class DeclaracionComponent implements OnInit {
         const resultado = await this.declaracionConflictoService.guardarDeclaracionesConflicto(idUsuario, this.personasConflicto);
         
         if (resultado && resultado.success) {
+          // Mostrar mensaje apropiado según si existían datos previos
+          if (tieneDeclaracionesExistentes) {
+            this.notificationService.showSuccess(
+              '✅ Declaraciones actualizadas',
+              'Las declaraciones de conflicto han sido actualizadas correctamente en la base de datos'
+            );
+          } else {
           this.notificationService.showSuccess(
             '✅ Declaraciones guardadas',
             'Las declaraciones de conflicto han sido guardadas correctamente en la base de datos'
           );
+          }
         } else {
           throw new Error('Error al guardar declaraciones de conflicto');
         }
       } else {
         console.log('ℹ️ No hay declaraciones de conflicto para guardar');
+        
+        // Si no hay declaraciones pero existían antes, limpiar la base de datos
+        if (tieneDeclaracionesExistentes) {
+          await this.declaracionConflictoService.guardarDeclaracionesConflicto(idUsuario, []);
+          this.notificationService.showInfo(
+            'ℹ️ Datos actualizados',
+            'Se actualizó el registro indicando que no tienes declaraciones de conflicto'
+          );
+        } else {
         this.notificationService.showInfo(
           'ℹ️ Sin declaraciones',
           'No se encontraron declaraciones de conflicto para guardar'
         );
+        }
       }
 
       // Si estamos en modo conflict-only, resetear el modo
@@ -287,9 +318,76 @@ export class DeclaracionComponent implements OnInit {
   }
 
   cargarPersonasConflicto(): void {
-    // En el flujo simplificado, solo validamos con información básica
-    console.log('ℹ️ Validación de conflictos disponible pero simplificada en el flujo actual');
-    this.personasConflicto = [];
+    // Método para cargar personas de conflicto desde el backend
+    console.log('📋 Cargando personas de conflicto desde el backend...');
+  }
+
+  async cargarDeclaracionesConflicto(): Promise<void> {
+    try {
+      this.isLoading = true;
+      console.log('📋 Cargando declaraciones de conflicto automáticamente...');
+      
+      // Obtener la cédula del usuario desde el servicio de sesión
+      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
+      if (!cedula) {
+        console.log('⚠️ No hay cédula disponible para cargar declaraciones');
+        return;
+      }
+
+      // Obtener todos los datos del usuario incluyendo declaraciones de conflicto
+      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      
+      if (datosCompletos && datosCompletos.declaracionesConflicto) {
+        const declaraciones = datosCompletos.declaracionesConflicto;
+        console.log('✅ Declaraciones cargadas desde datos completos:', declaraciones);
+        
+        if (declaraciones.length > 0) {
+          // Convertir las declaraciones al formato del componente
+          this.personasConflicto = declaraciones.map((decl: any) => ({
+            nombre: decl.nombre || decl.nombreCompleto || '',
+            parentesco: decl.parentesco || '',
+            tipoParteInteresada: decl.tipoParteInteresada || decl.tipoParteAsoc || ''
+          }));
+          
+          // Si hay declaraciones, cambiar la opción a "Sí"
+          this.conflictForm.patchValue({
+            opcion_conflicto: '1'
+          });
+          
+          this.notificationService.showSuccess(
+            '✅ Datos cargados',
+            `Se cargaron ${this.personasConflicto.length} declaraciones de conflicto`
+          );
+        } else {
+          console.log('ℹ️ No hay declaraciones de conflicto para cargar');
+        }
+      } else {
+        console.log('ℹ️ No se encontraron declaraciones de conflicto en los datos completos');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al cargar declaraciones de conflicto:', error);
+      this.notificationService.showWarning(
+        '⚠️ Error al cargar datos',
+        'No se pudieron cargar las declaraciones de conflicto'
+      );
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  cargarDatosEnFormulario(declaracion: any): void {
+    // Cargar datos en el formulario
+    this.conflictForm.patchValue({
+      dconf_nombre: declaracion.dconf_nombre || '',
+      dconf_parentesco: declaracion.dconf_parentesco || '',
+      dconf_parte: declaracion.dconf_parte || ''
+    });
+
+    // Habilitar campos según la respuesta
+    if (declaracion.opcion_conflicto === '1') {
+      this.toggleConflictFields('1');
+    }
   }
 
   verificarConflicto(cedula: string): boolean {

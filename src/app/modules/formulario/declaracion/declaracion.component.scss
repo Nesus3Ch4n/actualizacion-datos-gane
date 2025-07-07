@@ -38,7 +38,7 @@
 .info-section,
 .declaration-section,
 .conflict-section,
-.persons-list-section {
+.vehicles-section {
   margin-bottom: $spacing-xxl;
 
   .section-title {
@@ -158,83 +158,12 @@
   }
 }
 
-// Contenedor de personas
-.persons-container {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-}
-
-.person-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-lg;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #f0f0f0;
-    border-color: $primary-color;
-  }
-
-  .person-info {
-    display: grid;
-
-    .person-name {
-      display: flex;
-      align-items: center;
-      gap: $spacing-sm;
-      font-weight: 500;
-      color: #333;
-      margin-bottom: $spacing-xs;
-
-      mat-icon {
-        color: $primary-color;
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    .person-details {
-      display: flex;
-      gap: $spacing-lg;
-      font-size: 14px;
-      color: #666;
-
-      .detail-item {
-        display: flex;
-        align-items: center;
-        gap: $spacing-xs;
-
-        mat-icon {
-          font-size: 16px;
-          width: 16px;
-          height: 16px;
-          color: $primary-color;
-        }
-      }
-    }
-  }
-
-  .delete-button {
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: scale(1.1);
-      background-color: rgba(244, 67, 54, 0.1);
-    }
-  }
-}
-
-// Botones de acción minimalistas
+// Botones de acción
 .form-actions {
   display: flex;
   justify-content: space-between;
-  gap: $spacing-lg;
+  align-items: center;
+  margin-top: $spacing-xxl;
   padding-top: $spacing-xl;
   border-top: 1px solid #e0e0e0;
 }
@@ -247,7 +176,6 @@
   border-radius: 6px;
   font-weight: 500;
   text-transform: none;
-  min-width: 120px;
   transition: all 0.2s ease;
 
   mat-icon {
@@ -257,13 +185,9 @@
   }
 
   &.secondary {
-    color: #666;
-    border-color: #ddd;
-
     &:hover {
-      background-color: #f5f5f5;
-      border-color: $primary-color;
-      color: $primary-color;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -272,6 +196,85 @@
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(0, 66, 137, 0.3);
     }
+  }
+}
+
+// Lista de vehículos (reutilizada para personas)
+.vehicles-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: $spacing-lg;
+  margin-top: $spacing-xl;
+}
+
+.vehicle-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+  animation: slideInUp 0.3s ease-out;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .vehicle-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .vehicle-details {
+    flex: 1;
+
+    .vehicle-title {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      margin: 0 0 $spacing-sm 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: #333;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: $primary-color;
+      }
+    }
+
+    .vehicle-type,
+    .vehicle-institution {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      margin: $spacing-xs 0;
+      font-size: 14px;
+      color: #666;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: #999;
+      }
+    }
+  }
+
+  .vehicle-actions {
+    display: flex;
+    align-items: center;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -304,11 +307,6 @@
 
   .legend-grid {
     grid-template-columns: 1fr;
-  }
-
-  .person-details {
-    flex-direction: column !important;
-    gap: $spacing-xs !important;
   }
 
   .form-actions {
@@ -356,21 +354,5 @@
       width: 18px;
       height: 18px;
     }
-  }
-}
-
-// Animaciones suaves
-.person-card {
-  animation: slideInUp 0.3s ease-out;
-}
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }

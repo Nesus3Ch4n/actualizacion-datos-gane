@@ -20,9 +20,9 @@ public class UsuarioCompletoDTO {
     @NotBlank(message = "El email es requerido")
     private String correo;
     
-    private Long numeroFijo;
-    private Long numeroCelular;
-    private Long numeroCorp;
+    private String numeroFijo;
+    private String numeroCelular;
+    private String numeroCorp;
     private String cedulaExpedicion;
     private String paisNacimiento;
     private String ciudadNacimiento;
@@ -55,14 +55,14 @@ public class UsuarioCompletoDTO {
     public String getCorreo() { return correo; }
     public void setCorreo(String correo) { this.correo = correo; }
     
-    public Long getNumeroFijo() { return numeroFijo; }
-    public void setNumeroFijo(Long numeroFijo) { this.numeroFijo = numeroFijo; }
+    public String getNumeroFijo() { return numeroFijo; }
+    public void setNumeroFijo(String numeroFijo) { this.numeroFijo = numeroFijo; }
     
-    public Long getNumeroCelular() { return numeroCelular; }
-    public void setNumeroCelular(Long numeroCelular) { this.numeroCelular = numeroCelular; }
+    public String getNumeroCelular() { return numeroCelular; }
+    public void setNumeroCelular(String numeroCelular) { this.numeroCelular = numeroCelular; }
     
-    public Long getNumeroCorp() { return numeroCorp; }
-    public void setNumeroCorp(Long numeroCorp) { this.numeroCorp = numeroCorp; }
+    public String getNumeroCorp() { return numeroCorp; }
+    public void setNumeroCorp(String numeroCorp) { this.numeroCorp = numeroCorp; }
     
     public String getCedulaExpedicion() { return cedulaExpedicion; }
     public void setCedulaExpedicion(String cedulaExpedicion) { this.cedulaExpedicion = cedulaExpedicion; }

@@ -19,6 +19,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTabsModule } from '@angular/material/tabs';
 
 const MaterialModules = [
   MatFormFieldModule,
@@ -40,7 +41,8 @@ const MaterialModules = [
   MatChipsModule,
   MatPaginatorModule,
   MatSortModule,
-  MatProgressSpinnerModule
+  MatProgressSpinnerModule,
+  MatTabsModule
 ];
 
 @NgModule({

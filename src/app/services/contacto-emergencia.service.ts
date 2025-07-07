@@ -4,6 +4,7 @@ import { NotificationService } from './notification.service';
 import { AuthService } from './auth.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -86,8 +87,8 @@ export class ContactoEmergenciaService {
       console.log('📋 Obteniendo contactos de emergencia para usuario ID:', idUsuario);
 
       const response = await firstValueFrom(
-        this.backendService.getHttpClient().get<{success: boolean, contactos: any[], cantidad: number, message?: string}>(
-          `${this.backendService.getApiUrl()}/contactos-emergencia/usuario/${idUsuario}`,
+        this.backendService.getHttpClient().get<{success: boolean, data: any[], message?: string}>(
+          `${this.backendService.getApiUrl()}/formulario/contacto-emergencia/obtener?idUsuario=${idUsuario}`,
           this.backendService.getHttpOptions()
         ).pipe(
           map((res: any) => res),
@@ -101,7 +102,7 @@ export class ContactoEmergenciaService {
       console.log('✅ Contactos obtenidos exitosamente:', response);
       
       if (response.success) {
-        return response.contactos || [];
+        return response.data || [];
       } else {
         throw new Error(response.message || 'Error desconocido');
       }

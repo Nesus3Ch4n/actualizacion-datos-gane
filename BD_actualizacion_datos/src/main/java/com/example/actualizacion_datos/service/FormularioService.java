@@ -52,6 +52,9 @@ public class FormularioService {
     @Autowired
     private ModelMapper modelMapper;
     
+    @Autowired
+    private AuditoriaService auditoriaService;
+    
     // ========== MÉTODOS DE GUARDADO TEMPORAL ==========
     
     public void guardarInformacionPersonalTemporal(InformacionPersonalDTO dto) {
@@ -271,6 +274,19 @@ public class FormularioService {
             if (usuarioExistente.isPresent()) {
                 // Actualizar usuario existente
                 usuario = usuarioExistente.get();
+                
+                // Registrar auditoría para cambios
+                if (!nombre.equals(usuario.getNombre())) {
+                    auditoriaService.registrarActualizacion("USUARIO", usuario.getId(), "nombre", 
+                        usuario.getNombre(), nombre, nombre, usuario.getId(), 
+                        "Actualización de nombre de usuario");
+                }
+                if (!correo.equals(usuario.getCorreo())) {
+                    auditoriaService.registrarActualizacion("USUARIO", usuario.getId(), "correo", 
+                        usuario.getCorreo(), correo, nombre, usuario.getId(), 
+                        "Actualización de correo de usuario");
+                }
+                
                 usuario.setNombre(nombre);
                 usuario.setCorreo(correo);
             } else {
@@ -283,13 +299,13 @@ public class FormularioService {
             
             // Mapear campos adicionales
             if (datos.get("numeroFijo") != null) {
-                usuario.setNumeroFijo(Long.parseLong(datos.get("numeroFijo").toString()));
+                usuario.setNumeroFijo(datos.get("numeroFijo").toString());
             }
             if (datos.get("numeroCelular") != null) {
-                usuario.setNumeroCelular(Long.parseLong(datos.get("numeroCelular").toString()));
+                usuario.setNumeroCelular(datos.get("numeroCelular").toString());
             }
             if (datos.get("numeroCorp") != null) {
-                usuario.setNumeroCorp(Long.parseLong(datos.get("numeroCorp").toString()));
+                usuario.setNumeroCorp(datos.get("numeroCorp").toString());
             }
             if (datos.get("cedulaExpedicion") != null) {
                 usuario.setCedulaExpedicion((String) datos.get("cedulaExpedicion"));
@@ -332,6 +348,12 @@ public class FormularioService {
             
             Usuario usuarioGuardado = usuarioRepository.save(usuario);
             
+            // Registrar auditoría para creación de usuario
+            if (!usuarioExistente.isPresent()) {
+                auditoriaService.registrarCreacion("USUARIO", usuarioGuardado.getId(), 
+                    nombre, usuarioGuardado.getId(), "Creación de nuevo usuario");
+            }
+            
             // Retornar datos del usuario guardado
             Map<String, Object> resultado = new HashMap<>();
             resultado.put("id", usuarioGuardado.getId());
@@ -353,6 +375,9 @@ public class FormularioService {
             // Primero eliminamos los estudios existentes (no hay soft delete en la tabla actual)
             List<EstudioAcademico> estudiosExistentes = estudioAcademicoRepository.findByIdUsuarioAndActivoTrue(idUsuario);
             for (EstudioAcademico estudio : estudiosExistentes) {
+                // Registrar auditoría de eliminación
+                auditoriaService.registrarEliminacion("ESTUDIO_ACADEMICO", estudio.getId(), 
+                    "Sistema", idUsuario, "Eliminación de estudio académico previo a actualización");
                 estudioAcademicoRepository.delete(estudio);
             }
 
@@ -408,6 +433,10 @@ public class FormularioService {
                 
                 EstudioAcademico estudioGuardado = estudioAcademicoRepository.save(estudio);
                 
+                // Registrar auditoría de creación
+                auditoriaService.registrarCreacion("ESTUDIO_ACADEMICO", estudioGuardado.getId(), 
+                    "Sistema", idUsuario, "Creación de estudio académico: " + estudioGuardado.getTitulo());
+                
                 // Crear mapa de respuesta
                 Map<String, Object> estudioResponse = new HashMap<>();
                 estudioResponse.put("id", estudioGuardado.getId());
@@ -416,8 +445,6 @@ public class FormularioService {
                 estudioResponse.put("titulo", estudioGuardado.getTitulo());
                 estudioResponse.put("semestre", estudioGuardado.getSemestre());
                 estudioResponse.put("graduacion", estudioGuardado.getGraduacion());
-                estudioResponse.put("graduado", estudioGuardado.getGraduado());
-                estudioResponse.put("enCurso", estudioGuardado.getEnCurso());
                 estudioResponse.put("version", estudioGuardado.getVersion());
                 
                 estudiosGuardados.add(estudioResponse);
@@ -435,6 +462,11 @@ public class FormularioService {
         try {
             // Primero eliminamos los vehículos existentes
             List<Vehiculo> vehiculosExistentes = vehiculoRepository.findByIdUsuario(idUsuario);
+            for (Vehiculo vehiculo : vehiculosExistentes) {
+                // Registrar auditoría de eliminación
+                auditoriaService.registrarEliminacion("VEHICULO", vehiculo.getIdVehiculo(), 
+                    "Sistema", idUsuario, "Eliminación de vehículo previo a actualización");
+            }
             vehiculoRepository.deleteAll(vehiculosExistentes);
 
             List<Map<String, Object>> vehiculosGuardados = new ArrayList<>();
@@ -467,6 +499,10 @@ public class FormularioService {
                 
                 Vehiculo vehiculoGuardado = vehiculoRepository.save(vehiculo);
                 
+                // Registrar auditoría de creación
+                auditoriaService.registrarCreacion("VEHICULO", vehiculoGuardado.getIdVehiculo(), 
+                    "Sistema", idUsuario, "Creación de vehículo: " + vehiculoGuardado.getMarca() + " " + vehiculoGuardado.getPlaca());
+                
                 // Crear mapa de respuesta con solo los campos que realmente existen
                 Map<String, Object> vehiculoResponse = new HashMap<>();
                 vehiculoResponse.put("id", vehiculoGuardado.getIdVehiculo());
@@ -493,6 +529,9 @@ public class FormularioService {
             // Primero eliminamos la vivienda existente
             Optional<Vivienda> viviendaExistente = viviendaRepository.findByIdUsuario(idUsuario);
             if (viviendaExistente.isPresent()) {
+                // Registrar auditoría de eliminación
+                auditoriaService.registrarEliminacion("VIVIENDA", viviendaExistente.get().getIdVivienda(), 
+                    "Sistema", idUsuario, "Eliminación de vivienda previo a actualización");
                 viviendaRepository.delete(viviendaExistente.get());
             }
 
@@ -532,6 +571,10 @@ public class FormularioService {
             
             Vivienda viviendaGuardada = viviendaRepository.save(vivienda);
             
+            // Registrar auditoría de creación
+            auditoriaService.registrarCreacion("VIVIENDA", viviendaGuardada.getIdVivienda(), 
+                "Sistema", idUsuario, "Creación de vivienda: " + viviendaGuardada.getTipoVivienda() + " en " + viviendaGuardada.getCiudad());
+            
             // Crear mapa de respuesta con solo los campos que realmente existen
             Map<String, Object> viviendaResponse = new HashMap<>();
             viviendaResponse.put("id", viviendaGuardada.getIdVivienda());
@@ -555,7 +598,30 @@ public class FormularioService {
     @Transactional
     public List<Map<String, Object>> guardarPersonasCargoDirecto(Long idUsuario, List<Map<String, Object>> personasData) {
         try {
+            System.out.println("🔄 Guardando personas a cargo para usuario ID: " + idUsuario);
+            System.out.println("📋 Datos a guardar: " + personasData.size() + " personas");
+            
+            // Primero, eliminar todas las personas a cargo existentes para este usuario
+            List<PersonaACargo> personasExistentes = personaACargoRepository.findByIdUsuario(idUsuario);
+            if (!personasExistentes.isEmpty()) {
+                System.out.println("🗑️ Eliminando " + personasExistentes.size() + " personas existentes");
+                for (PersonaACargo persona : personasExistentes) {
+                    // Registrar auditoría de eliminación
+                    auditoriaService.registrarEliminacion("PERSONA_A_CARGO", persona.getId(), 
+                        "Sistema", idUsuario, "Eliminación de persona a cargo previo a actualización");
+                    personaACargoRepository.delete(persona);
+                }
+                // Forzar flush para asegurar que se eliminen
+                personaACargoRepository.flush();
+            }
+            
             List<Map<String, Object>> personasGuardadas = new ArrayList<>();
+
+            // Si no hay datos para guardar, retornar lista vacía
+            if (personasData.isEmpty()) {
+                System.out.println("ℹ️ No hay personas a cargo para guardar");
+                return personasGuardadas;
+            }
 
             for (Map<String, Object> personaData : personasData) {
                 PersonaACargo persona = new PersonaACargo();
@@ -574,9 +640,9 @@ public class FormularioService {
                     try {
                         String fechaStr = personaData.get("fechaNacimiento").toString();
                         LocalDate fecha = LocalDate.parse(fechaStr);
-                        persona.setFechaNacimiento(fecha);
+                        persona.setFechaNacimientoFromLocalDate(fecha);
                     } catch (Exception e) {
-                        persona.setFechaNacimiento(null);
+                        persona.setFechaNacimientoFromLocalDate(null);
                     }
                 }
                 if (personaData.get("edad") != null) {
@@ -600,6 +666,10 @@ public class FormularioService {
                 
                 PersonaACargo personaGuardada = personaACargoRepository.save(persona);
                 
+                // Registrar auditoría de creación
+                auditoriaService.registrarCreacion("PERSONA_A_CARGO", personaGuardada.getId(), 
+                    "Sistema", idUsuario, "Creación de persona a cargo: " + personaGuardada.getNombre() + " (" + personaGuardada.getParentesco() + ")");
+                
                 // Crear mapa de respuesta (solo con los campos que existen)
                 Map<String, Object> personaResponse = new HashMap<>();
                 personaResponse.put("id", personaGuardada.getId());
@@ -613,9 +683,11 @@ public class FormularioService {
                 personasGuardadas.add(personaResponse);
             }
 
+            System.out.println("✅ Se guardaron " + personasGuardadas.size() + " personas a cargo");
             return personasGuardadas;
 
         } catch (Exception e) {
+            System.err.println("❌ Error al guardar personas a cargo: " + e.getMessage());
             throw new RuntimeException("Error al guardar personas a cargo: " + e.getMessage(), e);
         }
     }
@@ -623,7 +695,30 @@ public class FormularioService {
     @Transactional
     public List<Map<String, Object>> guardarContactosEmergenciaDirecto(Long idUsuario, List<Map<String, Object>> contactosData) {
         try {
+            System.out.println("🔄 Guardando contactos de emergencia para usuario ID: " + idUsuario);
+            System.out.println("📋 Datos a guardar: " + contactosData.size() + " contactos");
+            
+            // Primero, eliminar todos los contactos de emergencia existentes para este usuario
+            List<ContactoEmergencia> contactosExistentes = contactoEmergenciaRepository.findByIdUsuario(idUsuario);
+            if (!contactosExistentes.isEmpty()) {
+                System.out.println("🗑️ Eliminando " + contactosExistentes.size() + " contactos existentes");
+                for (ContactoEmergencia contacto : contactosExistentes) {
+                    // Registrar auditoría de eliminación
+                    auditoriaService.registrarEliminacion("CONTACTO_EMERGENCIA", contacto.getId(), 
+                        "Sistema", idUsuario, "Eliminación de contacto de emergencia previo a actualización");
+                    contactoEmergenciaRepository.delete(contacto);
+                }
+                // Forzar flush para asegurar que se eliminen
+                contactoEmergenciaRepository.flush();
+            }
+            
             List<Map<String, Object>> contactosGuardados = new ArrayList<>();
+
+            // Si no hay datos para guardar, retornar lista vacía
+            if (contactosData.isEmpty()) {
+                System.out.println("ℹ️ No hay contactos de emergencia para guardar");
+                return contactosGuardados;
+            }
 
             for (Map<String, Object> contactoData : contactosData) {
                 ContactoEmergencia contacto = new ContactoEmergencia();
@@ -654,6 +749,10 @@ public class FormularioService {
                 
                 ContactoEmergencia contactoGuardado = contactoEmergenciaRepository.save(contacto);
                 
+                // Registrar auditoría de creación
+                auditoriaService.registrarCreacion("CONTACTO_EMERGENCIA", contactoGuardado.getId(), 
+                    "Sistema", idUsuario, "Creación de contacto de emergencia: " + contactoGuardado.getNombreCompleto() + " (" + contactoGuardado.getParentesco() + ")");
+                
                 // Crear mapa de respuesta (solo con los campos que existen)
                 Map<String, Object> contactoResponse = new HashMap<>();
                 contactoResponse.put("id", contactoGuardado.getId());
@@ -666,9 +765,11 @@ public class FormularioService {
                 contactosGuardados.add(contactoResponse);
             }
 
+            System.out.println("✅ Se guardaron " + contactosGuardados.size() + " contactos de emergencia");
             return contactosGuardados;
 
         } catch (Exception e) {
+            System.err.println("❌ Error al guardar contactos de emergencia: " + e.getMessage());
             throw new RuntimeException("Error al guardar contactos de emergencia: " + e.getMessage(), e);
         }
     }
@@ -688,8 +789,6 @@ public class FormularioService {
             estudioMap.put("titulo", estudio.getTitulo());
             estudioMap.put("semestre", estudio.getSemestre());
             estudioMap.put("graduacion", estudio.getGraduacion());
-            estudioMap.put("graduado", estudio.getGraduado());
-            estudioMap.put("enCurso", estudio.getEnCurso());
             estudioMap.put("version", estudio.getVersion());
             resultado.add(estudioMap);
         }
@@ -785,7 +884,30 @@ public class FormularioService {
     @Transactional
     public List<Map<String, Object>> guardarDeclaracionesConflictoDirecto(Long idUsuario, List<Map<String, Object>> declaracionesData) {
         try {
+            System.out.println("🔄 Guardando declaraciones de conflicto para usuario ID: " + idUsuario);
+            System.out.println("📋 Datos a guardar: " + declaracionesData.size() + " declaraciones");
+            
+            // Primero, eliminar todas las declaraciones de conflicto existentes para este usuario
+            List<RelacionConf> declaracionesExistentes = relacionConfRepository.findByIdUsuario(idUsuario);
+            if (!declaracionesExistentes.isEmpty()) {
+                System.out.println("🗑️ Eliminando " + declaracionesExistentes.size() + " declaraciones existentes");
+                for (RelacionConf declaracion : declaracionesExistentes) {
+                    // Registrar auditoría de eliminación
+                    auditoriaService.registrarEliminacion("RELACION_CONF", declaracion.getId(), 
+                        "Sistema", idUsuario, "Eliminación de declaración de conflicto previo a actualización");
+                    relacionConfRepository.delete(declaracion);
+                }
+                // Forzar flush para asegurar que se eliminen
+                relacionConfRepository.flush();
+            }
+            
             List<Map<String, Object>> declaracionesGuardadas = new ArrayList<>();
+
+            // Si no hay datos para guardar, retornar lista vacía
+            if (declaracionesData.isEmpty()) {
+                System.out.println("ℹ️ No hay declaraciones de conflicto para guardar");
+                return declaracionesGuardadas;
+            }
 
             for (Map<String, Object> declaracionData : declaracionesData) {
                 RelacionConf declaracion = new RelacionConf();
@@ -819,12 +941,18 @@ public class FormularioService {
                 
                 RelacionConf declaracionGuardada = relacionConfRepository.save(declaracion);
                 
+                // Registrar auditoría de creación
+                auditoriaService.registrarCreacion("RELACION_CONF", declaracionGuardada.getId(), 
+                    "Sistema", idUsuario, "Creación de declaración de conflicto: " + declaracionGuardada.getNombreCompleto() + " (" + declaracionGuardada.getParentesco() + ")");
+                
                 // Crear mapa de respuesta (solo con los campos que existen)
                 Map<String, Object> declaracionResponse = new HashMap<>();
                 declaracionResponse.put("id", declaracionGuardada.getId());
                 declaracionResponse.put("nombreCompleto", declaracionGuardada.getNombreCompleto());
                 declaracionResponse.put("parentesco", declaracionGuardada.getParentesco());
                 declaracionResponse.put("tipoParteAsoc", declaracionGuardada.getTipoParteAsoc());
+                declaracionResponse.put("tieneCl", declaracionGuardada.getTieneCl());
+                declaracionResponse.put("actualizado", declaracionGuardada.getActualizado());
                 declaracionResponse.put("version", declaracionGuardada.getVersion());
                 declaracionResponse.put("fechaCreacion", declaracionGuardada.getFechaCreacion());
                 declaracionResponse.put("idUsuario", declaracionGuardada.getIdUsuario());
@@ -832,9 +960,11 @@ public class FormularioService {
                 declaracionesGuardadas.add(declaracionResponse);
             }
 
+            System.out.println("✅ Se guardaron " + declaracionesGuardadas.size() + " declaraciones de conflicto");
             return declaracionesGuardadas;
 
         } catch (Exception e) {
+            System.err.println("❌ Error al guardar declaraciones de conflicto: " + e.getMessage());
             throw new RuntimeException("Error al guardar declaraciones de conflicto: " + e.getMessage(), e);
         }
     }

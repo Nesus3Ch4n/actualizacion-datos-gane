@@ -134,6 +134,12 @@ public class ConsultaController {
         List<ContactoEmergencia> contactos = formularioService.obtenerContactosEmergenciaBD(cedula);
         datosCompletos.put("contactosEmergencia", contactos);
         
+        // Obtener declaraciones de conflicto
+        if (info != null) {
+            List<Map<String, Object>> declaraciones = formularioService.obtenerDeclaracionesConflictoDirecto(info.getId());
+            datosCompletos.put("declaracionesConflicto", declaraciones);
+        }
+        
         // Verificar si hay al menos información personal
         if (info == null) {
             return ResponseEntity.notFound().build();

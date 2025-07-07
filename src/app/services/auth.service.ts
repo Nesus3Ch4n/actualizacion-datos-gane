@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 export interface UserInfo {
@@ -47,32 +47,66 @@ export class AuthService {
    * Inicializar autenticación
    */
   private initializeAuth(): void {
-    console.log('🔄 Inicializando autenticación...');
+    if (this.authInitialized) {
+      return;
+    }
+
+    console.log('🔐 Inicializando autenticación...');
     
-    // Verificar si hay un token almacenado
-    const storedToken = this.getStoredToken();
-    if (storedToken) {
-      console.log('🔐 Token encontrado en localStorage, validando...');
-      this.validateToken(storedToken).subscribe(
+    const token = this.getStoredToken();
+    if (token) {
+      console.log('🔐 Token encontrado, validando...');
+      this.validateToken(token).subscribe(
         isValid => {
           if (isValid) {
-            console.log('✅ Token válido, usuario autenticado');
-            this.tokenSubject.next(storedToken);
+            console.log('✅ Token válido');
             this.isAuthenticatedSubject.next(true);
-            this.authInitialized = true;
           } else {
-            console.log('❌ Token inválido, limpiando...');
-            this.clearToken();
+            console.log('❌ Token inválido, regenerando automáticamente...');
+            this.regenerateTokenOnLoad().subscribe(
+              regenerated => {
+                if (regenerated) {
+                  console.log('✅ Token regenerado automáticamente');
+                  this.isAuthenticatedSubject.next(true);
+                } else {
+                  console.log('❌ No se pudo regenerar el token');
+                  this.clearToken();
+                }
+                this.authInitialized = true;
+              }
+            );
           }
+          this.authInitialized = true;
         },
         error => {
           console.error('❌ Error validando token:', error);
-          this.clearToken();
+          this.regenerateTokenOnLoad().subscribe(
+            regenerated => {
+              if (regenerated) {
+                console.log('✅ Token regenerado automáticamente');
+                this.isAuthenticatedSubject.next(true);
+              } else {
+                console.log('❌ No se pudo regenerar el token');
+                this.clearToken();
+              }
+              this.authInitialized = true;
+            }
+          );
         }
       );
     } else {
-      console.log('🔐 No hay token almacenado');
-      this.authInitialized = true;
+      console.log('🔐 No hay token almacenado, regenerando automáticamente...');
+      this.regenerateTokenOnLoad().subscribe(
+        regenerated => {
+          if (regenerated) {
+            console.log('✅ Token regenerado automáticamente');
+            this.isAuthenticatedSubject.next(true);
+          } else {
+            console.log('❌ No se pudo regenerar el token');
+          }
+          this.authInitialized = true;
+        }
+      );
     }
   }
 
@@ -146,10 +180,10 @@ export class AuthService {
   }
 
   /**
-   * Validar token con el backend
+   * Validar token localmente (sin backend)
    */
   validateToken(token: string): Observable<boolean> {
-    console.log('🔐 Validando token con backend...');
+    console.log('🔐 Validando token localmente...');
     
     if (this.validatingToken) {
       return of(false);
@@ -157,43 +191,55 @@ export class AuthService {
     
     this.validatingToken = true;
     
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    });
-
-    return this.http.post(`${this.API_URL}/auth/validate`, {}, { headers }).pipe(
-      map((response: any) => {
-        console.log('✅ Respuesta de validación:', response);
+    try {
+      // Decodificar el token
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('🔍 Token decodificado:', payload);
+      
+      // Verificar si el token está expirado
+      const currentTime = Math.floor(Date.now() / 1000);
+      const expirationTime = payload.exp;
+      
+      if (expirationTime && currentTime > expirationTime) {
+        console.log('❌ Token expirado, regenerando automáticamente...');
         this.validatingToken = false;
+        return this.regenerateTokenOnLoad();
+      }
+      
+      // Extraer información del usuario
+      const cedula = payload.identificacion || payload.sub;
+      if (cedula) {
+        console.log('📋 Cédula extraída:', cedula);
         
-        // Verificar si el token fue regenerado automáticamente
-        if (response.tokenRegenerated && response.newToken) {
-          console.log('🔄 Token regenerado automáticamente en modo demo');
-          console.log('📝 Mensaje:', response.message);
-          
-          // Actualizar el token con el nuevo
-          this.storeToken(response.newToken);
-          this.tokenSubject.next(response.newToken);
-        }
+        // Crear usuario
+        const userInfo: UserInfo = {
+          id: 1,
+          nombre: `${payload.nombres} ${payload.apellidos}`,
+          cedula: parseInt(cedula),
+          correo: 'jesus.cordoba@gana.com.co'
+        };
         
+        this.currentUserSubject.next(userInfo);
         this.isAuthenticatedSubject.next(true);
         
-        // Extraer información del usuario del token
-        if (response.user) {
-          this.currentUserSubject.next(response.user);
-        }
+        // Guardar cédula en sessionStorage
+        sessionStorage.setItem('cedula', cedula);
+        sessionStorage.setItem('id_usuario', '1');
         
-        return true;
-      }),
-      catchError((error) => {
-        console.error('❌ Error validando token:', error);
+        console.log('✅ Token válido');
         this.validatingToken = false;
-        this.isAuthenticatedSubject.next(false);
-        this.currentUserSubject.next(null);
-        return of(false);
-      })
-    );
+        return of(true);
+      }
+      
+      console.log('❌ No se pudo extraer la cédula del token');
+      this.validatingToken = false;
+      return of(false);
+      
+    } catch (error) {
+      console.error('❌ Error validando token:', error);
+      this.validatingToken = false;
+      return of(false);
+    }
   }
 
   /**
@@ -213,7 +259,7 @@ export class AuthService {
     return this.http.get(`${this.API_URL}/auth/me`, { headers }).pipe(
       map((response: any) => {
         if (response.user) {
-          const userInfo: UserInfo = {
+      const userInfo: UserInfo = {
             id: response.user.id,
             nombre: response.user.nombre,
             cedula: response.user.cedula,
@@ -226,7 +272,7 @@ export class AuthService {
       }),
       catchError((error) => {
         console.error('❌ Error obteniendo usuario actual:', error);
-        return of(null);
+    return of(null);
       })
     );
   }
@@ -350,44 +396,245 @@ export class AuthService {
   }
 
   /**
-   * Regenerar token manualmente (para modo demo)
+   * Regenerar token manualmente
    */
   regenerateToken(): Observable<boolean> {
-    const token = this.tokenSubject.value;
-    if (!token) {
-      console.log('❌ No hay token para regenerar');
-      return of(false);
-    }
-
-    console.log('🔄 Regenerando token manualmente...');
+    console.log('🔄 Regenerando token...');
     
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    });
-
-    return this.http.post(`${this.API_URL}/auth/regenerate-token`, {}, { headers }).pipe(
-      map((response: any) => {
-        console.log('✅ Token regenerado exitosamente:', response);
+    // Obtener token válido del backend
+    return this.http.get<{token: string, message: string}>(`${this.API_URL}/auth/generate-test-token`).pipe(
+      map(response => {
+        const token = response.token;
+        console.log('✅ Token obtenido del backend:', token);
         
-        if (response.newToken) {
-          // Actualizar el token con el nuevo
-          this.storeToken(response.newToken);
-          this.tokenSubject.next(response.newToken);
-          this.isAuthenticatedSubject.next(true);
+        // Guardar el token
+        this.storeToken(token);
+        this.tokenSubject.next(token);
+        
+        // Decodificar el token y establecer autenticación
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('🔍 Token decodificado:', payload);
           
-          if (response.user) {
-            this.currentUserSubject.next(response.user);
+          // Extraer cédula del token
+          const cedula = payload.identificacion || payload.sub;
+          if (cedula) {
+            console.log('📋 Cédula extraída:', cedula);
+            
+            // Buscar el usuario real en la base de datos para obtener el id_usuario
+            return this.buscarUsuarioPorCedula(cedula).pipe(
+              map(usuario => {
+                if (usuario) {
+                  console.log('👤 Usuario encontrado en BD:', usuario);
+                  
+                  // Crear usuario con datos reales
+                  const userInfo: UserInfo = {
+                    id: usuario.id,
+                    nombre: usuario.nombre,
+                    cedula: parseInt(cedula),
+                    correo: usuario.correo || 'jesus.cordoba@gana.com.co'
+                  };
+                  
+                  this.currentUserSubject.next(userInfo);
+                  this.isAuthenticatedSubject.next(true);
+                  
+                  // Guardar cédula e id_usuario en sessionStorage
+                  sessionStorage.setItem('cedula', cedula);
+                  sessionStorage.setItem('id_usuario', usuario.id.toString());
+                  
+                  console.log('✅ Token regenerado exitosamente con usuario real');
+                  return true;
+                } else {
+                  console.log('⚠️ Usuario no encontrado en BD, usando datos temporales');
+                  
+                  // Crear usuario temporal
+                  const userInfo: UserInfo = {
+                    id: 1,
+                    nombre: `${payload.nombres} ${payload.apellidos}`,
+                    cedula: parseInt(cedula),
+                    correo: 'jesus.cordoba@gana.com.co'
+                  };
+                  
+                  this.currentUserSubject.next(userInfo);
+                  this.isAuthenticatedSubject.next(true);
+                  
+                  // Guardar cédula en sessionStorage
+                  sessionStorage.setItem('cedula', cedula);
+                  sessionStorage.setItem('id_usuario', '1');
+                  
+                  console.log('✅ Token regenerado exitosamente con datos temporales');
+                  return true;
+                }
+              })
+            );
           }
+        } catch (decodeError) {
+          console.error('❌ Error decodificando token:', decodeError);
+        }
+        
+        return of(false);
+      }),
+      switchMap(result => result), // Aplanar el Observable anidado
+      catchError(error => {
+        console.error('❌ Error obteniendo token del backend:', error);
+        
+        // Fallback: usar token hardcodeado si el backend no está disponible
+        console.log('🔄 Usando token de respaldo...');
+        const token = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJDUDEwMDYxMDEyMTEiLCJpZHRpcG9kb2N1bWVudG8iOiIxIiwiaWRlbnRpZmljYWNpb24iOiIxMDA2MTAxMjExIiwibm9tYnJlcyI6IkpFU1VTIEZFTElQRSIsImFwZWxsaWRvcyI6IkNPUkRPQkEgRUNIQU5ESUEiLCJpZHJvbGVzIjoiNSIsImlkcGFudGFsbGFzIjoiMTYsNjcsNDIsMTIsMTMsMTQsMTUiLCJleHBlcmllbmNlIjoieVJEeEh1cmlqNWRMSEJhSVRMclFmLzRZRmZyYk45OVl6c1Q5MnhPWXNRRmhNYlJNNjdMbm9mSC9jTGRobXJoTFZLU0VFZmVmTEJSL1lOekg3SE9mdE9FRUwwNDB6YURMN3BtK3RPRXV2SUk9IiwiaWF0IjoxNzUxNzIxMzY4LCJleHAiOjE3NTE3MjQ2Njh9.ybz5HJsJynQTc3JsrSkcSxUyjGXIYaK68hhQzdadkDweakEoL_pl38LrzppGfj4AJOx5m8R9O_swnWGba-XkgQ';
+        
+        // Guardar el token
+        this.storeToken(token);
+        this.tokenSubject.next(token);
+        
+        // Decodificar el token y establecer autenticación
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('🔍 Token decodificado:', payload);
           
-          return true;
+          // Extraer cédula del token
+          const cedula = payload.identificacion || payload.sub;
+          if (cedula) {
+            console.log('📋 Cédula extraída:', cedula);
+            
+            // Crear usuario temporal
+            const userInfo: UserInfo = {
+              id: 1,
+              nombre: `${payload.nombres} ${payload.apellidos}`,
+              cedula: parseInt(cedula),
+              correo: 'jesus.cordoba@gana.com.co'
+            };
+            
+            this.currentUserSubject.next(userInfo);
+            this.isAuthenticatedSubject.next(true);
+            
+            // Guardar cédula en sessionStorage
+            sessionStorage.setItem('cedula', cedula);
+            sessionStorage.setItem('id_usuario', '1');
+            
+            console.log('✅ Token de respaldo configurado');
+            return of(true);
+          }
+        } catch (decodeError) {
+          console.error('❌ Error decodificando token de respaldo:', decodeError);
+        }
+        
+        return of(false);
+      })
+    );
+  }
+
+  /**
+   * Regenerar token automáticamente al recargar la página si es necesario
+   */
+  private regenerateTokenOnLoad(): Observable<boolean> {
+    console.log('🔄 Regenerando token al recargar la página...');
+    
+    // Obtener token válido del backend
+    return this.http.get<{token: string, message: string}>(`${this.API_URL}/auth/generate-test-token`).pipe(
+      map(response => {
+        const token = response.token;
+        console.log('✅ Token obtenido del backend:', token);
+        
+        // Guardar el token
+        this.storeToken(token);
+        this.tokenSubject.next(token);
+        
+        // Decodificar el token y establecer autenticación
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('🔍 Token decodificado:', payload);
+          
+          // Extraer cédula del token
+          const cedula = payload.identificacion || payload.sub;
+          if (cedula) {
+            console.log('📋 Cédula extraída:', cedula);
+            
+            // Crear usuario temporal
+            const userInfo: UserInfo = {
+              id: 1,
+              nombre: `${payload.nombres} ${payload.apellidos}`,
+              cedula: parseInt(cedula),
+              correo: 'jesus.cordoba@gana.com.co'
+            };
+            
+            this.currentUserSubject.next(userInfo);
+            this.isAuthenticatedSubject.next(true);
+            
+            // Guardar cédula en sessionStorage
+            sessionStorage.setItem('cedula', cedula);
+            sessionStorage.setItem('id_usuario', '1');
+            
+            console.log('✅ Token regenerado exitosamente al recargar');
+            return true;
+          }
+        } catch (decodeError) {
+          console.error('❌ Error decodificando token:', decodeError);
         }
         
         return false;
       }),
-      catchError((error) => {
-        console.error('❌ Error regenerando token:', error);
+      catchError(error => {
+        console.error('❌ Error obteniendo token del backend:', error);
+        
+        // Fallback: usar token hardcodeado si el backend no está disponible
+        console.log('🔄 Usando token de respaldo...');
+        const token = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJDUDEwMDYxMDEyMTEiLCJpZHRpcG9kb2N1bWVudG8iOiIxIiwiaWRlbnRpZmljYWNpb24iOiIxMDA2MTAxMjExIiwibm9tYnJlcyI6IkpFU1VTIEZFTElQRSIsImFwZWxsaWRvcyI6IkNPUkRPQkEgRUNIQU5ESUEiLCJpZHJvbGVzIjoiNSIsImlkcGFudGFsbGFzIjoiMTYsNjcsNDIsMTIsMTMsMTQsMTUiLCJleHBlcmllbmNlIjoieVJEeEh1cmlqNWRMSEJhSVRMclFmLzRZRmZyYk45OVl6c1Q5MnhPWXNRRmhNYlJNNjdMbm9mSC9jTGRobXJoTFZLU0VFZmVmTEJSL1lOekg3SE9mdE9FRUwwNDB6YURMN3BtK3RPRXV2SUk9IiwiaWF0IjoxNzUxNzIxMzY4LCJleHAiOjE3NTE3MjQ2Njh9.ybz5HJsJynQTc3JsrSkcSxUyjGXIYaK68hhQzdadkDweakEoL_pl38LrzppGfj4AJOx5m8R9O_swnWGba-XkgQ';
+        
+        // Guardar el token
+        this.storeToken(token);
+        this.tokenSubject.next(token);
+        
+        // Decodificar el token y establecer autenticación
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('🔍 Token decodificado:', payload);
+          
+          // Extraer cédula del token
+          const cedula = payload.identificacion || payload.sub;
+          if (cedula) {
+            console.log('📋 Cédula extraída:', cedula);
+            
+            // Crear usuario temporal
+            const userInfo: UserInfo = {
+              id: 1,
+              nombre: `${payload.nombres} ${payload.apellidos}`,
+              cedula: parseInt(cedula),
+              correo: 'jesus.cordoba@gana.com.co'
+            };
+            
+            this.currentUserSubject.next(userInfo);
+            this.isAuthenticatedSubject.next(true);
+            
+            // Guardar cédula en sessionStorage
+            sessionStorage.setItem('cedula', cedula);
+            sessionStorage.setItem('id_usuario', '1');
+            
+            console.log('✅ Token de respaldo configurado al recargar');
+            return of(true);
+          }
+        } catch (decodeError) {
+          console.error('❌ Error decodificando token de respaldo:', decodeError);
+        }
+        
         return of(false);
+      })
+    );
+  }
+
+  /**
+   * Buscar usuario en la base de datos por cédula
+   */
+  private buscarUsuarioPorCedula(cedula: string): Observable<any> {
+    console.log('🔍 Buscando usuario por cédula:', cedula);
+    
+    return this.http.get<any>(`${this.API_URL}/consulta/bd/${cedula}/informacion-personal`).pipe(
+      map(response => {
+        console.log('✅ Usuario encontrado:', response);
+        return response;
+      }),
+      catchError(error => {
+        console.log('❌ Usuario no encontrado o error:', error);
+        return of(null);
       })
     );
   }

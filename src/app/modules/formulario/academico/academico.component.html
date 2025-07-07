@@ -148,15 +148,15 @@
               <div class="study-details">
                 <h4 class="study-program">
                   <mat-icon>book</mat-icon>
-                  {{ estudio.programa_academico }}
+                  {{ estudio.titulo}}
                 </h4>
                 <p class="study-level">
                   <mat-icon>school</mat-icon>
-                  {{ estudio.nivel_academico | titlecase }}
+                  {{ estudio.nivelEducativo | titlecase }}
                 </p>
                 <p class="study-institution">
                   <mat-icon>location_city</mat-icon>
-                  {{ estudio.institucion_educativa }}
+                  {{ estudio.institucion }}
                 </p>
                 <div class="study-meta">
                   <span class="study-semester" *ngIf="estudio.semestre">
@@ -166,7 +166,7 @@
                   </span>
                   <span class="study-graduation" *ngIf="estudio.fecha_grado">
                     <mat-icon>event</mat-icon>
-                    Graduación: {{ estudio.fecha_grado }}
+                    Graduación: {{ estudio.graduacion }}
                   </span>
                 </div>
               </div>

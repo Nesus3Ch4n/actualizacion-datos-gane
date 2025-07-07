@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, throwError, map } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ViviendaService {
-  private apiUrl = 'http://localhost:8080/api/vivienda';
+  private apiUrl = 'http://localhost:8080/api';
 
   private httpOptions = {
     headers: new HttpHeaders({
@@ -20,7 +20,7 @@ export class ViviendaService {
   guardarVivienda(idUsuario: number, vivienda: any): Observable<any> {
     console.log(`🏠 Guardando información de vivienda para usuario ID: ${idUsuario}`);
     
-    return this.http.post<any>(`${this.apiUrl}/usuario/${idUsuario}`, vivienda, this.httpOptions)
+    return this.http.post<any>(`${this.apiUrl}/formulario/vivienda/guardar?idUsuario=${idUsuario}`, vivienda, this.httpOptions)
       .pipe(
         catchError(error => {
           console.error('❌ Error al guardar vivienda:', error);
@@ -33,8 +33,15 @@ export class ViviendaService {
   obtenerViviendaPorUsuario(idUsuario: number): Observable<any> {
     console.log(`📋 Obteniendo información de vivienda para usuario ID: ${idUsuario}`);
     
-    return this.http.get<any>(`${this.apiUrl}/usuario/${idUsuario}`)
+    return this.http.get<{success: boolean, data: any}>(`${this.apiUrl}/formulario/vivienda/obtener?idUsuario=${idUsuario}`)
       .pipe(
+        map(response => {
+          if (response.success) {
+            return response.data || null;
+          } else {
+            return null;
+          }
+        }),
         catchError(error => {
           console.error('❌ Error al obtener vivienda:', error);
           return throwError(() => new Error(`Error al obtener vivienda: ${error.message || error}`));

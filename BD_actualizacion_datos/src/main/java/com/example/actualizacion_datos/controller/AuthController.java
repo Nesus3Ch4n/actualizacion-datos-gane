@@ -8,6 +8,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -19,6 +24,9 @@ public class AuthController {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     /**
      * Validar token y obtener información del usuario
@@ -486,5 +494,35 @@ public class AuthController {
                 "error", "Error creando usuario de prueba: " + e.getMessage()
             ));
         }
+    }
+
+    /**
+     * Endpoint temporal para corregir problemas de base de datos
+     */
+    @GetMapping("/fix-database")
+    public ResponseEntity<?> fixDatabase() {
+        try {
+            // Corregir fechas inválidas en la tabla FAMILIA
+            String updateQuery = "UPDATE FAMILIA SET FECHA_NACIMIENTO = NULL WHERE FECHA_NACIMIENTO = '1751950800000' OR FECHA_NACIMIENTO = '' OR FECHA_NACIMIENTO IS NULL";
+            int rowsAffected = jdbcTemplate.update(updateQuery);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Database fixed successfully",
+                "rowsAffected", rowsAffected
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", "Error fixing database: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/es-admin/{cedula}")
+    public ResponseEntity<Boolean> esAdmin(@PathVariable String cedula) {
+        boolean esAdmin = "1006101211".equals(cedula);
+        return ResponseEntity.ok(esAdmin);
     }
 } 

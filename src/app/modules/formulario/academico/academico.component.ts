@@ -1,12 +1,17 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormStateService } from '../../../services/form-state.service';
 import { NotificationService } from '../../../services/notification.service';
 import { FormNavigationService } from '../../../services/form-navigation.service';
 import { EstudioAcademicoService } from '../../../services/estudio-academico.service';
 import { UsuarioSessionService } from '../../../services/usuario-session.service';
-import { UserSessionService } from '../../../services/user-session.service';
+import { BackendService } from '../../../services/backend.service';
+import { AuthService } from '../../../services/auth.service';
+import { FormDataService } from '../../../services/form-data.service';
+import { firstValueFrom } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Component({
   selector: 'app-academico',
@@ -20,14 +25,22 @@ export class AcademicoComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder, 
-    private datePipe: DatePipe, 
+    private formNavigationService: FormNavigationService,
     private formStateService: FormStateService,
     private notificationService: NotificationService,
-    private formNavigationService: FormNavigationService,
     private estudioAcademicoService: EstudioAcademicoService,
     private usuarioSessionService: UsuarioSessionService,
-    private userSessionService: UserSessionService
-  ) {}
+    private backendService: BackendService,
+    private authService: AuthService,
+    private formDataService: FormDataService
+  ) {
+    this.generateYears();
+  }
+
+  generateYears(): void {
+    // Este método no es necesario para el componente académico
+    // Se puede eliminar la llamada en el constructor
+  }
 
   ngOnInit(): void {
     this.academicoForm = this.fb.group({
@@ -58,11 +71,11 @@ export class AcademicoComponent implements OnInit {
       const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
       
       if (!idUsuario) {
-        // Intentar recuperar de userSessionService como fallback
-        const idFallback = this.userSessionService.getCurrentUserId();
+        // Intentar recuperar de UsuarioSessionService como fallback
+        const idFallback = this.usuarioSessionService.getIdUsuarioActual();
         
         if (idFallback) {
-          console.log('⚠️ Usando ID del userSessionService como fallback:', idFallback);
+          console.log('⚠️ Usando ID del UsuarioSessionService como fallback:', idFallback);
           // Intentar reconstruir la sesión del usuarioSessionService
           const usuarioMinimo = { id: idFallback };
           this.usuarioSessionService.setUsuarioActual(usuarioMinimo);
@@ -100,11 +113,61 @@ export class AcademicoComponent implements OnInit {
   }
 
   loadFormState(): void {
-    // Cargar estudios guardados del servicio de estado
-    const savedEstudios = this.formStateService.getEstudiosAcademicos();
-    if (savedEstudios && savedEstudios.length > 0) {
-      this.estudios = savedEstudios;
-      console.log('✅ Estudios académicos cargados:', this.estudios);
+    // Cargar datos del estado del formulario si existen
+    const estudiosGuardados = this.formStateService.getEstudiosAcademicos();
+    if (estudiosGuardados && estudiosGuardados.length > 0) {
+      console.log('📋 Estudios académicos cargados desde estado del formulario:', estudiosGuardados);
+      this.estudios = estudiosGuardados;
+    }
+  }
+
+  async cargarEstudiosExistentes(): Promise<void> {
+    try {
+      this.isLoading = true;
+      console.log('🎓 Cargando datos académicos existentes...');
+      
+      // Obtener la cédula del usuario desde el servicio de sesión
+      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
+      if (!cedula) {
+        console.log('⚠️ No hay cédula disponible para cargar estudios académicos');
+        return;
+      }
+
+      // Obtener todos los datos del usuario incluyendo estudios académicos
+      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      
+      if (datosCompletos && datosCompletos.estudiosAcademicos) {
+        const estudios = datosCompletos.estudiosAcademicos;
+        console.log('✅ Estudios académicos cargados desde datos completos:', estudios);
+        
+        // Convertir los estudios al formato que espera el template
+        this.estudios = estudios.map((estudio: any) => ({
+          programa: estudio.titulo || estudio.programa || '',
+          nivel_academico: estudio.nivelEducativo || estudio.nivel_academico || '',
+          institucion_educativa: estudio.institucion || estudio.institucion_educativa || '',
+          semestre: estudio.semestre || estudio.semestreActual || '',
+          fecha_grado: estudio.fechaFinalizacion || estudio.fecha_grado || estudio.anioGraduacion || '',
+          ciudad: estudio.ciudad || '',
+          graduado: estudio.graduado || false,
+          enCurso: estudio.enCurso || false
+        }));
+        
+        this.notificationService.showSuccess(
+          '✅ Datos cargados',
+          `Se cargaron ${this.estudios.length} estudios académicos`
+        );
+      } else {
+        console.log('ℹ️ No se encontraron estudios académicos en los datos completos');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al cargar estudios académicos:', error);
+      this.notificationService.showWarning(
+        '⚠️ Error al cargar datos',
+        'No se pudieron cargar los estudios académicos'
+      );
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -258,11 +321,11 @@ export class AcademicoComponent implements OnInit {
       const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
       
       if (!idUsuario) {
-        // Intentar recuperar de userSessionService como fallback
-        const idFallback = this.userSessionService.getCurrentUserId();
+        // Intentar recuperar de UsuarioSessionService como fallback
+        const idFallback = this.usuarioSessionService.getIdUsuarioActual();
         
         if (idFallback) {
-          console.log('⚠️ Usando ID del userSessionService como fallback:', idFallback);
+          console.log('⚠️ Usando ID del UsuarioSessionService como fallback:', idFallback);
           // Intentar reconstruir la sesión del usuarioSessionService
           const usuarioMinimo = { id: idFallback };
           this.usuarioSessionService.setUsuarioActual(usuarioMinimo);

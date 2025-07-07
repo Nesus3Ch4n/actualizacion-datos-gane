@@ -4,12 +4,13 @@ import { FormStateService } from '../../../services/form-state.service';
 import { NotificationService } from '../../../services/notification.service';
 import { FormNavigationService } from '../../../services/form-navigation.service';
 import { VehiculoService } from '../../../services/vehiculo.service';
-import { UserSessionService } from '../../../services/user-session.service';
+import { UsuarioSessionService } from '../../../services/usuario-session.service';
 import { BackendService } from '../../../services/backend.service';
 import { AuthService } from '../../../services/auth.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
+import { FormDataService } from '../../../services/form-data.service';
 
 @Component({
   selector: 'app-vehiculo',
@@ -28,35 +29,135 @@ export class VehiculoComponent implements OnInit {
     private formStateService: FormStateService,
     private notificationService: NotificationService,
     private vehiculoService: VehiculoService,
-    private userSessionService: UserSessionService,
+    private usuarioSessionService: UsuarioSessionService,
     private backendService: BackendService,
-    private authService: AuthService
+    private authService: AuthService,
+    private formDataService: FormDataService
   ) {
     this.generateYears();
   }
 
   ngOnInit(): void {
     this.vehicleForm = this.fb.group({
-      vehiculo: ['', Validators.required],
+      vehiculo: ['', Validators.required], // Cambiado de 'tiene_vehiculo' a 'vehiculo'
       tipo_vehiculo: [{ value: '', disabled: true }],
       marca: [{ value: '', disabled: true }],
+      modelo: [{ value: '', disabled: true }],
+      año: [{ value: '', disabled: true }],
       placa: [{ value: '', disabled: true }],
-      año: [{ value: '', disabled: true }, Validators.required],
-      prop_vehiculo: [{ value: '', disabled: true }]
+      valor_comercial: [{ value: '', disabled: true }],
+      deudas_vehiculo: [{ value: '', disabled: true }],
+      entidad_financiera: [{ value: '', disabled: true }],
+      cuota_mensual: [{ value: '', disabled: true }],
+      prop_vehiculo: [{ value: '', disabled: true }] // Agregado campo propietario
     });
 
     this.vehicleForm.get('vehiculo')?.valueChanges.subscribe(value => {
       this.toggleVehicleFields(value);
     });
 
+    this.vehicleForm.get('deudas_vehiculo')?.valueChanges.subscribe(value => {
+      this.toggleDebtFields(value);
+    });
+
     // Cargar datos guardados si existen
     this.loadFormState();
+    
+    // Cargar datos de vehículo automáticamente
+    this.cargarVehiculoExistente();
   }
 
   loadFormState(): void {
-    // Componente simplificado - no cargar datos de vehículos ya que el proyecto 
-    // se enfoca solo en información personal
-    console.log('ℹ️ Componente de vehículo disponible pero no utilizado en el flujo simplificado');
+    // Cargar datos del estado del formulario si existen
+    const vehiculosGuardados = this.formStateService.getVehiculos();
+    if (vehiculosGuardados && vehiculosGuardados.length > 0) {
+      console.log('📋 Vehículos cargados desde estado del formulario:', vehiculosGuardados);
+      // Tomar el primer vehículo si existe
+      const primerVehiculo = vehiculosGuardados[0];
+      this.cargarDatosEnFormulario(primerVehiculo);
+    }
+  }
+
+  async cargarVehiculoExistente(): Promise<void> {
+    try {
+      this.isLoading = true;
+      console.log('🚗 Cargando datos de vehículo existentes...');
+      
+      // Obtener la cédula del usuario desde el servicio de sesión
+      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
+      if (!cedula) {
+        console.log('⚠️ No hay cédula disponible para cargar vehículo');
+        return;
+      }
+
+      // Obtener todos los datos del usuario incluyendo vehículos
+      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      
+      if (datosCompletos && datosCompletos.vehiculos && datosCompletos.vehiculos.length > 0) {
+        const vehiculos = datosCompletos.vehiculos;
+        console.log('✅ Vehículos cargados desde datos completos:', vehiculos);
+        
+        // Convertir los vehículos al formato que espera el componente
+        this.vehiculos = vehiculos.map((vehiculo: any) => ({
+          tipo_vehiculo: vehiculo.tipoVehiculo || '',
+          marca: vehiculo.marca || '',
+          placa: vehiculo.placa || '',
+          anio: vehiculo.anio || '',
+          propietario: vehiculo.propietario || ''
+        }));
+        
+        // Marcar como que tiene vehículos
+        this.vehicleForm.patchValue({
+          vehiculo: '2' // Sí tiene vehículos
+        });
+        
+        this.notificationService.showSuccess(
+          '✅ Datos cargados',
+          `Se cargaron ${this.vehiculos.length} vehículos existentes`
+        );
+      } else {
+        console.log('ℹ️ No se encontraron vehículos en los datos completos');
+        // Marcar como que no tiene vehículos
+        this.vehicleForm.patchValue({
+          vehiculo: '1' // No tiene vehículos
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al cargar datos de vehículo:', error);
+      this.notificationService.showWarning(
+        '⚠️ Error al cargar datos',
+        'No se pudieron cargar los datos de vehículo'
+      );
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  cargarDatosEnFormulario(vehiculo: any): void {
+    // Cargar datos en el formulario
+    this.vehicleForm.patchValue({
+      vehiculo: vehiculo.tieneVehiculo || '',
+      tipo_vehiculo: vehiculo.tipoVehiculo || '',
+      marca: vehiculo.marca || '',
+      modelo: vehiculo.modelo || '',
+      año: vehiculo.anio || '',
+      placa: vehiculo.placa || '',
+      valor_comercial: vehiculo.valorComercial || '',
+      deudas_vehiculo: vehiculo.tieneDeudas || '',
+      entidad_financiera: vehiculo.entidadFinanciera || '',
+      cuota_mensual: vehiculo.cuotaMensual || '',
+      prop_vehiculo: vehiculo.propietario || '' // Mapeo del propietario
+    });
+
+    // Habilitar campos según las respuestas
+    if (vehiculo.tieneVehiculo === 'Sí') {
+      this.toggleVehicleFields('Sí');
+    }
+    
+    if (vehiculo.tieneDeudas === 'Sí') {
+      this.toggleDebtFields('Sí');
+    }
   }
 
   generateYears(): void {
@@ -67,29 +168,37 @@ export class VehiculoComponent implements OnInit {
   }
 
   toggleVehicleFields(value: string): void {
-    const fields = ['tipo_vehiculo', 'marca', 'placa', 'año', 'prop_vehiculo'];
-
-    if (value === '2') {
+    const fields = ['tipo_vehiculo', 'marca', 'modelo', 'año', 'placa', 'valor_comercial', 'deudas_vehiculo', 'prop_vehiculo'];
+    
+    if (value === '2') { // Sí tiene vehículo
       fields.forEach(field => {
         this.vehicleForm.get(field)?.enable();
-        if (field !== 'año') {
-          this.vehicleForm.get(field)?.setValidators(Validators.required);
-        }
       });
     } else {
       fields.forEach(field => {
         this.vehicleForm.get(field)?.disable();
-        this.vehicleForm.get(field)?.clearValidators();
-        this.vehicleForm.get(field)?.setValue("");
-        this.vehicleForm.get(field)?.updateValueAndValidity();
+        this.vehicleForm.get(field)?.setValue('');
       });
-      // Si cambió a "No tiene vehículo", limpiar la lista
-      this.vehiculos = [];
+    }
+  }
+
+  toggleDebtFields(value: string): void {
+    const debtFields = ['entidad_financiera', 'cuota_mensual'];
+    
+    if (value === 'Sí') {
+      debtFields.forEach(field => {
+        this.vehicleForm.get(field)?.enable();
+      });
+    } else {
+      debtFields.forEach(field => {
+        this.vehicleForm.get(field)?.disable();
+        this.vehicleForm.get(field)?.setValue('');
+      });
     }
   }
 
   canAddVehicle(): boolean {
-    const requiredFields = ['tipo_vehiculo', 'marca', 'placa', 'año', 'prop_vehiculo'];
+    const requiredFields = ['tipo_vehiculo', 'marca', 'año', 'placa', 'prop_vehiculo'];
     return this.vehicleForm.get('vehiculo')?.value === '2' && 
            requiredFields.every(field => {
              const control = this.vehicleForm.get(field);
@@ -114,6 +223,7 @@ export class VehiculoComponent implements OnInit {
     const vehicleData = {
       tipo_vehiculo: this.vehicleForm.get('tipo_vehiculo')?.value,
       marca: this.vehicleForm.get('marca')?.value,
+      modelo: this.vehicleForm.get('modelo')?.value,
       placa: this.vehicleForm.get('placa')?.value.toUpperCase(),
       anio: this.vehicleForm.get('año')?.value,
       propietario: this.vehicleForm.get('prop_vehiculo')?.value
@@ -136,7 +246,7 @@ export class VehiculoComponent implements OnInit {
     this.vehiculos.push(vehicleData);
 
     // Limpiar solo los campos del vehículo, no el radio button
-    ['tipo_vehiculo', 'marca', 'placa', 'año', 'prop_vehiculo'].forEach(field => {
+    ['tipo_vehiculo', 'marca', 'modelo', 'placa', 'año', 'valor_comercial', 'deudas_vehiculo', 'entidad_financiera', 'cuota_mensual'].forEach(field => {
       this.vehicleForm.get(field)?.setValue('');
       this.vehicleForm.get(field)?.markAsUntouched();
     });
@@ -169,7 +279,7 @@ export class VehiculoComponent implements OnInit {
   }
 
   async validateAndNext(): Promise<void> {
-    const idUsuario = this.userSessionService.getCurrentUserId();
+    const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
     if (!idUsuario) {
       this.notificationService.showError(
         '❌ Error',

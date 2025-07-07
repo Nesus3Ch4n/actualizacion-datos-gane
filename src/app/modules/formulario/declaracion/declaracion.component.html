@@ -148,49 +148,43 @@
     </div>
 
     <!-- Lista de personas agregadas -->
-    <div class="persons-list-section" *ngIf="conflictForm.get('opcion_conflicto')?.value === '1' && personasConflicto.length > 0">
+    <div class="vehicles-section" *ngIf="conflictForm.get('opcion_conflicto')?.value === '1' && personasConflicto.length > 0">
       <h3 class="section-title">
-        <mat-icon>group</mat-icon>
+        <mat-icon>list</mat-icon>
         Personas Registradas
       </h3>
       
-      <div class="persons-container">
-        <div class="person-card" *ngFor="let persona of personasConflicto; let i = index">
-          <div class="person-info">
-            <div class="person-name">
-              <mat-icon>person</mat-icon>
-              <span>{{ persona.nombre }}</span>
+      <div class="vehicles-list">
+        <mat-card class="vehicle-card" *ngFor="let persona of personasConflicto; let i = index">
+          <mat-card-content>
+            <div class="vehicle-info">
+              <div class="vehicle-details">
+                <h4 class="vehicle-title">
+                  <mat-icon>person</mat-icon>
+                  {{ persona.nombre }}
+                </h4>
+                <p class="vehicle-type">
+                  <mat-icon>family_restroom</mat-icon>
+                  {{ persona.parentesco }}
+                </p>
+                <p class="vehicle-institution">
+                  <mat-icon>business</mat-icon>
+                  {{ persona.tipoParteInteresada }}
+                </p>
+              </div>
+              <div class="vehicle-actions">
+                <button mat-icon-button color="warn" (click)="eliminarPersona(i)" matTooltip="Eliminar persona">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
             </div>
-            <div class="person-details">
-              <span class="detail-item">
-                <mat-icon>family_restroom</mat-icon>
-                {{ persona.parentesco }}
-              </span>
-              <span class="detail-item">
-                <mat-icon>business</mat-icon>
-                {{ persona.tipoParteInteresada }}
-              </span>
-            </div>
-          </div>
-          <button mat-icon-button color="warn" (click)="eliminarPersona(i)" 
-                  matTooltip="Eliminar persona" class="delete-button">
-            <mat-icon>delete</mat-icon>
-          </button>
-        </div>
+          </mat-card-content>
+        </mat-card>
       </div>
     </div>
 
   </form>
 
-  <!-- TEMPORAL: Botón de debugging -->
-  <div class="debug-section" style="margin: 20px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-    <h4 style="margin: 0 0 10px 0; color: #666;">🔧 Debugging Temporal</h4>
-    <button mat-raised-button color="warn" (click)="debugFormulario()" style="margin-right: 10px;">
-      <mat-icon>bug_report</mat-icon>
-      Ver Datos en Consola
-    </button>
-    <small style="color: #666;">Haz clic para ver el contenido completo del FormStateService en la consola del navegador</small>
-  </div>
 
   <!-- Botones minimalistas -->
   <div class="form-actions">

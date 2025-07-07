@@ -4,9 +4,10 @@ import { FormStateService } from '../../../services/form-state.service';
 import { NotificationService } from '../../../services/notification.service';
 import { FormNavigationService } from '../../../services/form-navigation.service';
 import { ViviendaService } from '../../../services/vivienda.service';
-import { UserSessionService } from '../../../services/user-session.service';
+import { UsuarioSessionService } from '../../../services/usuario-session.service';
 import { BackendService } from '../../../services/backend.service';
 import { AuthService } from '../../../services/auth.service';
+import { FormDataService } from '../../../services/form-data.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -27,9 +28,10 @@ export class ViviendaComponent implements OnInit {
     private formStateService: FormStateService,
     private notificationService: NotificationService,
     private viviendaService: ViviendaService,
-    private userSessionService: UserSessionService,
+    private usuarioSessionService: UsuarioSessionService,
     private backendService: BackendService,
-    private authService: AuthService
+    private authService: AuthService,
+    private formDataService: FormDataService
   ) {
     this.generateYears();
   }
@@ -61,12 +63,129 @@ export class ViviendaComponent implements OnInit {
 
     // Cargar datos guardados si existen
     this.loadFormState();
+    
+    // Cargar datos de vivienda automáticamente
+    this.cargarViviendaExistente();
   }
 
   loadFormState(): void {
-    // Componente simplificado - no cargar datos de vivienda ya que el proyecto 
-    // se enfoca solo en información personal
-    console.log('ℹ️ Componente de vivienda disponible pero no utilizado en el flujo simplificado');
+    // Cargar datos del estado del formulario si existen
+    const viviendaGuardada = this.formStateService.getVivienda();
+    if (viviendaGuardada && Object.keys(viviendaGuardada).length > 0) {
+      console.log('📋 Vivienda cargada desde estado del formulario:', viviendaGuardada);
+      this.cargarDatosEnFormulario(viviendaGuardada);
+    }
+  }
+
+  async cargarViviendaExistente(): Promise<void> {
+    try {
+      this.isLoading = true;
+      console.log('🏠 Cargando datos de vivienda existentes...');
+      
+      // Obtener la cédula del usuario desde el servicio de sesión
+      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
+      if (!cedula) {
+        console.log('⚠️ No hay cédula disponible para cargar vivienda');
+        return;
+      }
+
+      // Obtener todos los datos del usuario incluyendo vivienda
+      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      
+      if (datosCompletos && datosCompletos.vivienda) {
+        const vivienda = datosCompletos.vivienda;
+        console.log('✅ Vivienda cargada desde datos completos:', vivienda);
+        
+        // Cargar datos en el formulario
+        this.cargarDatosEnFormulario(vivienda);
+        
+        this.notificationService.showSuccess(
+          '✅ Datos cargados',
+          'Se cargaron los datos de vivienda existentes'
+        );
+      } else {
+        console.log('ℹ️ No se encontraron datos de vivienda en los datos completos');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al cargar datos de vivienda:', error);
+      this.notificationService.showWarning(
+        '⚠️ Error al cargar datos',
+        'No se pudieron cargar los datos de vivienda'
+      );
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  cargarDatosEnFormulario(vivienda: any): void {
+    // Separar la dirección en sus componentes
+    let direccion = vivienda.direccion || '';
+    let cdir1 = '', cdir2 = '', cdir3 = '', cdir4 = '';
+    
+    if (direccion) {
+      // Para el formato "CRA 39e # 40 - 45"
+      // Primero separar por "#" para obtener la parte principal y los números
+      const partesPorHash = direccion.split('#');
+      
+      if (partesPorHash.length >= 2) {
+        // Parte principal: "CRA 39e"
+        const partePrincipal = partesPorHash[0].trim();
+        
+        // Separar la parte principal por espacios para obtener tipo y número
+        const partesPrincipales = partePrincipal.split(/\s+/);
+        if (partesPrincipales.length >= 2) {
+          cdir1 = partesPrincipales[0]; // "CRA"
+          cdir2 = partesPrincipales.slice(1).join(' '); // "39e"
+        } else {
+          cdir1 = partePrincipal;
+        }
+        
+        // Parte de números: "40 - 45"
+        const parteNumeros = partesPorHash[1].trim();
+        const partesNumeros = parteNumeros.split('-');
+        
+        if (partesNumeros.length >= 2) {
+          cdir3 = partesNumeros[0].trim(); // "40"
+          cdir4 = partesNumeros[1].trim(); // "45"
+        } else {
+          cdir3 = parteNumeros;
+        }
+      } else {
+        // Si no hay "#", intentar separar por espacios
+        const partes = direccion.split(/\s+/);
+        if (partes.length >= 2) {
+          cdir1 = partes[0];
+          cdir2 = partes.slice(1).join(' ');
+        } else {
+          cdir1 = direccion;
+        }
+      }
+    }
+
+    console.log('🏠 Dirección separada:', { cdir1, cdir2, cdir3, cdir4 });
+
+    // Cargar datos en el formulario
+    this.housingForm.patchValue({
+      cdir1: cdir1,
+      cdir2: cdir2,
+      cdir3: cdir3,
+      cdir4: cdir4,
+      dir_adicional: vivienda.infoAdicional || '',
+      barrio: vivienda.barrio || '',
+      ciudad: vivienda.ciudad || '',
+      tipovivienda: vivienda.tipoVivienda || '',
+      viviendaes: vivienda.vivienda || '',
+      tipo_adquisicion: vivienda.tipoAdquisicion || '',
+      tipo_adquisicion2: vivienda.tipoAdquisicionOtro || '',
+      entidad_vivienda: vivienda.entidad || '',
+      año_vivienda: vivienda.anio || ''
+    });
+
+    // Habilitar campos según el tipo de vivienda
+    if (vivienda.vivienda === 'Propia') {
+      this.toggleHousingFields('Propia');
+    }
   }
 
   generateYears(): void {
@@ -133,7 +252,7 @@ export class ViviendaComponent implements OnInit {
       
       try {
         // Obtener el ID del usuario actual
-        const idUsuario = this.userSessionService.getCurrentUserId();
+        const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
         if (!idUsuario) {
           this.notificationService.showError(
             '❌ Error',

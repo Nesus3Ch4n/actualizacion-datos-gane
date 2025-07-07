@@ -11,6 +11,10 @@
     </div>
     
     <div class="header-actions">
+      <button mat-raised-button color="accent" routerLink="/auditoria" class="auditoria-btn">
+        <mat-icon>history</mat-icon>
+        Auditoría
+      </button>
       <button mat-raised-button color="primary" (click)="exportarTodo()">
         <mat-icon>download</mat-icon>
         Exportar todo
@@ -18,7 +22,54 @@
     </div>
   </div>
 
-  <!-- Sección de filtros -->
+  <!-- Sección de reportes -->
+  <mat-card class="reports-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>assessment</mat-icon>
+        Generación de reportes
+      </mat-card-title>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <div class="reports-grid">
+        <mat-card *ngFor="let reporte of reportesConfig" class="report-item">
+          <mat-card-header>
+            <mat-icon mat-card-avatar [class]="'report-icon-' + reporte.tipo">
+              {{reporte.icono}}
+            </mat-icon>
+            <mat-card-title class="report-title">{{reporte.nombre}}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p class="report-description">{{reporte.descripcion}}</p>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-raised-button 
+                    [color]="reporte.tipo === 'conflicto-intereses' ? 'warn' : 'accent'"
+                    (click)="generarReporte(reporte.tipo)">
+              <mat-icon>file_download</mat-icon>
+              Generar excel
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tabla de usuarios -->
+  <mat-card class="users-table-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>people</mat-icon>
+        Usuarios registrados
+        <span class="users-count">({{dataSource.filteredData.length}})</span>
+      </mat-card-title>
+      <mat-card-subtitle>
+        {{selection.selected.length > 0 ? selection.selected.length + ' usuarios seleccionados' : 'Vista simplificada - Selecciona usuarios para generar reportes específicos'}}
+      </mat-card-subtitle>
+    </mat-card-header>
+    
+    <!-- Sección de filtros -->
   <mat-card class="filters-card">
     <mat-card-header>
       <mat-card-title>
@@ -65,56 +116,28 @@
       </div>
     </mat-card-content>
   </mat-card>
-
-  <!-- Sección de reportes -->
-  <mat-card class="reports-card">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>assessment</mat-icon>
-        Generación de reportes
-      </mat-card-title>
-    </mat-card-header>
     
     <mat-card-content>
-      <div class="reports-grid">
-        <mat-card *ngFor="let reporte of reportesConfig" class="report-item">
-          <mat-card-header>
-            <mat-icon mat-card-avatar [class]="'report-icon-' + reporte.tipo">
-              {{reporte.icono}}
-            </mat-icon>
-            <mat-card-title class="report-title">{{reporte.nombre}}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <p class="report-description">{{reporte.descripcion}}</p>
-          </mat-card-content>
-          <mat-card-actions>
-            <button mat-raised-button 
-                    [color]="reporte.tipo === 'conflicto-intereses' ? 'warn' : 'accent'"
-                    (click)="generarReporte(reporte.tipo)">
-              <mat-icon>file_download</mat-icon>
-              Generar excel
-            </button>
-          </mat-card-actions>
-        </mat-card>
+      <!-- Indicador de carga -->
+      <div *ngIf="cargando" class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Cargando usuarios...</p>
       </div>
-    </mat-card-content>
-  </mat-card>
 
-  <!-- Tabla de usuarios -->
-  <mat-card class="users-table-card">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>people</mat-icon>
-        Usuarios registrados
-        <span class="users-count">({{dataSource.filteredData.length}})</span>
-      </mat-card-title>
-      <mat-card-subtitle>
-        {{selection.selected.length > 0 ? selection.selected.length + ' usuarios seleccionados' : 'Selecciona usuarios para generar reportes específicos'}}
-      </mat-card-subtitle>
-    </mat-card-header>
-    
-    <mat-card-content>
-      <div class="table-container">
+      <!-- Mensaje de error -->
+      <div *ngIf="error && !cargando" class="error-container">
+        <mat-icon color="warn">error</mat-icon>
+        <p>{{error}}</p>
+        <button mat-raised-button color="primary" (click)="cargarUsuarios()">
+          <mat-icon>refresh</mat-icon>
+          Reintentar
+        </button>
+      </div>
+
+      
+
+      <!-- Tabla de usuarios -->
+      <div *ngIf="!cargando && !error" class="table-container">
         <table mat-table [dataSource]="dataSource" matSort class="users-table">
           
           <!-- Columna de selección -->
@@ -135,27 +158,15 @@
             </td>
           </ng-container>
 
-          <!-- ID -->
-          <ng-container matColumnDef="id">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
-            <td mat-cell *matCellDef="let usuario">{{usuario.id}}</td>
-          </ng-container>
-
-          <!-- Nombre -->
+          <!-- Nombre Completo -->
           <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre Completo</th>
             <td mat-cell *matCellDef="let usuario">
               <div class="user-name">
                 <mat-icon class="user-avatar">account_circle</mat-icon>
-                {{usuario.nombre}}
+                {{usuario.nombre}} {{usuario.apellido}}
               </div>
             </td>
-          </ng-container>
-
-          <!-- Apellido -->
-          <ng-container matColumnDef="apellido">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Apellido</th>
-            <td mat-cell *matCellDef="let usuario">{{usuario.apellido}}</td>
           </ng-container>
 
           <!-- Email -->
@@ -178,17 +189,9 @@
           <ng-container matColumnDef="departamento">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Departamento</th>
             <td mat-cell *matCellDef="let usuario">
-              <mat-chip [color]="'primary'" selected>
+              <div class="departamento-chip">
                 {{usuario.departamento}}
-              </mat-chip>
-            </td>
-          </ng-container>
-
-          <!-- Fecha de Ingreso -->
-          <ng-container matColumnDef="fechaIngreso">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha ingreso</th>
-            <td mat-cell *matCellDef="let usuario">
-              {{usuario.fechaIngreso | date:'dd/MM/yyyy'}}
+              </div>
             </td>
           </ng-container>
 
@@ -196,18 +199,10 @@
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
             <td mat-cell *matCellDef="let usuario">
-              <mat-chip [color]="getEstadoColor(usuario.estado)" selected>
+              <div class="estado-chip" [class]="'estado-' + usuario.estado">
                 <mat-icon>{{usuario.estado === 'activo' ? 'check_circle' : 'cancel'}}</mat-icon>
                 {{usuario.estado | titlecase}}
-              </mat-chip>
-            </td>
-          </ng-container>
-
-          <!-- Última Actualización -->
-          <ng-container matColumnDef="ultimaActualizacion">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Última actualización</th>
-            <td mat-cell *matCellDef="let usuario">
-              {{usuario.ultimaActualizacion | date:'dd/MM/yyyy'}}
+              </div>
             </td>
           </ng-container>
 
@@ -215,10 +210,10 @@
           <ng-container matColumnDef="conflictoIntereses">
             <th mat-header-cell *matHeaderCellDef>Conflicto intereses</th>
             <td mat-cell *matCellDef="let usuario">
-              <mat-icon [color]="getConflictoColor(usuario.tieneConflictoIntereses)"
-                        [matTooltip]="usuario.tieneConflictoIntereses ? 'Tiene conflicto de intereses' : 'Sin conflicto de intereses'">
-                {{getConflictoIcon(usuario.tieneConflictoIntereses)}}
-              </mat-icon>
+              <div class="conflicto-icon" [class]="usuario.tieneConflictoIntereses ? 'tiene-conflicto' : 'sin-conflicto'"
+                   [matTooltip]="usuario.tieneConflictoIntereses ? 'Tiene conflicto de intereses' : 'Sin conflicto de intereses'">
+                <mat-icon>{{getConflictoIcon(usuario.tieneConflictoIntereses)}}</mat-icon>
+              </div>
             </td>
           </ng-container>
 
@@ -231,11 +226,6 @@
                         (click)="verDetalle(usuario)"
                         matTooltip="Ver detalle">
                   <mat-icon>visibility</mat-icon>
-                </button>
-                <button mat-icon-button color="accent" 
-                        (click)="editarUsuario(usuario)"
-                        matTooltip="Editar">
-                  <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button color="warn" 
                         (click)="eliminarUsuario(usuario)"

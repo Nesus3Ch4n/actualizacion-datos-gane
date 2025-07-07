@@ -1,0 +1,320 @@
+<div class="modal-container">
+  <h2 mat-dialog-title class="modal-title">
+    <mat-icon class="title-icon">person</mat-icon>
+    Detalle Completo del Usuario
+  </h2>
+  
+  <mat-dialog-content class="modal-content">
+    <mat-tab-group class="custom-tab-group">
+      <!-- Tab Información Personal -->
+      <mat-tab label="Información Personal" class="custom-tab">
+        <div class="tab-content">
+          <div class="info-section">
+            <h3 class="section-title">
+              <mat-icon>person_outline</mat-icon>
+              Datos Personales
+            </h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Nombre completo:</span>
+                <span class="value">{{data.usuario?.nombre || 'No especificado'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Cédula:</span>
+                <span class="value">{{data.usuario?.cedula || 'No especificado'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Correo electrónico:</span>
+                <span class="value">{{data.usuario?.correo || 'No especificado'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Cargo:</span>
+                <span class="value">{{data.usuario?.cargo || 'No especificado'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Área:</span>
+                <span class="value">{{data.usuario?.area || 'No especificado'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Estado civil:</span>
+                <span class="value">{{data.usuario?.estadoCivil || 'No especificado'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Tipo de sangre:</span>
+                <span class="value">{{data.usuario?.tipoSangre || 'No especificado'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Fecha de nacimiento:</span>
+                <span class="value">{{data.usuario?.fechaNacimiento | date:'dd/MM/yyyy' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Contactos de Emergencia -->
+      <mat-tab label="Contactos de Emergencia" class="custom-tab">
+        <div class="tab-content">
+          <ng-container *ngIf="data.contactosEmergencia?.length; else noContactos">
+            <div *ngFor="let contacto of data.contactosEmergencia; let i = index" class="item-block">
+              <h4 class="item-title">
+                <mat-icon>contact_phone</mat-icon>
+                Contacto {{i + 1}}
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Nombre completo:</span>
+                  <span class="value">{{contacto.nombreCompleto || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Parentesco:</span>
+                  <span class="value">{{contacto.parentesco || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Teléfono:</span>
+                  <span class="value">{{contacto.numeroCelular || 'No especificado'}}</span>
+                </div>
+              </div>
+              <mat-divider *ngIf="i < data.contactosEmergencia.length - 1"></mat-divider>
+            </div>
+          </ng-container>
+          <ng-template #noContactos>
+            <div class="no-data">
+              <mat-icon>info</mat-icon>
+              <p>No hay contactos de emergencia registrados.</p>
+            </div>
+          </ng-template>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Estudios Académicos -->
+      <mat-tab label="Estudios Académicos" class="custom-tab">
+        <div class="tab-content">
+          <ng-container *ngIf="data.estudiosAcademicos?.length; else noEstudios">
+            <div *ngFor="let estudio of data.estudiosAcademicos; let i = index" class="item-block">
+              <h4 class="item-title">
+                <mat-icon>school</mat-icon>
+                Estudio {{i + 1}}
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Nivel educativo:</span>
+                  <span class="value">{{estudio.nivelEducativo || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Institución:</span>
+                  <span class="value">{{estudio.institucion || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Título/Programa:</span>
+                  <span class="value">{{estudio.titulo || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Semestre:</span>
+                  <span class="value">{{estudio.semestre || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Estado de graduación:</span>
+                  <span class="value">{{estudio.graduacion || 'No especificado'}}</span>
+                </div>
+              </div>
+              <mat-divider *ngIf="i < data.estudiosAcademicos.length - 1"></mat-divider>
+            </div>
+          </ng-container>
+          <ng-template #noEstudios>
+            <div class="no-data">
+              <mat-icon>info</mat-icon>
+              <p>No hay estudios académicos registrados.</p>
+            </div>
+          </ng-template>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Personas a Cargo -->
+      <mat-tab label="Personas a Cargo" class="custom-tab">
+        <div class="tab-content">
+          <ng-container *ngIf="data.personasACargo?.length; else noPersonas">
+            <div *ngFor="let persona of data.personasACargo; let i = index" class="item-block">
+              <h4 class="item-title">
+                <mat-icon>family_restroom</mat-icon>
+                Persona {{i + 1}}
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Nombre:</span>
+                  <span class="value">{{persona.nombre || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Parentesco:</span>
+                  <span class="value">{{persona.parentesco || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Edad:</span>
+                  <span class="value">{{persona.edad || 'No especificado'}} años</span>
+                </div>
+                <div class="info-item" *ngIf="persona.fechaNacimiento">
+                  <span class="label">Fecha de nacimiento:</span>
+                  <span class="value">{{persona.fechaNacimiento || 'No especificado'}}</span>
+                </div>
+              </div>
+              <mat-divider *ngIf="i < data.personasACargo.length - 1"></mat-divider>
+            </div>
+          </ng-container>
+          <ng-template #noPersonas>
+            <div class="no-data">
+              <mat-icon>info</mat-icon>
+              <p>No hay personas a cargo registradas.</p>
+            </div>
+          </ng-template>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Conflictos de Interés -->
+      <mat-tab label="Conflictos de Interés" class="custom-tab">
+        <div class="tab-content">
+          <ng-container *ngIf="data.relacionesConflicto?.length; else noConflictos">
+            <div *ngFor="let relacion of data.relacionesConflicto; let i = index" class="item-block">
+              <h4 class="item-title">
+                <mat-icon>gavel</mat-icon>
+                Relación {{i + 1}}
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Nombre completo:</span>
+                  <span class="value">{{relacion.nombreCompleto || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Parentesco:</span>
+                  <span class="value">{{relacion.parentesco || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Tipo de parte asociada:</span>
+                  <span class="value">{{relacion.tipoParteAsoc || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Fecha de creación:</span>
+                  <span class="value">{{relacion.fechaCreacion || 'No especificado'}}</span>
+                </div>
+              </div>
+              <mat-divider *ngIf="i < data.relacionesConflicto.length - 1"></mat-divider>
+            </div>
+          </ng-container>
+          <ng-template #noConflictos>
+            <div class="no-data">
+              <mat-icon>info</mat-icon>
+              <p>No hay conflictos de interés registrados.</p>
+            </div>
+          </ng-template>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Vehículos -->
+      <mat-tab label="Vehículos" class="custom-tab">
+        <div class="tab-content">
+          <ng-container *ngIf="data.vehiculos?.length; else noVehiculos">
+            <div *ngFor="let vehiculo of data.vehiculos; let i = index" class="item-block">
+              <h4 class="item-title">
+                <mat-icon>directions_car</mat-icon>
+                Vehículo {{i + 1}}
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Tipo de vehículo:</span>
+                  <span class="value">{{vehiculo.tipoVehiculo || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Marca:</span>
+                  <span class="value">{{vehiculo.marca || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Placa:</span>
+                  <span class="value">{{vehiculo.placa || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Año:</span>
+                  <span class="value">{{vehiculo.anio || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Propietario:</span>
+                  <span class="value">{{vehiculo.propietario || 'No especificado'}}</span>
+                </div>
+              </div>
+              <mat-divider *ngIf="i < data.vehiculos.length - 1"></mat-divider>
+            </div>
+          </ng-container>
+          <ng-template #noVehiculos>
+            <div class="no-data">
+              <mat-icon>info</mat-icon>
+              <p>No hay vehículos registrados.</p>
+            </div>
+          </ng-template>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Vivienda -->
+      <mat-tab label="Vivienda" class="custom-tab">
+        <div class="tab-content">
+          <ng-container *ngIf="data.vivienda; else noVivienda">
+            <div class="item-block">
+              <h4 class="item-title">
+                <mat-icon>home</mat-icon>
+                Información de Vivienda
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Tipo de vivienda:</span>
+                  <span class="value">{{data.vivienda.tipoVivienda || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Dirección:</span>
+                  <span class="value">{{data.vivienda.direccion || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Barrio:</span>
+                  <span class="value">{{data.vivienda.barrio || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Ciudad:</span>
+                  <span class="value">{{data.vivienda.ciudad || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Información adicional:</span>
+                  <span class="value">{{data.vivienda.infoAdicional || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Tipo de vivienda (clasificación):</span>
+                  <span class="value">{{data.vivienda.vivienda || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Entidad:</span>
+                  <span class="value">{{data.vivienda.entidad || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Año:</span>
+                  <span class="value">{{data.vivienda.anio || 'No especificado'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Tipo de adquisición:</span>
+                  <span class="value">{{data.vivienda.tipoAdquisicion || 'No especificado'}}</span>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+          <ng-template #noVivienda>
+            <div class="no-data">
+              <mat-icon>info</mat-icon>
+              <p>No hay información de vivienda registrada.</p>
+            </div>
+          </ng-template>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="modal-actions">
+    <button mat-button class="close-button" (click)="close()">
+      <mat-icon>close</mat-icon>
+      Cerrar
+    </button>
+  </mat-dialog-actions>
+</div> 

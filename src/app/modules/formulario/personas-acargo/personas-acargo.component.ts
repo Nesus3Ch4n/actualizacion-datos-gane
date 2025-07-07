@@ -7,7 +7,11 @@ import { FormNavigationService } from '../../../services/form-navigation.service
 import { PersonaACargoService } from '../../../services/persona-acargo.service';
 import { UsuarioSessionService } from '../../../services/usuario-session.service';
 import { firstValueFrom } from 'rxjs';
-import { UserSessionService } from '../../../services/user-session.service';
+import { map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+import { BackendService } from '../../../services/backend.service';
+import { AuthService } from '../../../services/auth.service';
+import { FormDataService } from '../../../services/form-data.service';
 
 @Component({
   selector: 'app-personas-acargo',
@@ -35,14 +39,23 @@ export class PersonasAcargoComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder, 
-    private datePipe: DatePipe, 
+    private formNavigationService: FormNavigationService,
     private formStateService: FormStateService,
     private notificationService: NotificationService,
-    private formNavigationService: FormNavigationService,
     private personaACargoService: PersonaACargoService,
     private usuarioSessionService: UsuarioSessionService,
-    private userSessionService: UserSessionService
-  ) {}
+    private backendService: BackendService,
+    private authService: AuthService,
+    private formDataService: FormDataService,
+    private datePipe: DatePipe
+  ) {
+    this.generateYears();
+  }
+
+  generateYears(): void {
+    // Este método no es necesario para el componente de personas a cargo
+    // Se puede eliminar la llamada en el constructor
+  }
 
   ngOnInit(): void {
     this.personasACargoForm = this.fb.group({
@@ -59,39 +72,66 @@ export class PersonasAcargoComponent implements OnInit {
 
     // Cargar datos guardados si existen
     this.loadFormState();
-    this.loadExistingPersons();
-  }
-
-  async loadExistingPersons(): Promise<void> {
-    try {
-      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-      if (idUsuario) {
-        console.log('📋 Cargando personas a cargo existentes para usuario ID:', idUsuario);
-        const personasExistentes = await firstValueFrom(
-          this.personaACargoService.obtenerPersonasPorUsuario(idUsuario)
-        );
-        
-        if (personasExistentes && personasExistentes.length > 0) {
-          this.personas = personasExistentes;
-          this.personasACargoForm.get('persona_acargo')?.setValue('2'); // Marcar como que tiene personas a cargo
-          this.togglePersonalFields('2');
-          console.log('✅ Personas a cargo cargadas desde BD:', this.personas);
-          this.notificationService.showInfo(
-            '📋 Personas cargadas',
-            `Se cargaron ${this.personas.length} persona(s) a cargo existente(s)`
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar personas existentes:', error);
-      // No mostrar error si no hay personas (es normal)
-    }
+    
+    // Cargar datos de personas a cargo automáticamente
+    this.cargarPersonasExistentes();
   }
 
   loadFormState(): void {
-    // Componente simplificado - no cargar datos de personas a cargo ya que el proyecto 
-    // se enfoca solo en información personal
-    console.log('ℹ️ Componente de personas a cargo disponible pero no utilizado en el flujo simplificado');
+    // Cargar datos del estado del formulario si existen
+    const personasGuardadas = this.formStateService.getPersonasACargo();
+    if (personasGuardadas && personasGuardadas.length > 0) {
+      console.log('📋 Personas a cargo cargadas desde estado del formulario:', personasGuardadas);
+      this.personas = personasGuardadas;
+    }
+  }
+
+  async cargarPersonasExistentes(): Promise<void> {
+    try {
+      this.isLoading = true;
+      console.log('👥 Cargando datos de personas a cargo existentes...');
+      
+      // Obtener la cédula del usuario desde el servicio de sesión
+      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
+      if (!cedula) {
+        console.log('⚠️ No hay cédula disponible para cargar personas a cargo');
+        return;
+      }
+
+      // Obtener todos los datos del usuario incluyendo personas a cargo
+      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      
+      if (datosCompletos && datosCompletos.personasACargo) {
+        const personas = datosCompletos.personasACargo;
+        console.log('✅ Personas a cargo cargadas desde datos completos:', personas);
+        
+        // Convertir las personas al formato del componente
+        this.personas = personas.map((persona: any) => ({
+          nombre: persona.nombre || '',
+          parentesco: persona.parentesco || '',
+          fecha_nacimiento: persona.fechaNacimientoFormateada || persona.fechaNacimiento || persona.fecha_nacimiento || '',
+          edad: persona.edad || '',
+          ocupacion: persona.ocupacion || '',
+          ingresos: persona.ingresos || ''
+        }));
+        
+        this.notificationService.showSuccess(
+          '✅ Datos cargados',
+          `Se cargaron ${this.personas.length} personas a cargo`
+        );
+      } else {
+        console.log('ℹ️ No se encontraron personas a cargo en los datos completos');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error al cargar personas a cargo:', error);
+      this.notificationService.showWarning(
+        '⚠️ Error al cargar datos',
+        'No se pudieron cargar las personas a cargo'
+      );
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   togglePersonalFields(value: string): void {
@@ -262,11 +302,11 @@ export class PersonasAcargoComponent implements OnInit {
       
       if (!idUsuario) {
         // Intentar recuperar de userSessionService como fallback
-        const idFallback = this.userSessionService.getCurrentUserId();
+        const idFallback = this.usuarioSessionService.getIdUsuarioActual(); // Assuming getIdUsuarioActual is the correct fallback
         
         if (idFallback) {
           console.log('⚠️ Usando ID del userSessionService como fallback:', idFallback);
-          // Intentar reconstruir la sesión del usuarioSessionService
+          // Intentar reconstruir la sesión del userSessionService
           const usuarioMinimo = { id: idFallback };
           this.usuarioSessionService.setUsuarioActual(usuarioMinimo);
           
@@ -277,6 +317,13 @@ export class PersonasAcargoComponent implements OnInit {
       }
 
       console.log('👤 Procesando personas a cargo para usuario ID:', idUsuario);
+
+      // Verificar si ya existen personas a cargo para este usuario
+      const personasExistentes = await firstValueFrom(
+        this.personaACargoService.obtenerPersonasPorUsuario(idUsuario)
+      );
+      
+      const tienePersonasExistentes = personasExistentes && personasExistentes.length > 0;
 
       // Si el usuario tiene personas a cargo (opción "2"), validar que haya agregado al menos una
       if (this.personasACargoForm.get('persona_acargo')?.value === '2') {
@@ -297,8 +344,6 @@ export class PersonasAcargoComponent implements OnInit {
           parentesco: persona.parentesco,
           fechaNacimiento: persona.fechaNacimiento,
           edad: persona.edad
-          // version: 1, // Descomenta si tu backend lo requiere
-          // idUsuario: idUsuario // Descomenta si tu backend lo requiere
         }));
 
         // Guardar usando el servicio
@@ -308,20 +353,35 @@ export class PersonasAcargoComponent implements OnInit {
         
         console.log('✅ Personas a cargo guardadas en BD:', resultado);
         
-        this.notificationService.showSuccess(
-          '✅ Personas a cargo guardadas',
-          `Se registraron ${this.personas.length} persona(s) a cargo en la base de datos`
-        );
+        // Mostrar mensaje apropiado según si existían datos previos
+        if (tienePersonasExistentes) {
+          this.notificationService.showSuccess(
+            '✅ Personas a cargo actualizadas',
+            `Se actualizaron ${this.personas.length} persona(s) a cargo en la base de datos`
+          );
+        } else {
+          this.notificationService.showSuccess(
+            '✅ Personas a cargo guardadas',
+            `Se registraron ${this.personas.length} persona(s) a cargo en la base de datos`
+          );
+        }
       } else {
         // Usuario no tiene personas a cargo - guardar lista vacía
         await firstValueFrom(
           this.personaACargoService.guardarPersonasACargo(idUsuario, [])
         );
         
-        this.notificationService.showInfo(
-          'ℹ️ Sin personas a cargo',
-          'Se registró que no tienes personas a cargo'
-        );
+        if (tienePersonasExistentes) {
+          this.notificationService.showInfo(
+            'ℹ️ Datos actualizados',
+            'Se actualizó el registro indicando que no tienes personas a cargo'
+          );
+        } else {
+          this.notificationService.showInfo(
+            'ℹ️ Sin personas a cargo',
+            'Se registró que no tienes personas a cargo'
+          );
+        }
       }
 
       // Continuar al siguiente paso

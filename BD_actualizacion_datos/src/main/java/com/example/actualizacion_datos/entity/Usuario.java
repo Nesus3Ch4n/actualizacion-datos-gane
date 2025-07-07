@@ -34,13 +34,13 @@ public class Usuario {
     private String correo;
     
     @Column(name = "NUMERO_FIJO")
-    private Long numeroFijo;
+    private String numeroFijo;
     
     @Column(name = "NUMERO_CELULAR")
-    private Long numeroCelular;
+    private String numeroCelular;
     
     @Column(name = "NUMERO_CORP")
-    private Long numeroCorp;
+    private String numeroCorp;
     
     @Column(name = "CEDULA_EXPEDICION")
     private String cedulaExpedicion;
@@ -100,14 +100,14 @@ public class Usuario {
     public String getCorreo() { return correo; }
     public void setCorreo(String correo) { this.correo = correo; }
     
-    public Long getNumeroFijo() { return numeroFijo; }
-    public void setNumeroFijo(Long numeroFijo) { this.numeroFijo = numeroFijo; }
+    public String getNumeroFijo() { return numeroFijo; }
+    public void setNumeroFijo(String numeroFijo) { this.numeroFijo = numeroFijo; }
     
-    public Long getNumeroCelular() { return numeroCelular; }
-    public void setNumeroCelular(Long numeroCelular) { this.numeroCelular = numeroCelular; }
+    public String getNumeroCelular() { return numeroCelular; }
+    public void setNumeroCelular(String numeroCelular) { this.numeroCelular = numeroCelular; }
     
-    public Long getNumeroCorp() { return numeroCorp; }
-    public void setNumeroCorp(Long numeroCorp) { this.numeroCorp = numeroCorp; }
+    public String getNumeroCorp() { return numeroCorp; }
+    public void setNumeroCorp(String numeroCorp) { this.numeroCorp = numeroCorp; }
     
     public String getCedulaExpedicion() { return cedulaExpedicion; }
     public void setCedulaExpedicion(String cedulaExpedicion) { this.cedulaExpedicion = cedulaExpedicion; }
