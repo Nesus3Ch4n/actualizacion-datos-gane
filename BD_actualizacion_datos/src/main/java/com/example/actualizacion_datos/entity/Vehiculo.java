@@ -1,7 +1,7 @@
 package com.example.actualizacion_datos.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "VEHICULO")
@@ -12,49 +12,50 @@ public class Vehiculo {
     @Column(name = "ID_VEHICULO")
     private Long idVehiculo;
     
-    @Column(name = "ID_USUARIO", nullable = false)
-    private Long idUsuario;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ID_USUARIO", nullable = false)
+    private Usuario usuario;
     
-    @NotBlank(message = "El tipo de vehículo es requerido")
-    @Column(name = "TIPO_VEHICULO", nullable = false)
+    @Column(name = "TIPO_VEHICULO", length = 50)
     private String tipoVehiculo;
     
-    @NotBlank(message = "La marca es requerida")
-    @Column(name = "MARCA", nullable = false)
+    @Column(name = "MARCA", length = 50)
     private String marca;
     
-    @NotBlank(message = "La placa es requerida")
-    @Column(name = "PLACA", nullable = false)
+    @Column(name = "PLACA", length = 20)
     private String placa;
     
-    @Column(name = "ANIO", nullable = false)
-    private Integer anio;
+    @Column(name = "ANO")
+    private Integer ano;
     
-    @NotBlank(message = "El propietario es requerido")
-    @Column(name = "PROPIETARIO", nullable = false)
+    @Column(name = "PROPIETARIO", length = 100)
     private String propietario;
     
     @Column(name = "VERSION")
     private Integer version = 1;
     
+    @Column(name = "FECHA_CREACION")
+    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    
+    @Column(name = "FECHA_MODIFICACION")
+    private LocalDateTime fechaModificacion = LocalDateTime.now();
+    
     // Constructores
     public Vehiculo() {}
     
-    public Vehiculo(Long idUsuario, String tipoVehiculo, String marca, String placa, Integer anio, String propietario) {
-        this.idUsuario = idUsuario;
+    public Vehiculo(Usuario usuario, String tipoVehiculo, String marca, String placa) {
+        this.usuario = usuario;
         this.tipoVehiculo = tipoVehiculo;
         this.marca = marca;
         this.placa = placa;
-        this.anio = anio;
-        this.propietario = propietario;
     }
     
     // Getters y Setters
     public Long getIdVehiculo() { return idVehiculo; }
     public void setIdVehiculo(Long idVehiculo) { this.idVehiculo = idVehiculo; }
     
-    public Long getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Long idUsuario) { this.idUsuario = idUsuario; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
     
     public String getTipoVehiculo() { return tipoVehiculo; }
     public void setTipoVehiculo(String tipoVehiculo) { this.tipoVehiculo = tipoVehiculo; }
@@ -65,8 +66,8 @@ public class Vehiculo {
     public String getPlaca() { return placa; }
     public void setPlaca(String placa) { this.placa = placa; }
     
-    public Integer getAnio() { return anio; }
-    public void setAnio(Integer anio) { this.anio = anio; }
+    public Integer getAno() { return ano; }
+    public void setAno(Integer ano) { this.ano = ano; }
     
     public String getPropietario() { return propietario; }
     public void setPropietario(String propietario) { this.propietario = propietario; }
@@ -74,17 +75,20 @@ public class Vehiculo {
     public Integer getVersion() { return version; }
     public void setVersion(Integer version) { this.version = version; }
     
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+    
+    public LocalDateTime getFechaModificacion() { return fechaModificacion; }
+    public void setFechaModificacion(LocalDateTime fechaModificacion) { this.fechaModificacion = fechaModificacion; }
+    
     @Override
     public String toString() {
         return "Vehiculo{" +
                 "idVehiculo=" + idVehiculo +
-                ", idUsuario=" + idUsuario +
                 ", tipoVehiculo='" + tipoVehiculo + '\'' +
                 ", marca='" + marca + '\'' +
                 ", placa='" + placa + '\'' +
-                ", anio=" + anio +
                 ", propietario='" + propietario + '\'' +
-                ", version=" + version +
                 '}';
     }
 } 

@@ -91,15 +91,15 @@ export class PersonasAcargoComponent implements OnInit {
       this.isLoading = true;
       console.log('👥 Cargando datos de personas a cargo existentes...');
       
-      // Obtener la cédula del usuario desde el servicio de sesión
-      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
-      if (!cedula) {
-        console.log('⚠️ No hay cédula disponible para cargar personas a cargo');
+      // Obtener el ID del usuario desde el servicio de sesión
+      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      if (!idUsuario) {
+        console.log('⚠️ No hay ID de usuario disponible para cargar personas a cargo');
         return;
       }
 
       // Obtener todos los datos del usuario incluyendo personas a cargo
-      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      const datosCompletos = await this.formDataService.obtenerDatosCompletosPorId(idUsuario);
       
       if (datosCompletos && datosCompletos.personasACargo) {
         const personas = datosCompletos.personasACargo;
@@ -318,9 +318,13 @@ export class PersonasAcargoComponent implements OnInit {
 
       console.log('👤 Procesando personas a cargo para usuario ID:', idUsuario);
 
+      // Obtener la cédula del usuario actual
+      const usuarioActual = this.usuarioSessionService.getUsuarioActual();
+      const cedula = usuarioActual?.cedula || idUsuario; // Usar cédula si está disponible, sino usar ID
+
       // Verificar si ya existen personas a cargo para este usuario
       const personasExistentes = await firstValueFrom(
-        this.personaACargoService.obtenerPersonasPorUsuario(idUsuario)
+        this.personaACargoService.obtenerPersonasPorIdUsuario(idUsuario)
       );
       
       const tienePersonasExistentes = personasExistentes && personasExistentes.length > 0;

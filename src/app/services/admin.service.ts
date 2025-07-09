@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface UsuarioBD {
-  id: number;
+  idUsuario: number;
+  documento: number;
   nombre: string;
-  cedula: number;
   correo: string;
   numeroFijo?: number;
   numeroCelular?: number;
@@ -19,7 +20,7 @@ export interface UsuarioBD {
   tipoSangre?: string;
   version?: number;
   fechaCreacion?: string;
-  fechaActualizacion?: string;
+  fechaModificacion?: string;
 }
 
 export interface UsuarioAdmin {
@@ -41,7 +42,7 @@ export interface UsuarioAdmin {
 })
 export class AdminService {
 
-  private readonly API_URL = 'http://localhost:8080/api';
+  private readonly API_URL = environment.apiBaseUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -49,12 +50,19 @@ export class AdminService {
    * Obtener todos los usuarios de la base de datos
    */
   obtenerUsuarios(): Observable<UsuarioAdmin[]> {
-    return this.http.get<any>(`${this.API_URL}/USUARIO/test/todos`).pipe(
+    console.log('🔍 AdminService: Solicitando usuarios del backend...');
+    return this.http.get<any>(`${this.API_URL}/usuarios`).pipe(
       map(response => {
+        console.log('📥 AdminService: Respuesta del backend:', response);
         if (response && response.success && response.data) {
+          console.log('✅ AdminService: Datos recibidos correctamente');
+          console.log('👥 AdminService: Usuarios sin transformar:', response.data);
           // Transformar los usuarios de la BD al formato del panel
-          return this.transformarUsuarios(response.data);
+          const usuariosTransformados = this.transformarUsuarios(response.data);
+          console.log('🔄 AdminService: Usuarios transformados:', usuariosTransformados);
+          return usuariosTransformados;
         } else {
+          console.log('⚠️ AdminService: No hay datos o error en la respuesta');
           // Si no hay usuarios o hay error, devolver array vacío
           return this.transformarUsuarios([]);
         }
@@ -93,8 +101,10 @@ export class AdminService {
    * Transformar usuarios de la BD al formato del panel de administración
    */
   private transformarUsuarios(usuariosBD: UsuarioBD[]): UsuarioAdmin[] {
-    return usuariosBD.map(usuario => ({
-      id: usuario.id,
+    console.log('🔄 AdminService: Transformando usuarios:', usuariosBD);
+    return usuariosBD.map(usuario => {
+      const usuarioTransformado = {
+        id: usuario.idUsuario,
       nombre: usuario.nombre ? usuario.nombre.split(' ')[0] || usuario.nombre : 'Sin nombre',
       apellido: usuario.nombre ? usuario.nombre.split(' ').slice(1).join(' ') || 'Sin apellido' : 'Sin apellido',
       email: usuario.correo || 'Sin email',
@@ -102,23 +112,26 @@ export class AdminService {
       departamento: usuario.area || 'Sin departamento',
       fechaIngreso: usuario.fechaCreacion ? new Date(usuario.fechaCreacion) : new Date(),
       estado: 'activo' as const,
-      ultimaActualizacion: usuario.fechaActualizacion ? new Date(usuario.fechaActualizacion) : new Date(),
+        ultimaActualizacion: usuario.fechaModificacion ? new Date(usuario.fechaModificacion) : new Date(),
       tieneConflictoIntereses: false, // Por defecto false, se puede calcular después
-      cedula: usuario.cedula
-    }));
+        cedula: usuario.documento
+      };
+      console.log('👤 AdminService: Usuario transformado:', usuarioTransformado);
+      return usuarioTransformado;
+    });
   }
 
   /**
    * Crear usuario de prueba en la base de datos
    */
   crearUsuarioPrueba(usuarioData: any): Observable<any> {
-    return this.http.post<any>(`${this.API_URL}/USUARIO/test/crear-usuario`, usuarioData);
+    return this.http.post<any>(`${this.API_URL}/usuarios/basico`, usuarioData);
   }
 
   /**
    * Verificar si un usuario existe por cédula
    */
   verificarUsuarioPorCedula(cedula: string): Observable<any> {
-    return this.http.get<any>(`${this.API_URL}/USUARIO/test/cedula/${cedula}`);
+    return this.http.get<any>(`${this.API_URL}/usuarios/cedula/${cedula}`);
   }
 } 

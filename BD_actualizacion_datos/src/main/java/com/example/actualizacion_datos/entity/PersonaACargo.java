@@ -1,106 +1,86 @@
 package com.example.actualizacion_datos.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDate;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "FAMILIA")
 public class PersonaACargo {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_FAMILIA")
-    private Long id;
-
-    @Column(name = "ID_USUARIO", nullable = false)
-    private Long idUsuario;
-
-    @Column(name = "NOMBRE", nullable = false)
+    private Long idFamilia;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ID_USUARIO", nullable = false)
+    private Usuario usuario;
+    
+    @Column(name = "NOMBRE", length = 100)
     private String nombre;
-
-    @Column(name = "PARENTESCO", nullable = false)
+    
+    @Column(name = "PARENTESCO", length = 50)
     private String parentesco;
-
-    @Column(name = "FECHA_NACIMIENTO")
-    private String fechaNacimiento; // Cambiado a String para manejar timestamps
-
+    
+    @Column(name = "FECHA_NACIMIENTO", length = 20)
+    private String fechaNacimiento;
+    
     @Column(name = "EDAD")
     private Integer edad;
-
+    
     @Column(name = "VERSION")
-    private Integer version;
-
+    private Integer version = 1;
+    
+    @Column(name = "FECHA_CREACION")
+    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    
+    @Column(name = "FECHA_MODIFICACION")
+    private LocalDateTime fechaModificacion = LocalDateTime.now();
+    
     // Constructores
     public PersonaACargo() {}
-
-    public PersonaACargo(Long idUsuario, String nombre, String parentesco) {
-        this.idUsuario = idUsuario;
+    
+    public PersonaACargo(Usuario usuario, String nombre, String parentesco) {
+        this.usuario = usuario;
         this.nombre = nombre;
         this.parentesco = parentesco;
     }
-
+    
     // Getters y Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public Long getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Long idUsuario) { this.idUsuario = idUsuario; }
-
+    public Long getIdFamilia() { return idFamilia; }
+    public void setIdFamilia(Long idFamilia) { this.idFamilia = idFamilia; }
+    
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+    
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
-
+    
     public String getParentesco() { return parentesco; }
     public void setParentesco(String parentesco) { this.parentesco = parentesco; }
-
+    
     public String getFechaNacimiento() { return fechaNacimiento; }
     public void setFechaNacimiento(String fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
     
-    // Método para obtener la fecha como LocalDate (para el frontend)
-    public LocalDate getFechaNacimientoAsLocalDate() {
-        if (fechaNacimiento == null || fechaNacimiento.isEmpty()) {
-            return null;
-        }
-        
-        try {
-            // Si es un timestamp (número), convertirlo a LocalDate
-            if (fechaNacimiento.matches("\\d+")) {
-                long timestamp = Long.parseLong(fechaNacimiento);
-                return Instant.ofEpochMilli(timestamp)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate();
-            }
-            // Si ya es una fecha en formato string, parsearla
-            else {
-                return LocalDate.parse(fechaNacimiento);
-            }
-        } catch (Exception e) {
-            return null;
-        }
-    }
-    
-    // Método para establecer la fecha desde un LocalDate
-    public void setFechaNacimientoFromLocalDate(LocalDate fecha) {
-        if (fecha == null) {
-            this.fechaNacimiento = null;
-        } else {
-            this.fechaNacimiento = fecha.toString();
-        }
-    }
-    
-    // Método para obtener la fecha formateada para el frontend
-    public String getFechaNacimientoFormateada() {
-        LocalDate fecha = getFechaNacimientoAsLocalDate();
-        if (fecha == null) {
-            return null;
-        }
-        return fecha.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-    }
-
     public Integer getEdad() { return edad; }
     public void setEdad(Integer edad) { this.edad = edad; }
-
+    
     public Integer getVersion() { return version; }
     public void setVersion(Integer version) { this.version = version; }
+    
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+    
+    public LocalDateTime getFechaModificacion() { return fechaModificacion; }
+    public void setFechaModificacion(LocalDateTime fechaModificacion) { this.fechaModificacion = fechaModificacion; }
+    
+    @Override
+    public String toString() {
+        return "PersonaACargo{" +
+                "idFamilia=" + idFamilia +
+                ", nombre='" + nombre + '\'' +
+                ", parentesco='" + parentesco + '\'' +
+                ", edad=" + edad +
+                '}';
+    }
 } 

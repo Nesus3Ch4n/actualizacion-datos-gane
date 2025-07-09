@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, throwError, map } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ViviendaService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = environment.apiBaseUrl;
 
   private httpOptions = {
     headers: new HttpHeaders({
@@ -17,10 +18,10 @@ export class ViviendaService {
   constructor(private http: HttpClient) { }
 
   // Guardar información de vivienda de un usuario específico
-  guardarVivienda(idUsuario: number, vivienda: any): Observable<any> {
-    console.log(`🏠 Guardando información de vivienda para usuario ID: ${idUsuario}`);
+  guardarVivienda(cedula: number, vivienda: any): Observable<any> {
+    console.log(`🏠 Guardando información de vivienda para cédula: ${cedula}`);
     
-    return this.http.post<any>(`${this.apiUrl}/formulario/vivienda/guardar?idUsuario=${idUsuario}`, vivienda, this.httpOptions)
+    return this.http.post<any>(`${this.apiUrl}/formulario/vivienda/guardar?cedula=${cedula}`, vivienda, this.httpOptions)
       .pipe(
         catchError(error => {
           console.error('❌ Error al guardar vivienda:', error);
@@ -30,18 +31,11 @@ export class ViviendaService {
   }
 
   // Obtener información de vivienda de un usuario específico
-  obtenerViviendaPorUsuario(idUsuario: number): Observable<any> {
-    console.log(`📋 Obteniendo información de vivienda para usuario ID: ${idUsuario}`);
+  obtenerViviendaPorCedula(cedula: number): Observable<any> {
+    console.log(`📋 Obteniendo información de vivienda para cédula: ${cedula}`);
     
-    return this.http.get<{success: boolean, data: any}>(`${this.apiUrl}/formulario/vivienda/obtener?idUsuario=${idUsuario}`)
+    return this.http.get<any>(`${this.apiUrl}/consulta/viviendas/${cedula}`)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data || null;
-          } else {
-            return null;
-          }
-        }),
         catchError(error => {
           console.error('❌ Error al obtener vivienda:', error);
           return throwError(() => new Error(`Error al obtener vivienda: ${error.message || error}`));

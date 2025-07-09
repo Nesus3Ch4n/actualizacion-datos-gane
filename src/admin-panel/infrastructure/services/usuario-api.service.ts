@@ -2,10 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { UsuarioDetalleCompletoDTO } from '../../application/dto/usuario-detalle-completo.dto';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class UsuarioApiService {
-  private readonly API_URL = 'http://localhost:8080/api/USUARIO/test/detalle-completo';
+  private readonly API_URL = environment.apiBaseUrl + '/usuarios/detalle';
 
   constructor(private http: HttpClient) {}
 

@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, throwError, map } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class VehiculoService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = environment.apiBaseUrl;
 
   private httpOptions = {
     headers: new HttpHeaders({
@@ -19,8 +20,7 @@ export class VehiculoService {
   // Guardar vehículos de un usuario específico
   guardarVehiculos(idUsuario: number, vehiculos: any[]): Observable<any> {
     console.log(`🚗 Guardando ${vehiculos.length} vehículos para usuario ID: ${idUsuario}`);
-    
-    return this.http.post<any>(`${this.apiUrl}/formulario/vehiculo/guardar?idUsuario=${idUsuario}`, vehiculos, this.httpOptions)
+    return this.http.post<any>(`${this.apiUrl}/formulario/vehiculos/guardar?idUsuario=${idUsuario}`, vehiculos, this.httpOptions)
       .pipe(
         catchError(error => {
           console.error('❌ Error al guardar vehículos:', error);
@@ -30,18 +30,10 @@ export class VehiculoService {
   }
 
   // Obtener vehículos de un usuario específico
-  obtenerVehiculosPorUsuario(idUsuario: number): Observable<any[]> {
-    console.log(`📋 Obteniendo vehículos para usuario ID: ${idUsuario}`);
-    
-    return this.http.get<{success: boolean, data: any[]}>(`${this.apiUrl}/formulario/vehiculo/obtener?idUsuario=${idUsuario}`)
+  obtenerVehiculosPorCedula(cedula: number): Observable<any[]> {
+    console.log(`📋 Obteniendo vehículos para cédula: ${cedula}`);
+    return this.http.get<any[]>(`${this.apiUrl}/consulta/vehiculos/${cedula}`)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data || [];
-          } else {
-            return [];
-          }
-        }),
         catchError(error => {
           console.error('❌ Error al obtener vehículos:', error);
           return throwError(() => new Error(`Error al obtener vehículos: ${error.message || error}`));

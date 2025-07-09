@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, throwError, map } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PersonaACargoService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = environment.apiBaseUrl;
 
   private httpOptions = {
     headers: new HttpHeaders({
@@ -34,18 +35,11 @@ export class PersonaACargoService {
   }
 
   // Obtener personas a cargo de un usuario específico
-  obtenerPersonasPorUsuario(idUsuario: number): Observable<any[]> {
+  obtenerPersonasPorIdUsuario(idUsuario: number): Observable<any[]> {
     console.log(`📋 Obteniendo personas a cargo para usuario ID: ${idUsuario}`);
     
-    return this.http.get<{success: boolean, data: any[]}>(`${this.apiUrl}/formulario/personas-acargo/obtener?idUsuario=${idUsuario}`)
+    return this.http.get<any[]>(`${this.apiUrl}/consulta/personas-acargo-id/${idUsuario}`)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data || [];
-          } else {
-            return [];
-          }
-        }),
         catchError(error => {
           console.error('❌ Error al obtener personas a cargo:', error);
           return throwError(() => new Error(`Error al obtener personas a cargo: ${error.message || error}`));

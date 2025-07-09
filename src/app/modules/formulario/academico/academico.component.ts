@@ -68,37 +68,29 @@ export class AcademicoComponent implements OnInit {
 
   async loadExistingStudies(): Promise<void> {
     try {
-      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      // Obtener la cédula del usuario actual
+      const usuarioActual = this.usuarioSessionService.getUsuarioActual();
+      const cedula = usuarioActual?.cedula || usuarioActual?.documento;
       
-      if (!idUsuario) {
-        // Intentar recuperar de UsuarioSessionService como fallback
-        const idFallback = this.usuarioSessionService.getIdUsuarioActual();
+      if (!cedula) {
+        // Intentar obtener la cédula desde sessionStorage como fallback
+        const cedulaSession = sessionStorage.getItem('cedula');
         
-        if (idFallback) {
-          console.log('⚠️ Usando ID del UsuarioSessionService como fallback:', idFallback);
-          // Intentar reconstruir la sesión del usuarioSessionService
-          const usuarioMinimo = { id: idFallback };
-          this.usuarioSessionService.setUsuarioActual(usuarioMinimo);
-          
-          throw new Error(`Sesión incompleta detectada. Se usó el ID ${idFallback} como fallback. Complete primero la información personal si persiste el problema.`);
+        if (cedulaSession) {
+          console.log('⚠️ Usando cédula de sessionStorage como fallback:', cedulaSession);
+          // Intentar cargar datos usando la cédula de sessionStorage
+          await this.cargarEstudiosExistentes();
+          return;
         } else {
           throw new Error('No hay usuario activo. Complete primero la información personal.');
         }
       }
       
-      console.log('📋 Cargando estudios académicos existentes para usuario ID:', idUsuario);
-      const estudiosExistentes = await this.estudioAcademicoService.obtenerEstudiosPorUsuario(idUsuario);
+      console.log('📋 Cargando estudios académicos existentes para cédula:', cedula);
       
-      if (estudiosExistentes && estudiosExistentes.length > 0) {
-        this.estudios = estudiosExistentes;
-        this.academicoForm.get('academico')?.setValue('2'); // Marcar como que tiene estudios
-        this.toggleAcademicoFields('2');
-        console.log('✅ Estudios académicos cargados desde BD:', this.estudios);
-        this.notificationService.showInfo(
-          '📋 Estudios cargados',
-          `Se cargaron ${this.estudios.length} estudio(s) académico(s) existente(s)`
-        );
-      }
+      // Usar el método que carga desde datos completos
+      await this.cargarEstudiosExistentes();
+      
     } catch (error) {
       console.error('Error al cargar estudios existentes:', error);
       // No mostrar error si no hay estudios (es normal)
@@ -127,30 +119,38 @@ export class AcademicoComponent implements OnInit {
       console.log('🎓 Cargando datos académicos existentes...');
       
       // Obtener la cédula del usuario desde el servicio de sesión
-      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
+      const usuarioActual = this.usuarioSessionService.getUsuarioActual();
+      const cedula = usuarioActual?.cedula || usuarioActual?.documento || sessionStorage.getItem('cedula');
+      
       if (!cedula) {
         console.log('⚠️ No hay cédula disponible para cargar estudios académicos');
         return;
       }
 
+      console.log('📋 Cargando estudios para cédula:', cedula);
+
       // Obtener todos los datos del usuario incluyendo estudios académicos
       const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
       
-      if (datosCompletos && datosCompletos.estudiosAcademicos) {
-        const estudios = datosCompletos.estudiosAcademicos;
+      if (datosCompletos && datosCompletos.estudios && datosCompletos.estudios.length > 0) {
+        const estudios = datosCompletos.estudios;
         console.log('✅ Estudios académicos cargados desde datos completos:', estudios);
         
         // Convertir los estudios al formato que espera el template
         this.estudios = estudios.map((estudio: any) => ({
-          programa: estudio.titulo || estudio.programa || '',
-          nivel_academico: estudio.nivelEducativo || estudio.nivel_academico || '',
-          institucion_educativa: estudio.institucion || estudio.institucion_educativa || '',
+          programa: estudio.programa || estudio.tituloObtenido || estudio.titulo || '',
+          nivelAcademico: estudio.nivelAcademico || estudio.tipoEducacion || estudio.nivelEducativo || estudio.nivel_academico || '',
+          institucion: estudio.institucion || estudio.nombreInstitucion || estudio.institucion_educativa || '',
           semestre: estudio.semestre || estudio.semestreActual || '',
-          fecha_grado: estudio.fechaFinalizacion || estudio.fecha_grado || estudio.anioGraduacion || '',
+          graduacion: estudio.graduacion || estudio.fechaFin || estudio.fechaFinalizacion || estudio.fecha_grado || estudio.anioGraduacion || '',
           ciudad: estudio.ciudad || '',
-          graduado: estudio.graduado || false,
-          enCurso: estudio.enCurso || false
+          graduado: estudio.activo === false || estudio.graduado || false,
+          enCurso: estudio.activo === true || estudio.enCurso || false
         }));
+        
+        // Marcar el formulario como que tiene estudios
+        this.academicoForm.get('academico')?.setValue('2');
+        this.toggleAcademicoFields('2');
         
         this.notificationService.showSuccess(
           '✅ Datos cargados',
@@ -158,6 +158,9 @@ export class AcademicoComponent implements OnInit {
         );
       } else {
         console.log('ℹ️ No se encontraron estudios académicos en los datos completos');
+        // Marcar el formulario como que no tiene estudios
+        this.academicoForm.get('academico')?.setValue('1');
+        this.toggleAcademicoFields('1');
       }
       
     } catch (error) {
@@ -317,26 +320,14 @@ export class AcademicoComponent implements OnInit {
     try {
       this.isLoading = true;
 
-      // Obtener ID del usuario actual
-      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      // Obtener el ID del usuario actual
+      const usuarioId = this.formDataService.getCurrentUserIdValue();
       
-      if (!idUsuario) {
-        // Intentar recuperar de UsuarioSessionService como fallback
-        const idFallback = this.usuarioSessionService.getIdUsuarioActual();
-        
-        if (idFallback) {
-          console.log('⚠️ Usando ID del UsuarioSessionService como fallback:', idFallback);
-          // Intentar reconstruir la sesión del usuarioSessionService
-          const usuarioMinimo = { id: idFallback };
-          this.usuarioSessionService.setUsuarioActual(usuarioMinimo);
-          
-          throw new Error(`Sesión incompleta detectada. Se usó el ID ${idFallback} como fallback. Complete primero la información personal si persiste el problema.`);
-        } else {
-          throw new Error('No hay usuario activo. Complete primero la información personal.');
-        }
+      if (!usuarioId) {
+        throw new Error('No hay usuario activo. Complete primero la información personal.');
       }
 
-      console.log('🎓 Procesando estudios académicos para usuario ID:', idUsuario);
+      console.log('🎓 Procesando estudios académicos para usuario ID:', usuarioId);
 
       // Si el usuario tiene estudios (opción "2"), validar que haya agregado al menos uno
       if (this.academicoForm.get('academico')?.value === '2') {
@@ -348,28 +339,28 @@ export class AcademicoComponent implements OnInit {
           return;
         }
 
-        // Guardar estudios en el backend usando el servicio
+        // Guardar estudios en el backend usando el endpoint correcto
         console.log('💾 Guardando estudios académicos en el backend...');
         
         // Preparar datos para el backend
         const estudiosData = this.estudios.map(estudio => ({
-          nivelEducativo: estudio.nivelEducativo,
+          nivelAcademico: estudio.nivelEducativo,
+          programa: estudio.titulo,
           institucion: estudio.institucion,
-          titulo: estudio.titulo,
-          semestre: estudio.semestre || null,
-          area: estudio.area || '',
-          modalidad: estudio.modalidad || 'Presencial',
-          fechaInicio: estudio.fechaInicio,
-          fechaFinalizacion: estudio.fechaFinalizacion,
-          graduado: estudio.graduado,
-          enCurso: estudio.enCurso,
-          observaciones: estudio.observaciones || ''
+          semestre: estudio.semestre && estudio.semestre !== 'Graduado' ? parseInt(estudio.semestre) : null,
+          graduacion: estudio.graduado ? 'Graduado' : (estudio.enCurso ? 'En Curso' : 'No Graduado')
         }));
 
-        // Guardar usando el servicio
-        const resultado = await this.estudioAcademicoService.guardarEstudiosAcademicos(idUsuario, estudiosData);
+        // Guardar usando el endpoint correcto con idUsuario
+        await firstValueFrom(
+          this.backendService.getHttpClient().post<any>(
+            `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${usuarioId}`,
+            estudiosData,
+            this.backendService.getHttpOptions()
+          )
+        );
         
-        console.log('✅ Estudios académicos guardados en BD:', resultado);
+        console.log('✅ Estudios académicos guardados en BD');
         
         this.notificationService.showSuccess(
           '✅ Información académica guardada',
@@ -377,7 +368,13 @@ export class AcademicoComponent implements OnInit {
         );
       } else {
         // Usuario no tiene estudios - guardar lista vacía
-        await this.estudioAcademicoService.guardarEstudiosAcademicos(idUsuario, []);
+        await firstValueFrom(
+          this.backendService.getHttpClient().post<any>(
+            `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${usuarioId}`,
+            [],
+            this.backendService.getHttpOptions()
+          )
+        );
         
         this.notificationService.showInfo(
           'ℹ️ Sin estudios académicos',

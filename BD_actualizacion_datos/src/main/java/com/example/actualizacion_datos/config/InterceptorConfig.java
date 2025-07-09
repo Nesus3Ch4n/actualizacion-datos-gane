@@ -20,13 +20,15 @@ public class InterceptorConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                     "/api/auth/**",           // Excluir endpoints de autenticación
                     "/api/public/**",         // Excluir endpoints públicos
-                    "/api/USUARIO/test/**",   // Excluir endpoints de prueba
-                    "/api/USUARIO/health",    // Excluir endpoint de salud
-                    "/api/USUARIO/verify-columns", // Excluir endpoint de verificación
-                    "/api/USUARIO/crear-completo", // Excluir creación de usuarios
-                    "/api/USUARIO/crear",     // Excluir creación simple de usuarios
+                    "/api/usuarios/test/**",  // Excluir endpoints de prueba
+                    "/api/usuarios/health",   // Excluir endpoint de salud
+                    "/api/usuarios/verify-columns", // Excluir endpoint de verificación
+                    "/api/usuarios/completo", // Excluir creación de usuarios
+                    "/api/usuarios/basico",   // Excluir creación simple de usuarios
                     "/api/consulta/bd/usuarios", // Excluir consulta de usuarios
                     "/api/consulta/bd/**",    // Excluir todas las consultas de BD
+                    "/api/database/**",       // Excluir endpoints de base de datos
+                    "/api/auditoria/**",      // Excluir endpoints de auditoría
                     "/actuator/**",           // Excluir endpoints de monitoreo
                     "/swagger-ui/**",         // Excluir documentación Swagger
                     "/v3/api-docs/**",        // Excluir documentación OpenAPI

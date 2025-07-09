@@ -3,6 +3,7 @@ import { CanActivate, Router, UrlTree } from '@angular/router';
 import { Observable, map, timeout, catchError, of } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -51,7 +52,7 @@ export class AdminGuard implements CanActivate {
     console.log('🔍 AdminGuard: Verificando si la cédula', cedula, 'existe en la tabla USUARIO...');
     
     // Consultar si el usuario existe en la base de datos usando el endpoint de prueba
-    return this.http.get<any>(`http://localhost:8080/api/USUARIO/test/cedula/${cedula}`).pipe(
+    return this.http.get<any>(`${environment.apiBaseUrl}/usuarios/cedula/${cedula}`).pipe(
       timeout(5000), // Timeout de 5 segundos
       map(response => {
         if (response && response.success && response.data) {

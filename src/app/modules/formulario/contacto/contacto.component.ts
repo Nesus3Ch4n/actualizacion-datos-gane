@@ -76,15 +76,15 @@ export class ContactoComponent implements OnInit {
       this.isLoading = true;
       console.log('📞 Cargando datos de contacto de emergencia existentes...');
       
-      // Obtener la cédula del usuario desde el servicio de sesión
-      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
-      if (!cedula) {
-        console.log('⚠️ No hay cédula disponible para cargar contacto de emergencia');
+      // Obtener el ID del usuario desde el servicio de sesión
+      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      if (!idUsuario) {
+        console.log('⚠️ No hay ID de usuario disponible para cargar contacto de emergencia');
         return;
       }
 
       // Obtener todos los datos del usuario incluyendo contacto de emergencia
-      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      const datosCompletos = await this.formDataService.obtenerDatosCompletosPorId(idUsuario);
       
       if (datosCompletos && datosCompletos.contactosEmergencia) {
         const contactos = datosCompletos.contactosEmergencia;

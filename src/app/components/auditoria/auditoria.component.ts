@@ -25,6 +25,9 @@ export class AuditoriaComponent implements OnInit {
   registrosPorPagina = 20;
   totalPaginas = 0;
 
+  // Columnas de la tabla
+  columnasMostradas: string[] = ['fecha', 'tabla', 'tipoPeticion', 'usuario', 'idUsuario', 'descripcion', 'detalles', 'ip', 'acciones'];
+
   constructor(
     private auditoriaService: AuditoriaService,
     private notificationService: NotificationService,
@@ -41,7 +44,7 @@ export class AuditoriaComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarOpcionesFiltros();
-    this.cargarAuditorias();
+    this.cargarAuditoriasRecientes();
   }
 
   cargarOpcionesFiltros(): void {
@@ -49,10 +52,28 @@ export class AuditoriaComponent implements OnInit {
     this.tiposPeticionDisponibles = this.auditoriaService.obtenerTiposPeticionDisponibles();
   }
 
-  cargarAuditorias(): void {
+  cargarAuditoriasRecientes(): void {
+    this.cargando = true;
+    this.auditoriaService.obtenerAuditoriasRecientes().subscribe({
+      next: (data) => {
+        console.log('📊 Auditorías cargadas:', data);
+        this.auditorias = data;
+        this.aplicarFiltros();
+        this.cargando = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar auditorías:', error);
+        this.notificationService.showError('Error al cargar las auditorías', 'Error');
+        this.cargando = false;
+      }
+    });
+  }
+
+  cargarTodasAuditorias(): void {
     this.cargando = true;
     this.auditoriaService.obtenerTodasAuditorias().subscribe({
       next: (data) => {
+        console.log('📊 Todas las auditorías cargadas:', data);
         this.auditorias = data;
         this.aplicarFiltros();
         this.cargando = false;
@@ -160,5 +181,35 @@ export class AuditoriaComponent implements OnInit {
       eliminaciones: this.auditoriasFiltradas.filter(a => a.tipoPeticion === 'DELETE').length
     };
     return resumen;
+  }
+  
+  verDetalles(auditoria: AuditoriaDTO): void {
+    console.log('🔍 Detalles de auditoría:', auditoria);
+    
+    // Crear mensaje con todos los detalles
+    let detalles = `📋 Detalles de Auditoría\n\n`;
+    detalles += `🆔 ID: ${auditoria.id}\n`;
+    detalles += `📊 Tabla: ${this.auditoriaService.obtenerNombreLegibleTabla(auditoria.tablaModificada)}\n`;
+    detalles += `🔢 ID Registro: ${auditoria.idRegistroModificado}\n`;
+    detalles += `👤 Usuario: ${auditoria.usuarioModificador}\n`;
+    detalles += `🆔 ID Usuario: ${auditoria.idUsuario}\n`;
+    detalles += `📅 Fecha: ${this.auditoriaService.formatearFecha(auditoria.fechaModificacion)}\n`;
+    detalles += `🔄 Tipo: ${this.auditoriaService.obtenerNombreLegibleTipoPeticion(auditoria.tipoPeticion)}\n`;
+    detalles += `📝 Descripción: ${auditoria.descripcion}\n`;
+    detalles += `🌐 IP: ${auditoria.ipAddress || 'N/A'}\n`;
+    detalles += `💻 User Agent: ${auditoria.userAgent || 'N/A'}\n`;
+    
+    if (auditoria.campoModificado) {
+      detalles += `\n📝 Campo Modificado: ${auditoria.campoModificado}\n`;
+    }
+    if (auditoria.valorAnterior) {
+      detalles += `📤 Valor Anterior: ${auditoria.valorAnterior}\n`;
+    }
+    if (auditoria.valorNuevo) {
+      detalles += `📥 Valor Nuevo: ${auditoria.valorNuevo}\n`;
+    }
+    
+    // Mostrar en alert o modal
+    alert(detalles);
   }
 } 

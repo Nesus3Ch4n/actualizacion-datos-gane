@@ -1,32 +1,26 @@
 package com.example.actualizacion_datos.service;
 
-import com.example.actualizacion_datos.dto.*;
 import com.example.actualizacion_datos.entity.*;
 import com.example.actualizacion_datos.repository.*;
-import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Service
+@Transactional
 public class FormularioService {
     
-    // Almacenamiento temporal en memoria por cédula
-    private final Map<Long, InformacionPersonalDTO> informacionPersonalTemp = new ConcurrentHashMap<>();
-    private final Map<Long, List<EstudioAcademicoDTO>> estudiosTemp = new ConcurrentHashMap<>();
-    private final Map<Long, List<VehiculoDTO>> vehiculosTemp = new ConcurrentHashMap<>();
-    private final Map<Long, ViviendaDTO> viviendaTemp = new ConcurrentHashMap<>();
-    private final Map<Long, List<PersonaACargoDTO>> personasACargoTemp = new ConcurrentHashMap<>();
-    private final Map<Long, List<ContactoEmergenciaDTO>> contactosEmergenciaTemp = new ConcurrentHashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(FormularioService.class);
     
     @Autowired
-    private InformacionPersonalRepository informacionPersonalRepository;
+    private UsuarioRepository usuarioRepository;
     
     @Autowired
     private EstudioAcademicoRepository estudioAcademicoRepository;
@@ -46,948 +40,642 @@ public class FormularioService {
     @Autowired
     private RelacionConfRepository relacionConfRepository;
     
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
-    @Autowired
-    private ModelMapper modelMapper;
-    
-    @Autowired
-    private AuditoriaService auditoriaService;
-    
-    // ========== MÉTODOS DE GUARDADO TEMPORAL ==========
-    
-    public void guardarInformacionPersonalTemporal(InformacionPersonalDTO dto) {
-        informacionPersonalTemp.put(dto.getCedula(), dto);
-    }
-    
-    public void guardarEstudiosTemporal(Long cedula, List<EstudioAcademicoDTO> estudios) {
-        estudiosTemp.put(cedula, estudios);
-    }
-    
-    public void guardarVehiculosTemporal(Long cedula, List<VehiculoDTO> vehiculos) {
-        vehiculosTemp.put(cedula, vehiculos);
-    }
-    
-    public void guardarViviendaTemporal(Long cedula, ViviendaDTO vivienda) {
-        viviendaTemp.put(cedula, vivienda);
-    }
-    
-    public void guardarPersonasACargoTemporal(Long cedula, List<PersonaACargoDTO> personas) {
-        personasACargoTemp.put(cedula, personas);
-    }
-    
-    public void guardarContactosEmergenciaTemporal(Long cedula, List<ContactoEmergenciaDTO> contactos) {
-        contactosEmergenciaTemp.put(cedula, contactos);
-    }
-    
-    // ========== MÉTODOS DE CONSULTA TEMPORAL ==========
-    
-    public InformacionPersonalDTO obtenerInformacionPersonalTemporal(Long cedula) {
-        return informacionPersonalTemp.get(cedula);
-    }
-    
-    public List<EstudioAcademicoDTO> obtenerEstudiosTemporal(Long cedula) {
-        return estudiosTemp.getOrDefault(cedula, new ArrayList<>());
-    }
-    
-    public List<VehiculoDTO> obtenerVehiculosTemporal(Long cedula) {
-        return vehiculosTemp.getOrDefault(cedula, new ArrayList<>());
-    }
-    
-    public ViviendaDTO obtenerViviendaTemporal(Long cedula) {
-        return viviendaTemp.get(cedula);
-    }
-    
-    public List<PersonaACargoDTO> obtenerPersonasACargoTemporal(Long cedula) {
-        return personasACargoTemp.getOrDefault(cedula, new ArrayList<>());
-    }
-    
-    public List<ContactoEmergenciaDTO> obtenerContactosEmergenciaTemporal(Long cedula) {
-        return contactosEmergenciaTemp.getOrDefault(cedula, new ArrayList<>());
-    }
-    
-    // ========== MÉTODOS DE UTILIDAD ==========
-    
-    public void limpiarDatosTemporales(Long cedula) {
-        informacionPersonalTemp.remove(cedula);
-        estudiosTemp.remove(cedula);
-        vehiculosTemp.remove(cedula);
-        viviendaTemp.remove(cedula);
-        personasACargoTemp.remove(cedula);
-        contactosEmergenciaTemp.remove(cedula);
-    }
-    
-    public boolean tieneInformacionPersonalTemporal(Long cedula) {
-        return informacionPersonalTemp.containsKey(cedula);
-    }
-    
-    public boolean formularioCompletoTemporal(Long cedula) {
-        return informacionPersonalTemp.containsKey(cedula) &&
-               estudiosTemp.containsKey(cedula) &&
-               vehiculosTemp.containsKey(cedula) &&
-               viviendaTemp.containsKey(cedula) &&
-               personasACargoTemp.containsKey(cedula) &&
-               contactosEmergenciaTemp.containsKey(cedula);
-    }
-    
-    // ========== MÉTODO DE GUARDADO DEFINITIVO ==========
-    
-    @Transactional
-    public void guardarFormularioCompleto(Long cedula) {
-        // Obtener el usuario por cédula
-        Usuario usuario = usuarioRepository.findByCedula(cedula)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con cédula: " + cedula));
+    // ========== GUARDAR INFORMACIÓN PERSONAL ==========
+    public Usuario guardarInformacionPersonal(Usuario usuario) {
+        logger.info("💾 Guardando información personal para usuario: {}", usuario.getDocumento());
         
-        Long idUsuario = usuario.getId();
-        
-        // Guardar estudios académicos
-        if (estudiosTemp.containsKey(cedula)) {
-            List<EstudioAcademicoDTO> estudiosDTO = estudiosTemp.get(cedula);
-            for (EstudioAcademicoDTO estudioDTO : estudiosDTO) {
-                EstudioAcademico estudio = modelMapper.map(estudioDTO, EstudioAcademico.class);
-                estudio.setIdUsuario(idUsuario);
-                estudioAcademicoRepository.save(estudio);
-            }
-        }
-        
-        // Guardar vehículos
-        if (vehiculosTemp.containsKey(cedula)) {
-            List<VehiculoDTO> vehiculosDTO = vehiculosTemp.get(cedula);
-            for (VehiculoDTO vehiculoDTO : vehiculosDTO) {
-                Vehiculo vehiculo = modelMapper.map(vehiculoDTO, Vehiculo.class);
-                vehiculo.setIdUsuario(idUsuario);
-                vehiculoRepository.save(vehiculo);
-            }
-        }
-        
-        // Guardar vivienda
-        if (viviendaTemp.containsKey(cedula)) {
-            ViviendaDTO viviendaDTO = viviendaTemp.get(cedula);
-            Vivienda vivienda = modelMapper.map(viviendaDTO, Vivienda.class);
-            vivienda.setIdUsuario(idUsuario);
-            viviendaRepository.save(vivienda);
-        }
-        
-        // Guardar personas a cargo
-        if (personasACargoTemp.containsKey(cedula)) {
-            List<PersonaACargoDTO> personasDTO = personasACargoTemp.get(cedula);
-            for (PersonaACargoDTO personaDTO : personasDTO) {
-                PersonaACargo persona = modelMapper.map(personaDTO, PersonaACargo.class);
-                persona.setIdUsuario(idUsuario);
-                personaACargoRepository.save(persona);
-            }
-        }
-        
-        // Guardar contactos de emergencia
-        if (contactosEmergenciaTemp.containsKey(cedula)) {
-            List<ContactoEmergenciaDTO> contactosDTO = contactosEmergenciaTemp.get(cedula);
-            for (ContactoEmergenciaDTO contactoDTO : contactosDTO) {
-                ContactoEmergencia contacto = modelMapper.map(contactoDTO, ContactoEmergencia.class);
-                contacto.setIdUsuario(idUsuario);
-                contactoEmergenciaRepository.save(contacto);
-            }
-        }
-        
-        // Limpiar datos temporales
-        limpiarDatosTemporales(cedula);
-    }
-    
-    // ========== MÉTODOS DE CONSULTA DE BASE DE DATOS POR IDUSUARIO ==========
-    
-    public InformacionPersonal obtenerInformacionPersonalBD(Long cedula) {
-        return informacionPersonalRepository.findByCedula(cedula).orElse(null);
-    }
-    
-    public List<EstudioAcademico> obtenerEstudiosBDPorIdUsuario(Long idUsuario) {
-        return estudioAcademicoRepository.findByIdUsuario(idUsuario);
-    }
-    
-    public List<Vehiculo> obtenerVehiculosBDPorIdUsuario(Long idUsuario) {
-        return vehiculoRepository.findByIdUsuario(idUsuario);
-    }
-    
-    public Vivienda obtenerViviendaBDPorIdUsuario(Long idUsuario) {
-        return viviendaRepository.findByIdUsuario(idUsuario).orElse(null);
-    }
-    
-    public List<PersonaACargo> obtenerPersonasACargoBDPorIdUsuario(Long idUsuario) {
-        return personaACargoRepository.findByIdUsuario(idUsuario);
-    }
-    
-    public List<ContactoEmergencia> obtenerContactosEmergenciaBDPorIdUsuario(Long idUsuario) {
-        return contactoEmergenciaRepository.findByIdUsuario(idUsuario);
-    }
-    
-    // ========== MÉTODOS DE CONSULTA POR CÉDULA ==========
-    
-    public List<EstudioAcademico> obtenerEstudiosBD(Long cedula) {
-        Usuario usuario = usuarioRepository.findByCedula(cedula).orElse(null);
-        if (usuario == null) return new ArrayList<>();
-        return estudioAcademicoRepository.findByIdUsuario(usuario.getId());
-    }
-    
-    public List<Vehiculo> obtenerVehiculosBD(Long cedula) {
-        Usuario usuario = usuarioRepository.findByCedula(cedula).orElse(null);
-        if (usuario == null) return new ArrayList<>();
-        return vehiculoRepository.findByIdUsuario(usuario.getId());
-    }
-    
-    public Vivienda obtenerViviendaBD(Long cedula) {
-        Usuario usuario = usuarioRepository.findByCedula(cedula).orElse(null);
-        if (usuario == null) return null;
-        return viviendaRepository.findByIdUsuario(usuario.getId()).orElse(null);
-    }
-    
-    public List<PersonaACargo> obtenerPersonasACargoBD(Long cedula) {
-        Usuario usuario = usuarioRepository.findByCedula(cedula).orElse(null);
-        if (usuario == null) return new ArrayList<>();
-        return personaACargoRepository.findByIdUsuario(usuario.getId());
-    }
-    
-    public List<ContactoEmergencia> obtenerContactosEmergenciaBD(Long cedula) {
-        Usuario usuario = usuarioRepository.findByCedula(cedula).orElse(null);
-        if (usuario == null) return new ArrayList<>();
-        return contactoEmergenciaRepository.findByIdUsuario(usuario.getId());
-    }
-    
-    // ========== MÉTODOS DE GUARDADO DIRECTO EN BASE DE DATOS ==========
-    
-    @Transactional
-    public Map<String, Object> guardarInformacionPersonalDirecto(Map<String, Object> datos) {
         try {
-            // Convertir y validar datos
-            String nombre = (String) datos.get("nombre");
-            String cedulaStr = datos.get("cedula").toString();
-            String correo = (String) datos.get("correo");
-            
-            if (nombre == null || cedulaStr == null || correo == null) {
-                throw new IllegalArgumentException("Nombre, cédula y correo son requeridos");
-            }
-            
-            Long cedula = Long.parseLong(cedulaStr);
-            
-            // Verificar si ya existe un usuario con esta cédula
-            Optional<Usuario> usuarioExistente = usuarioRepository.findByCedula(cedula);
-            Usuario usuario;
+            // Buscar usuario existente
+            Optional<Usuario> usuarioExistente = usuarioRepository.findByDocumento(usuario.getDocumento());
             
             if (usuarioExistente.isPresent()) {
                 // Actualizar usuario existente
-                usuario = usuarioExistente.get();
-                
-                // Registrar auditoría para cambios
-                if (!nombre.equals(usuario.getNombre())) {
-                    auditoriaService.registrarActualizacion("USUARIO", usuario.getId(), "nombre", 
-                        usuario.getNombre(), nombre, nombre, usuario.getId(), 
-                        "Actualización de nombre de usuario");
-                }
-                if (!correo.equals(usuario.getCorreo())) {
-                    auditoriaService.registrarActualizacion("USUARIO", usuario.getId(), "correo", 
-                        usuario.getCorreo(), correo, nombre, usuario.getId(), 
-                        "Actualización de correo de usuario");
-                }
-                
-                usuario.setNombre(nombre);
-                usuario.setCorreo(correo);
+                Usuario usuarioActual = usuarioExistente.get();
+                actualizarCamposUsuario(usuarioActual, usuario);
+                usuarioActual.setVersion(usuarioActual.getVersion() + 1);
+                return usuarioRepository.save(usuarioActual);
             } else {
                 // Crear nuevo usuario
-                usuario = new Usuario();
-                usuario.setNombre(nombre);
-                usuario.setCedula(cedula);
-                usuario.setCorreo(correo);
+                usuario.setVersion(1);
+                return usuarioRepository.save(usuario);
             }
-            
-            // Mapear campos adicionales
-            if (datos.get("numeroFijo") != null) {
-                usuario.setNumeroFijo(datos.get("numeroFijo").toString());
-            }
-            if (datos.get("numeroCelular") != null) {
-                usuario.setNumeroCelular(datos.get("numeroCelular").toString());
-            }
-            if (datos.get("numeroCorp") != null) {
-                usuario.setNumeroCorp(datos.get("numeroCorp").toString());
-            }
-            if (datos.get("cedulaExpedicion") != null) {
-                usuario.setCedulaExpedicion((String) datos.get("cedulaExpedicion"));
-            }
-            if (datos.get("paisNacimiento") != null) {
-                usuario.setPaisNacimiento((String) datos.get("paisNacimiento"));
-            }
-            if (datos.get("ciudadNacimiento") != null) {
-                usuario.setCiudadNacimiento((String) datos.get("ciudadNacimiento"));
-            }
-            if (datos.get("cargo") != null) {
-                usuario.setCargo((String) datos.get("cargo"));
-            }
-            if (datos.get("area") != null) {
-                usuario.setArea((String) datos.get("area"));
-            }
-            if (datos.get("estadoCivil") != null) {
-                usuario.setEstadoCivil((String) datos.get("estadoCivil"));
-            }
-            if (datos.get("tipoSangre") != null) {
-                usuario.setTipoSangre((String) datos.get("tipoSangre"));
-            }
-            if (datos.get("fechaNacimiento") != null) {
-                String fechaStr = datos.get("fechaNacimiento").toString();
-                try {
-                    // Intentar formato YYYY-MM-DD
-                    LocalDate fecha = LocalDate.parse(fechaStr);
-                    usuario.setFechaNacimiento(fecha);
-                } catch (Exception e) {
-                    try {
-                        // Intentar formato DD/MM/YYYY
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-                        LocalDate fecha = LocalDate.parse(fechaStr, formatter);
-                        usuario.setFechaNacimiento(fecha);
-                    } catch (Exception e2) {
-                        // Si no se puede convertir, dejar nulo
-                    }
-                }
-            }
-            
-            Usuario usuarioGuardado = usuarioRepository.save(usuario);
-            
-            // Registrar auditoría para creación de usuario
-            if (!usuarioExistente.isPresent()) {
-                auditoriaService.registrarCreacion("USUARIO", usuarioGuardado.getId(), 
-                    nombre, usuarioGuardado.getId(), "Creación de nuevo usuario");
-            }
-            
-            // Retornar datos del usuario guardado
-            Map<String, Object> resultado = new HashMap<>();
-            resultado.put("id", usuarioGuardado.getId());
-            resultado.put("nombre", usuarioGuardado.getNombre());
-            resultado.put("cedula", usuarioGuardado.getCedula());
-            resultado.put("correo", usuarioGuardado.getCorreo());
-            resultado.put("version", usuarioGuardado.getVersion());
-            
-            return resultado;
             
         } catch (Exception e) {
+            logger.error("❌ Error al guardar información personal: {}", e.getMessage(), e);
             throw new RuntimeException("Error al guardar información personal: " + e.getMessage(), e);
         }
     }
     
-    @Transactional
-    public List<Map<String, Object>> guardarEstudiosDirecto(Long idUsuario, List<Map<String, Object>> estudiosData) {
+    // ========== GUARDAR ESTUDIOS ACADÉMICOS ==========
+    public EstudioAcademico guardarEstudiosAcademicos(EstudioAcademico estudio, Long idUsuario) {
+        logger.info("💾 Guardando estudios académicos para usuario ID: {}", idUsuario);
+        
         try {
-            // Primero eliminamos los estudios existentes (no hay soft delete en la tabla actual)
-            List<EstudioAcademico> estudiosExistentes = estudioAcademicoRepository.findByIdUsuarioAndActivoTrue(idUsuario);
-            for (EstudioAcademico estudio : estudiosExistentes) {
-                // Registrar auditoría de eliminación
-                auditoriaService.registrarEliminacion("ESTUDIO_ACADEMICO", estudio.getId(), 
-                    "Sistema", idUsuario, "Eliminación de estudio académico previo a actualización");
-                estudioAcademicoRepository.delete(estudio);
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
             }
-
-            List<Map<String, Object>> estudiosGuardados = new ArrayList<>();
-
-            for (Map<String, Object> estudioData : estudiosData) {
-                EstudioAcademico estudio = new EstudioAcademico();
-                
-                // Usar el campo idUsuario directamente
-                estudio.setIdUsuario(idUsuario);
-                
-                // Mapear campos desde el Map al entity
-                if (estudioData.get("institucion") != null) {
-                    estudio.setInstitucion(estudioData.get("institucion").toString());
-                }
-                if (estudioData.get("nivelEducativo") != null) {
-                    estudio.setNivelEducativo(estudioData.get("nivelEducativo").toString());
-                }
-                if (estudioData.get("titulo") != null) {
-                    estudio.setTitulo(estudioData.get("titulo").toString());
-                }
-                
-                // Manejar semestre si está disponible
-                if (estudioData.get("semestre") != null) {
-                    try {
-                        estudio.setSemestre(Integer.parseInt(estudioData.get("semestre").toString()));
-                    } catch (Exception e) {
-                        estudio.setSemestre(null);
-                    }
-                }
-                
-                // Manejar graduación basado en graduado/enCurso
-                if (estudioData.get("graduado") != null) {
-                    Boolean graduado = Boolean.parseBoolean(estudioData.get("graduado").toString());
-                    if (graduado) {
-                        estudio.setGraduacion("Sí");
-                    } else {
-                        estudio.setGraduacion("No");
-                    }
-                } else if (estudioData.get("enCurso") != null) {
-                    Boolean enCurso = Boolean.parseBoolean(estudioData.get("enCurso").toString());
-                    if (enCurso) {
-                        estudio.setGraduacion("En curso");
-                    } else {
-                        estudio.setGraduacion("No");
-                    }
-                } else {
-                    estudio.setGraduacion("No");
-                }
-                
-                // Establecer versión por defecto
-                estudio.setVersion(1);
-                
-                EstudioAcademico estudioGuardado = estudioAcademicoRepository.save(estudio);
-                
-                // Registrar auditoría de creación
-                auditoriaService.registrarCreacion("ESTUDIO_ACADEMICO", estudioGuardado.getId(), 
-                    "Sistema", idUsuario, "Creación de estudio académico: " + estudioGuardado.getTitulo());
-                
-                // Crear mapa de respuesta
-                Map<String, Object> estudioResponse = new HashMap<>();
-                estudioResponse.put("id", estudioGuardado.getId());
-                estudioResponse.put("institucion", estudioGuardado.getInstitucion());
-                estudioResponse.put("nivelEducativo", estudioGuardado.getNivelEducativo());
-                estudioResponse.put("titulo", estudioGuardado.getTitulo());
-                estudioResponse.put("semestre", estudioGuardado.getSemestre());
-                estudioResponse.put("graduacion", estudioGuardado.getGraduacion());
-                estudioResponse.put("version", estudioGuardado.getVersion());
-                
-                estudiosGuardados.add(estudioResponse);
-            }
-
-            return estudiosGuardados;
-
+            
+            // Asignar usuario al estudio
+            estudio.setUsuario(usuario.get());
+            
+            // Guardar estudio
+            EstudioAcademico estudioGuardado = estudioAcademicoRepository.save(estudio);
+            logger.info("✅ Estudio académico guardado exitosamente con ID: {}", estudioGuardado.getIdEstudios());
+            
+            return estudioGuardado;
+            
         } catch (Exception e) {
+            logger.error("❌ Error al guardar estudios académicos: {}", e.getMessage(), e);
             throw new RuntimeException("Error al guardar estudios académicos: " + e.getMessage(), e);
         }
     }
     
-    @Transactional
-    public List<Map<String, Object>> guardarVehiculosDirecto(Long idUsuario, List<Map<String, Object>> vehiculosData) {
+    // ========== GUARDAR VEHÍCULOS ==========
+    public Vehiculo guardarVehiculos(Vehiculo vehiculo, Long idUsuario) {
+        logger.info("💾 Guardando vehículo para usuario ID: {}", idUsuario);
+        
         try {
-            // Primero eliminamos los vehículos existentes
-            List<Vehiculo> vehiculosExistentes = vehiculoRepository.findByIdUsuario(idUsuario);
-            for (Vehiculo vehiculo : vehiculosExistentes) {
-                // Registrar auditoría de eliminación
-                auditoriaService.registrarEliminacion("VEHICULO", vehiculo.getIdVehiculo(), 
-                    "Sistema", idUsuario, "Eliminación de vehículo previo a actualización");
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
             }
-            vehiculoRepository.deleteAll(vehiculosExistentes);
-
-            List<Map<String, Object>> vehiculosGuardados = new ArrayList<>();
-
-            for (Map<String, Object> vehiculoData : vehiculosData) {
-                Vehiculo vehiculo = new Vehiculo();
-                
-                // Usar el campo idUsuario directamente
-                vehiculo.setIdUsuario(idUsuario);
-                
-                // Mapear solo los campos que existen en la tabla VEHICULO
-                if (vehiculoData.get("tipoVehiculo") != null) {
-                    vehiculo.setTipoVehiculo(vehiculoData.get("tipoVehiculo").toString());
-                }
-                if (vehiculoData.get("marca") != null) {
-                    vehiculo.setMarca(vehiculoData.get("marca").toString());
-                }
-                if (vehiculoData.get("placa") != null) {
-                    vehiculo.setPlaca(vehiculoData.get("placa").toString());
-                }
-                if (vehiculoData.get("anio") != null) {
-                    vehiculo.setAnio(Integer.parseInt(vehiculoData.get("anio").toString()));
-                }
-                if (vehiculoData.get("propietario") != null) {
-                    vehiculo.setPropietario(vehiculoData.get("propietario").toString());
-                }
-                
-                // Establecer versión por defecto
-                vehiculo.setVersion(1);
-                
-                Vehiculo vehiculoGuardado = vehiculoRepository.save(vehiculo);
-                
-                // Registrar auditoría de creación
-                auditoriaService.registrarCreacion("VEHICULO", vehiculoGuardado.getIdVehiculo(), 
-                    "Sistema", idUsuario, "Creación de vehículo: " + vehiculoGuardado.getMarca() + " " + vehiculoGuardado.getPlaca());
-                
-                // Crear mapa de respuesta con solo los campos que realmente existen
-                Map<String, Object> vehiculoResponse = new HashMap<>();
-                vehiculoResponse.put("id", vehiculoGuardado.getIdVehiculo());
-                vehiculoResponse.put("tipoVehiculo", vehiculoGuardado.getTipoVehiculo());
-                vehiculoResponse.put("marca", vehiculoGuardado.getMarca());
-                vehiculoResponse.put("placa", vehiculoGuardado.getPlaca());
-                vehiculoResponse.put("anio", vehiculoGuardado.getAnio());
-                vehiculoResponse.put("propietario", vehiculoGuardado.getPropietario());
-                vehiculoResponse.put("version", vehiculoGuardado.getVersion());
-                
-                vehiculosGuardados.add(vehiculoResponse);
-            }
-
-            return vehiculosGuardados;
-
+            
+            // Asignar usuario al vehículo
+            vehiculo.setUsuario(usuario.get());
+            
+            // Guardar vehículo
+            Vehiculo vehiculoGuardado = vehiculoRepository.save(vehiculo);
+            logger.info("✅ Vehículo guardado exitosamente con ID: {}", vehiculoGuardado.getIdVehiculo());
+            
+            return vehiculoGuardado;
+            
         } catch (Exception e) {
-            throw new RuntimeException("Error al guardar vehículos: " + e.getMessage(), e);
+            logger.error("❌ Error al guardar vehículo: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar vehículo: " + e.getMessage(), e);
         }
     }
     
-    @Transactional
-    public Map<String, Object> guardarViviendaDirecto(Long idUsuario, Map<String, Object> viviendaData) {
+    // ========== GUARDAR VIVIENDA ==========
+    public Vivienda guardarVivienda(Vivienda vivienda, Long idUsuario) {
+        logger.info("💾 Guardando vivienda para usuario ID: {}", idUsuario);
+        
         try {
-            // Primero eliminamos la vivienda existente
-            Optional<Vivienda> viviendaExistente = viviendaRepository.findByIdUsuario(idUsuario);
-            if (viviendaExistente.isPresent()) {
-                // Registrar auditoría de eliminación
-                auditoriaService.registrarEliminacion("VIVIENDA", viviendaExistente.get().getIdVivienda(), 
-                    "Sistema", idUsuario, "Eliminación de vivienda previo a actualización");
-                viviendaRepository.delete(viviendaExistente.get());
-            }
-
-            Vivienda vivienda = new Vivienda();
-            
-            // Usar el campo idUsuario directamente
-            vivienda.setIdUsuario(idUsuario);
-            
-            // Mapear solo los campos que existen en la tabla VIVIENDA
-            if (viviendaData.get("tipoVivienda") != null) {
-                vivienda.setTipoVivienda(viviendaData.get("tipoVivienda").toString());
-            }
-            if (viviendaData.get("direccion") != null) {
-                vivienda.setDireccion(viviendaData.get("direccion").toString());
-            }
-            if (viviendaData.get("infoAdicional") != null) {
-                vivienda.setInfoAdicional(viviendaData.get("infoAdicional").toString());
-            }
-            if (viviendaData.get("barrio") != null) {
-                vivienda.setBarrio(viviendaData.get("barrio").toString());
-            }
-            if (viviendaData.get("ciudad") != null) {
-                vivienda.setCiudad(viviendaData.get("ciudad").toString());
-            }
-            if (viviendaData.get("vivienda") != null) {
-                vivienda.setVivienda(viviendaData.get("vivienda").toString());
-            }
-            if (viviendaData.get("entidad") != null) {
-                vivienda.setEntidad(viviendaData.get("entidad").toString());
-            }
-            if (viviendaData.get("anio") != null) {
-                vivienda.setAnio(Integer.parseInt(viviendaData.get("anio").toString()));
-            }
-            if (viviendaData.get("tipoAdquisicion") != null) {
-                vivienda.setTipoAdquisicion(viviendaData.get("tipoAdquisicion").toString());
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
             }
             
+            // Asignar usuario a la vivienda
+            vivienda.setUsuario(usuario.get());
+            
+            // Guardar vivienda
             Vivienda viviendaGuardada = viviendaRepository.save(vivienda);
+            logger.info("✅ Vivienda guardada exitosamente con ID: {}", viviendaGuardada.getIdVivienda());
             
-            // Registrar auditoría de creación
-            auditoriaService.registrarCreacion("VIVIENDA", viviendaGuardada.getIdVivienda(), 
-                "Sistema", idUsuario, "Creación de vivienda: " + viviendaGuardada.getTipoVivienda() + " en " + viviendaGuardada.getCiudad());
+            return viviendaGuardada;
             
-            // Crear mapa de respuesta con solo los campos que realmente existen
-            Map<String, Object> viviendaResponse = new HashMap<>();
-            viviendaResponse.put("id", viviendaGuardada.getIdVivienda());
-            viviendaResponse.put("tipoVivienda", viviendaGuardada.getTipoVivienda());
-            viviendaResponse.put("direccion", viviendaGuardada.getDireccion());
-            viviendaResponse.put("infoAdicional", viviendaGuardada.getInfoAdicional());
-            viviendaResponse.put("barrio", viviendaGuardada.getBarrio());
-            viviendaResponse.put("ciudad", viviendaGuardada.getCiudad());
-            viviendaResponse.put("vivienda", viviendaGuardada.getVivienda());
-            viviendaResponse.put("entidad", viviendaGuardada.getEntidad());
-            viviendaResponse.put("anio", viviendaGuardada.getAnio());
-            viviendaResponse.put("tipoAdquisicion", viviendaGuardada.getTipoAdquisicion());
-
-            return viviendaResponse;
-
         } catch (Exception e) {
+            logger.error("❌ Error al guardar vivienda: {}", e.getMessage(), e);
             throw new RuntimeException("Error al guardar vivienda: " + e.getMessage(), e);
         }
     }
     
-    @Transactional
-    public List<Map<String, Object>> guardarPersonasCargoDirecto(Long idUsuario, List<Map<String, Object>> personasData) {
+    // ========== GUARDAR PERSONAS A CARGO ==========
+    public PersonaACargo guardarPersonasACargo(PersonaACargo persona, Long idUsuario) {
+        logger.info("💾 Guardando persona a cargo para usuario ID: {}", idUsuario);
+        
         try {
-            System.out.println("🔄 Guardando personas a cargo para usuario ID: " + idUsuario);
-            System.out.println("📋 Datos a guardar: " + personasData.size() + " personas");
-            
-            // Primero, eliminar todas las personas a cargo existentes para este usuario
-            List<PersonaACargo> personasExistentes = personaACargoRepository.findByIdUsuario(idUsuario);
-            if (!personasExistentes.isEmpty()) {
-                System.out.println("🗑️ Eliminando " + personasExistentes.size() + " personas existentes");
-                for (PersonaACargo persona : personasExistentes) {
-                    // Registrar auditoría de eliminación
-                    auditoriaService.registrarEliminacion("PERSONA_A_CARGO", persona.getId(), 
-                        "Sistema", idUsuario, "Eliminación de persona a cargo previo a actualización");
-                    personaACargoRepository.delete(persona);
-                }
-                // Forzar flush para asegurar que se eliminen
-                personaACargoRepository.flush();
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
             }
             
-            List<Map<String, Object>> personasGuardadas = new ArrayList<>();
-
-            // Si no hay datos para guardar, retornar lista vacía
-            if (personasData.isEmpty()) {
-                System.out.println("ℹ️ No hay personas a cargo para guardar");
-                return personasGuardadas;
-            }
-
-            for (Map<String, Object> personaData : personasData) {
-                PersonaACargo persona = new PersonaACargo();
-                
-                // Usar el campo idUsuario directamente
-                persona.setIdUsuario(idUsuario);
-                
-                // Mapear campos desde el Map al entity (solo los que existen en la tabla FAMILIA)
-                if (personaData.get("nombre") != null) {
-                    persona.setNombre(personaData.get("nombre").toString());
-                }
-                if (personaData.get("parentesco") != null) {
-                    persona.setParentesco(personaData.get("parentesco").toString());
-                }
-                if (personaData.get("fechaNacimiento") != null) {
-                    try {
-                        String fechaStr = personaData.get("fechaNacimiento").toString();
-                        LocalDate fecha = LocalDate.parse(fechaStr);
-                        persona.setFechaNacimientoFromLocalDate(fecha);
-                    } catch (Exception e) {
-                        persona.setFechaNacimientoFromLocalDate(null);
-                    }
-                }
-                if (personaData.get("edad") != null) {
-                    try {
-                        Integer edad = Integer.parseInt(personaData.get("edad").toString());
-                        persona.setEdad(edad);
-                    } catch (Exception e) {
-                        persona.setEdad(null);
-                    }
-                }
-                if (personaData.get("version") != null) {
-                    try {
-                        Integer version = Integer.parseInt(personaData.get("version").toString());
-                        persona.setVersion(version);
-                    } catch (Exception e) {
-                        persona.setVersion(1); // Valor por defecto
-                    }
-                } else {
-                    persona.setVersion(1); // Valor por defecto
-                }
-                
-                PersonaACargo personaGuardada = personaACargoRepository.save(persona);
-                
-                // Registrar auditoría de creación
-                auditoriaService.registrarCreacion("PERSONA_A_CARGO", personaGuardada.getId(), 
-                    "Sistema", idUsuario, "Creación de persona a cargo: " + personaGuardada.getNombre() + " (" + personaGuardada.getParentesco() + ")");
-                
-                // Crear mapa de respuesta (solo con los campos que existen)
-                Map<String, Object> personaResponse = new HashMap<>();
-                personaResponse.put("id", personaGuardada.getId());
-                personaResponse.put("nombre", personaGuardada.getNombre());
-                personaResponse.put("parentesco", personaGuardada.getParentesco());
-                personaResponse.put("fechaNacimiento", personaGuardada.getFechaNacimiento());
-                personaResponse.put("edad", personaGuardada.getEdad());
-                personaResponse.put("version", personaGuardada.getVersion());
-                personaResponse.put("idUsuario", personaGuardada.getIdUsuario());
-                
-                personasGuardadas.add(personaResponse);
-            }
-
-            System.out.println("✅ Se guardaron " + personasGuardadas.size() + " personas a cargo");
-            return personasGuardadas;
-
+            // Asignar usuario a la persona
+            persona.setUsuario(usuario.get());
+            
+            // Guardar persona
+            PersonaACargo personaGuardada = personaACargoRepository.save(persona);
+            logger.info("✅ Persona a cargo guardada exitosamente con ID: {}", personaGuardada.getIdFamilia());
+            
+            return personaGuardada;
+            
         } catch (Exception e) {
-            System.err.println("❌ Error al guardar personas a cargo: " + e.getMessage());
+            logger.error("❌ Error al guardar persona a cargo: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar persona a cargo: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== GUARDAR CONTACTOS DE EMERGENCIA ==========
+    public ContactoEmergencia guardarContactosEmergencia(ContactoEmergencia contacto, Long idUsuario) {
+        logger.info("💾 Guardando contacto de emergencia para usuario ID: {}", idUsuario);
+        
+        try {
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            // Asignar usuario al contacto
+            contacto.setUsuario(usuario.get());
+            
+            // Guardar contacto
+            ContactoEmergencia contactoGuardado = contactoEmergenciaRepository.save(contacto);
+            logger.info("✅ Contacto de emergencia guardado exitosamente con ID: {}", contactoGuardado.getIdContacto());
+            
+            return contactoGuardado;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al guardar contacto de emergencia: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar contacto de emergencia: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER DATOS COMPLETOS DEL USUARIO ==========
+    public Usuario obtenerDatosCompletosUsuario(Long idUsuario) {
+        logger.info("📋 Obteniendo datos completos para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            return usuario.get();
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener datos completos del usuario: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener datos completos del usuario: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER USUARIO POR ID ==========
+    public Usuario obtenerUsuarioPorId(Long idUsuario) {
+        logger.info("👤 Obteniendo usuario por ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            return usuario.orElse(null);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener usuario por ID: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    // ========== OBTENER DATOS COMPLETOS DEL USUARIO POR CÉDULA ==========
+    public Usuario obtenerDatosCompletosUsuarioPorCedula(Long cedula) {
+        logger.info("🔍 Obteniendo datos completos para usuario por cédula: {}", cedula);
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findByDocumento(cedula);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con cédula: " + cedula);
+            }
+            
+            logger.info("✅ Datos completos obtenidos para cédula: {}", cedula);
+            return usuario.get();
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener datos completos del usuario por cédula: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener datos completos del usuario por cédula: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER ESTUDIOS ACADÉMICOS ==========
+    public List<EstudioAcademico> obtenerEstudiosAcademicos(Long idUsuario) {
+        logger.info("🔍 Obteniendo estudios académicos para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            return estudioAcademicoRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener estudios académicos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener estudios académicos: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER VEHÍCULOS ==========
+    public List<Vehiculo> obtenerVehiculos(Long idUsuario) {
+        logger.info("🔍 Obteniendo vehículos para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            return vehiculoRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener vehículos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener vehículos: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER VIVIENDAS ==========
+    public List<Vivienda> obtenerViviendas(Long idUsuario) {
+        logger.info("🔍 Obteniendo viviendas para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            return viviendaRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener viviendas: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener viviendas: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER PERSONAS A CARGO ==========
+    public List<PersonaACargo> obtenerPersonasACargo(Long idUsuario) {
+        logger.info("🔍 Obteniendo personas a cargo para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            return personaACargoRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener personas a cargo: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener personas a cargo: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER CONTACTOS DE EMERGENCIA ==========
+    public List<ContactoEmergencia> obtenerContactosEmergencia(Long idUsuario) {
+        logger.info("🔍 Obteniendo contactos de emergencia para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            return contactoEmergenciaRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener contactos de emergencia: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener contactos de emergencia: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== MÉTODOS PARA GUARDAR LISTAS ==========
+    
+    // ========== GUARDAR LISTA DE ESTUDIOS ACADÉMICOS ==========
+    public List<EstudioAcademico> guardarEstudiosAcademicos(List<EstudioAcademico> estudios, Long idUsuario) {
+        logger.info("💾 Guardando {} estudios académicos para usuario ID: {}", estudios.size(), idUsuario);
+        
+        try {
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<EstudioAcademico> estudiosGuardados = new ArrayList<>();
+            
+            for (EstudioAcademico estudio : estudios) {
+                // Asignar usuario al estudio
+                estudio.setUsuario(usuario.get());
+                
+                // Guardar estudio
+                EstudioAcademico estudioGuardado = estudioAcademicoRepository.save(estudio);
+                estudiosGuardados.add(estudioGuardado);
+                logger.info("✅ Estudio académico guardado exitosamente con ID: {}", estudioGuardado.getIdEstudios());
+            }
+            
+            return estudiosGuardados;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al guardar estudios académicos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar estudios académicos: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== GUARDAR LISTA DE VEHÍCULOS ==========
+    public List<Vehiculo> guardarVehiculos(List<Vehiculo> vehiculos, Long idUsuario) {
+        logger.info("💾 Guardando {} vehículos para usuario ID: {}", vehiculos.size(), idUsuario);
+        
+        try {
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<Vehiculo> vehiculosGuardados = new ArrayList<>();
+            
+            for (Vehiculo vehiculo : vehiculos) {
+                // Asignar usuario al vehículo
+                vehiculo.setUsuario(usuario.get());
+                
+                // Guardar vehículo
+                Vehiculo vehiculoGuardado = vehiculoRepository.save(vehiculo);
+                vehiculosGuardados.add(vehiculoGuardado);
+                logger.info("✅ Vehículo guardado exitosamente con ID: {}", vehiculoGuardado.getIdVehiculo());
+            }
+            
+            return vehiculosGuardados;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al guardar vehículos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar vehículos: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== GUARDAR LISTA DE PERSONAS A CARGO ==========
+    public List<PersonaACargo> guardarPersonasACargo(List<PersonaACargo> personas, Long idUsuario) {
+        logger.info("💾 Guardando {} personas a cargo para usuario ID: {}", personas.size(), idUsuario);
+        
+        try {
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<PersonaACargo> personasGuardadas = new ArrayList<>();
+            
+            for (PersonaACargo persona : personas) {
+                // Asignar usuario a la persona
+                persona.setUsuario(usuario.get());
+                
+                // Guardar persona
+                PersonaACargo personaGuardada = personaACargoRepository.save(persona);
+                personasGuardadas.add(personaGuardada);
+                logger.info("✅ Persona a cargo guardada exitosamente con ID: {}", personaGuardada.getIdFamilia());
+            }
+            
+            return personasGuardadas;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al guardar personas a cargo: {}", e.getMessage(), e);
             throw new RuntimeException("Error al guardar personas a cargo: " + e.getMessage(), e);
         }
     }
     
-    @Transactional
-    public List<Map<String, Object>> guardarContactosEmergenciaDirecto(Long idUsuario, List<Map<String, Object>> contactosData) {
+    // ========== GUARDAR LISTA DE CONTACTOS DE EMERGENCIA ==========
+    public List<ContactoEmergencia> guardarContactosEmergencia(List<ContactoEmergencia> contactos, Long idUsuario) {
+        logger.info("💾 Guardando {} contactos de emergencia para usuario ID: {}", contactos.size(), idUsuario);
+        
         try {
-            System.out.println("🔄 Guardando contactos de emergencia para usuario ID: " + idUsuario);
-            System.out.println("📋 Datos a guardar: " + contactosData.size() + " contactos");
-            
-            // Primero, eliminar todos los contactos de emergencia existentes para este usuario
-            List<ContactoEmergencia> contactosExistentes = contactoEmergenciaRepository.findByIdUsuario(idUsuario);
-            if (!contactosExistentes.isEmpty()) {
-                System.out.println("🗑️ Eliminando " + contactosExistentes.size() + " contactos existentes");
-                for (ContactoEmergencia contacto : contactosExistentes) {
-                    // Registrar auditoría de eliminación
-                    auditoriaService.registrarEliminacion("CONTACTO_EMERGENCIA", contacto.getId(), 
-                        "Sistema", idUsuario, "Eliminación de contacto de emergencia previo a actualización");
-                    contactoEmergenciaRepository.delete(contacto);
-                }
-                // Forzar flush para asegurar que se eliminen
-                contactoEmergenciaRepository.flush();
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
             }
             
-            List<Map<String, Object>> contactosGuardados = new ArrayList<>();
-
-            // Si no hay datos para guardar, retornar lista vacía
-            if (contactosData.isEmpty()) {
-                System.out.println("ℹ️ No hay contactos de emergencia para guardar");
-                return contactosGuardados;
-            }
-
-            for (Map<String, Object> contactoData : contactosData) {
-                ContactoEmergencia contacto = new ContactoEmergencia();
+            List<ContactoEmergencia> contactosGuardados = new ArrayList<>();
+            
+            for (ContactoEmergencia contacto : contactos) {
+                // Asignar usuario al contacto
+                contacto.setUsuario(usuario.get());
                 
-                // Usar el campo idUsuario directamente
-                contacto.setIdUsuario(idUsuario);
-                
-                // Mapear campos desde el Map al entity (solo los que existen en la tabla CONTACTO)
-                if (contactoData.get("nombre") != null) {
-                    contacto.setNombreCompleto(contactoData.get("nombre").toString());
-                }
-                if (contactoData.get("parentesco") != null) {
-                    contacto.setParentesco(contactoData.get("parentesco").toString());
-                }
-                if (contactoData.get("telefono") != null) {
-                    contacto.setNumeroCelular(contactoData.get("telefono").toString());
-                }
-                if (contactoData.get("version") != null) {
-                    try {
-                        Integer version = Integer.parseInt(contactoData.get("version").toString());
-                        contacto.setVersion(version);
-                    } catch (Exception e) {
-                        contacto.setVersion(1); // Valor por defecto
-                    }
-                } else {
-                    contacto.setVersion(1); // Valor por defecto
-                }
-                
+                // Guardar contacto
                 ContactoEmergencia contactoGuardado = contactoEmergenciaRepository.save(contacto);
-                
-                // Registrar auditoría de creación
-                auditoriaService.registrarCreacion("CONTACTO_EMERGENCIA", contactoGuardado.getId(), 
-                    "Sistema", idUsuario, "Creación de contacto de emergencia: " + contactoGuardado.getNombreCompleto() + " (" + contactoGuardado.getParentesco() + ")");
-                
-                // Crear mapa de respuesta (solo con los campos que existen)
-                Map<String, Object> contactoResponse = new HashMap<>();
-                contactoResponse.put("id", contactoGuardado.getId());
-                contactoResponse.put("nombreCompleto", contactoGuardado.getNombreCompleto());
-                contactoResponse.put("parentesco", contactoGuardado.getParentesco());
-                contactoResponse.put("numeroCelular", contactoGuardado.getNumeroCelular());
-                contactoResponse.put("version", contactoGuardado.getVersion());
-                contactoResponse.put("idUsuario", contactoGuardado.getIdUsuario());
-                
-                contactosGuardados.add(contactoResponse);
+                contactosGuardados.add(contactoGuardado);
+                logger.info("✅ Contacto de emergencia guardado exitosamente con ID: {}", contactoGuardado.getIdContacto());
             }
-
-            System.out.println("✅ Se guardaron " + contactosGuardados.size() + " contactos de emergencia");
+            
             return contactosGuardados;
-
+            
         } catch (Exception e) {
-            System.err.println("❌ Error al guardar contactos de emergencia: " + e.getMessage());
+            logger.error("❌ Error al guardar contactos de emergencia: {}", e.getMessage(), e);
             throw new RuntimeException("Error al guardar contactos de emergencia: " + e.getMessage(), e);
         }
     }
     
-    // ========== MÉTODOS DE CONSULTA DIRECTA DE BASE DE DATOS ==========
+    // ========== MÉTODOS PARA ELIMINAR ==========
     
-    @Transactional(readOnly = true)
-    public List<Map<String, Object>> obtenerEstudiosDirecto(Long idUsuario) {
-        List<EstudioAcademico> estudios = estudioAcademicoRepository.findByIdUsuarioAndActivoTrue(idUsuario);
-        List<Map<String, Object>> resultado = new ArrayList<>();
+    // ========== ELIMINAR ESTUDIOS ACADÉMICOS ==========
+    public void eliminarEstudiosAcademicos(Long idUsuario) {
+        logger.info("🗑️ Eliminando estudios académicos para usuario ID: {}", idUsuario);
         
-        for (EstudioAcademico estudio : estudios) {
-            Map<String, Object> estudioMap = new HashMap<>();
-            estudioMap.put("id", estudio.getId());
-            estudioMap.put("nivelEducativo", estudio.getNivelEducativo());
-            estudioMap.put("institucion", estudio.getInstitucion());
-            estudioMap.put("titulo", estudio.getTitulo());
-            estudioMap.put("semestre", estudio.getSemestre());
-            estudioMap.put("graduacion", estudio.getGraduacion());
-            estudioMap.put("version", estudio.getVersion());
-            resultado.add(estudioMap);
-        }
-        
-        return resultado;
-    }
-    
-    @Transactional(readOnly = true)
-    public List<Map<String, Object>> obtenerVehiculosDirecto(Long idUsuario) {
-        List<Vehiculo> vehiculos = vehiculoRepository.findByIdUsuario(idUsuario);
-        List<Map<String, Object>> resultado = new ArrayList<>();
-        
-        for (Vehiculo vehiculo : vehiculos) {
-            Map<String, Object> vehiculoMap = new HashMap<>();
-            vehiculoMap.put("id", vehiculo.getIdVehiculo());
-            vehiculoMap.put("tipoVehiculo", vehiculo.getTipoVehiculo());
-            vehiculoMap.put("marca", vehiculo.getMarca());
-            vehiculoMap.put("placa", vehiculo.getPlaca());
-            vehiculoMap.put("anio", vehiculo.getAnio());
-            vehiculoMap.put("propietario", vehiculo.getPropietario());
-            vehiculoMap.put("version", vehiculo.getVersion());
-            
-            resultado.add(vehiculoMap);
-        }
-        
-        return resultado;
-    }
-    
-    @Transactional(readOnly = true)
-    public Map<String, Object> obtenerViviendaDirecto(Long idUsuario) {
-        Optional<Vivienda> viviendaOpt = viviendaRepository.findByIdUsuario(idUsuario);
-        
-        if (viviendaOpt.isPresent()) {
-            Vivienda vivienda = viviendaOpt.get();
-            Map<String, Object> viviendaMap = new HashMap<>();
-            viviendaMap.put("id", vivienda.getIdVivienda());
-            viviendaMap.put("tipoVivienda", vivienda.getTipoVivienda());
-            viviendaMap.put("direccion", vivienda.getDireccion());
-            viviendaMap.put("infoAdicional", vivienda.getInfoAdicional());
-            viviendaMap.put("barrio", vivienda.getBarrio());
-            viviendaMap.put("ciudad", vivienda.getCiudad());
-            viviendaMap.put("vivienda", vivienda.getVivienda());
-            viviendaMap.put("entidad", vivienda.getEntidad());
-            viviendaMap.put("anio", vivienda.getAnio());
-            viviendaMap.put("tipoAdquisicion", vivienda.getTipoAdquisicion());
-            return viviendaMap;
-        }
-        
-        return null;
-    }
-    
-    @Transactional(readOnly = true)
-    public List<Map<String, Object>> obtenerPersonasCargoDirecto(Long idUsuario) {
-        List<PersonaACargo> personas = personaACargoRepository.findByIdUsuario(idUsuario);
-        List<Map<String, Object>> resultado = new ArrayList<>();
-        
-        for (PersonaACargo persona : personas) {
-            Map<String, Object> personaMap = new HashMap<>();
-            personaMap.put("id", persona.getId());
-            personaMap.put("nombre", persona.getNombre());
-            personaMap.put("parentesco", persona.getParentesco());
-            personaMap.put("fechaNacimiento", persona.getFechaNacimiento());
-            personaMap.put("edad", persona.getEdad());
-            personaMap.put("version", persona.getVersion());
-            personaMap.put("idUsuario", persona.getIdUsuario());
-            resultado.add(personaMap);
-        }
-        
-        return resultado;
-    }
-    
-    @Transactional(readOnly = true)
-    public List<Map<String, Object>> obtenerContactosEmergenciaDirecto(Long idUsuario) {
-        List<ContactoEmergencia> contactos = contactoEmergenciaRepository.findByIdUsuario(idUsuario);
-        List<Map<String, Object>> resultado = new ArrayList<>();
-        
-        for (ContactoEmergencia contacto : contactos) {
-            Map<String, Object> contactoMap = new HashMap<>();
-            contactoMap.put("id", contacto.getId());
-            contactoMap.put("nombreCompleto", contacto.getNombreCompleto());
-            contactoMap.put("parentesco", contacto.getParentesco());
-            contactoMap.put("numeroCelular", contacto.getNumeroCelular());
-            contactoMap.put("version", contacto.getVersion());
-            contactoMap.put("idUsuario", contacto.getIdUsuario());
-            resultado.add(contactoMap);
-        }
-        
-        return resultado;
-    }
-    
-    // ========== MÉTODOS PARA DECLARACIONES DE CONFLICTO ==========
-    
-    @Transactional
-    public List<Map<String, Object>> guardarDeclaracionesConflictoDirecto(Long idUsuario, List<Map<String, Object>> declaracionesData) {
         try {
-            System.out.println("🔄 Guardando declaraciones de conflicto para usuario ID: " + idUsuario);
-            System.out.println("📋 Datos a guardar: " + declaracionesData.size() + " declaraciones");
-            
-            // Primero, eliminar todas las declaraciones de conflicto existentes para este usuario
-            List<RelacionConf> declaracionesExistentes = relacionConfRepository.findByIdUsuario(idUsuario);
-            if (!declaracionesExistentes.isEmpty()) {
-                System.out.println("🗑️ Eliminando " + declaracionesExistentes.size() + " declaraciones existentes");
-                for (RelacionConf declaracion : declaracionesExistentes) {
-                    // Registrar auditoría de eliminación
-                    auditoriaService.registrarEliminacion("RELACION_CONF", declaracion.getId(), 
-                        "Sistema", idUsuario, "Eliminación de declaración de conflicto previo a actualización");
-                    relacionConfRepository.delete(declaracion);
-                }
-                // Forzar flush para asegurar que se eliminen
-                relacionConfRepository.flush();
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
             }
             
-            List<Map<String, Object>> declaracionesGuardadas = new ArrayList<>();
-
-            // Si no hay datos para guardar, retornar lista vacía
-            if (declaracionesData.isEmpty()) {
-                System.out.println("ℹ️ No hay declaraciones de conflicto para guardar");
-                return declaracionesGuardadas;
-            }
-
-            for (Map<String, Object> declaracionData : declaracionesData) {
-                RelacionConf declaracion = new RelacionConf();
-                
-                // Usar el campo idUsuario directamente
-                declaracion.setIdUsuario(idUsuario);
-                
-                // Mapear campos desde el Map al entity (solo los que existen en la tabla RELACION_CONF)
-                if (declaracionData.get("nombre") != null) {
-                    declaracion.setNombreCompleto(declaracionData.get("nombre").toString());
-                }
-                if (declaracionData.get("parentesco") != null) {
-                    declaracion.setParentesco(declaracionData.get("parentesco").toString());
-                }
-                if (declaracionData.get("tipoParteInteresada") != null) {
-                    declaracion.setTipoParteAsoc(declaracionData.get("tipoParteInteresada").toString());
-                }
-                if (declaracionData.get("version") != null) {
-                    try {
-                        Integer version = Integer.parseInt(declaracionData.get("version").toString());
-                        declaracion.setVersion(version);
-                    } catch (Exception e) {
-                        declaracion.setVersion(1); // Valor por defecto
-                    }
-                } else {
-                    declaracion.setVersion(1); // Valor por defecto
-                }
-                
-                // Establecer fecha de creación
-                declaracion.setFechaCreacion(java.time.LocalDate.now().toString());
-                
-                RelacionConf declaracionGuardada = relacionConfRepository.save(declaracion);
-                
-                // Registrar auditoría de creación
-                auditoriaService.registrarCreacion("RELACION_CONF", declaracionGuardada.getId(), 
-                    "Sistema", idUsuario, "Creación de declaración de conflicto: " + declaracionGuardada.getNombreCompleto() + " (" + declaracionGuardada.getParentesco() + ")");
-                
-                // Crear mapa de respuesta (solo con los campos que existen)
-                Map<String, Object> declaracionResponse = new HashMap<>();
-                declaracionResponse.put("id", declaracionGuardada.getId());
-                declaracionResponse.put("nombreCompleto", declaracionGuardada.getNombreCompleto());
-                declaracionResponse.put("parentesco", declaracionGuardada.getParentesco());
-                declaracionResponse.put("tipoParteAsoc", declaracionGuardada.getTipoParteAsoc());
-                declaracionResponse.put("tieneCl", declaracionGuardada.getTieneCl());
-                declaracionResponse.put("actualizado", declaracionGuardada.getActualizado());
-                declaracionResponse.put("version", declaracionGuardada.getVersion());
-                declaracionResponse.put("fechaCreacion", declaracionGuardada.getFechaCreacion());
-                declaracionResponse.put("idUsuario", declaracionGuardada.getIdUsuario());
-                
-                declaracionesGuardadas.add(declaracionResponse);
-            }
-
-            System.out.println("✅ Se guardaron " + declaracionesGuardadas.size() + " declaraciones de conflicto");
-            return declaracionesGuardadas;
-
+            List<EstudioAcademico> estudios = estudioAcademicoRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            estudioAcademicoRepository.deleteAll(estudios);
+            logger.info("✅ Estudios académicos eliminados exitosamente para usuario ID: {}", idUsuario);
+            
         } catch (Exception e) {
-            System.err.println("❌ Error al guardar declaraciones de conflicto: " + e.getMessage());
-            throw new RuntimeException("Error al guardar declaraciones de conflicto: " + e.getMessage(), e);
+            logger.error("❌ Error al eliminar estudios académicos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar estudios académicos: " + e.getMessage(), e);
         }
     }
     
-    @Transactional(readOnly = true)
-    public List<Map<String, Object>> obtenerDeclaracionesConflictoDirecto(Long idUsuario) {
-        List<RelacionConf> declaraciones = relacionConfRepository.findByIdUsuario(idUsuario);
-        List<Map<String, Object>> resultado = new ArrayList<>();
+    // ========== ELIMINAR VEHÍCULOS ==========
+    public void eliminarVehiculos(Long idUsuario) {
+        logger.info("🗑️ Eliminando vehículos para usuario ID: {}", idUsuario);
         
-        for (RelacionConf declaracion : declaraciones) {
-            Map<String, Object> declaracionMap = new HashMap<>();
-            declaracionMap.put("id", declaracion.getId());
-            declaracionMap.put("nombreCompleto", declaracion.getNombreCompleto());
-            declaracionMap.put("parentesco", declaracion.getParentesco());
-            declaracionMap.put("tipoParteAsoc", declaracion.getTipoParteAsoc());
-            declaracionMap.put("tieneCl", declaracion.getTieneCl());
-            declaracionMap.put("actualizado", declaracion.getActualizado());
-            declaracionMap.put("version", declaracion.getVersion());
-            declaracionMap.put("fechaCreacion", declaracion.getFechaCreacion());
-            declaracionMap.put("idUsuario", declaracion.getIdUsuario());
-            resultado.add(declaracionMap);
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<Vehiculo> vehiculos = vehiculoRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            vehiculoRepository.deleteAll(vehiculos);
+            logger.info("✅ Vehículos eliminados exitosamente para usuario ID: {}", idUsuario);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al eliminar vehículos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar vehículos: " + e.getMessage(), e);
         }
+    }
+    
+    // ========== ELIMINAR VIVIENDAS ==========
+    public void eliminarViviendas(Long idUsuario) {
+        logger.info("🗑️ Eliminando viviendas para usuario ID: {}", idUsuario);
         
-        return resultado;
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<Vivienda> viviendas = viviendaRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            viviendaRepository.deleteAll(viviendas);
+            logger.info("✅ Viviendas eliminadas exitosamente para usuario ID: {}", idUsuario);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al eliminar viviendas: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar viviendas: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== ELIMINAR PERSONAS A CARGO ==========
+    public void eliminarPersonasACargo(Long idUsuario) {
+        logger.info("🗑️ Eliminando personas a cargo para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<PersonaACargo> personas = personaACargoRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            personaACargoRepository.deleteAll(personas);
+            logger.info("✅ Personas a cargo eliminadas exitosamente para usuario ID: {}", idUsuario);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al eliminar personas a cargo: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar personas a cargo: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== ELIMINAR CONTACTOS DE EMERGENCIA ==========
+    public void eliminarContactosEmergencia(Long idUsuario) {
+        logger.info("🗑️ Eliminando contactos de emergencia para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<ContactoEmergencia> contactos = contactoEmergenciaRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            contactoEmergenciaRepository.deleteAll(contactos);
+            logger.info("✅ Contactos de emergencia eliminados exitosamente para usuario ID: {}", idUsuario);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al eliminar contactos de emergencia: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar contactos de emergencia: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== OBTENER RELACIONES DE CONFLICTO ==========
+    public List<RelacionConf> obtenerRelacionesConflicto(Long idUsuario) {
+        logger.info("🔍 Obteniendo relaciones de conflicto para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<RelacionConf> relaciones = relacionConfRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            logger.info("✅ Relaciones de conflicto obtenidas exitosamente para usuario ID: {}", idUsuario);
+            
+            return relaciones;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener relaciones de conflicto: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener relaciones de conflicto: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== GUARDAR RELACIONES DE CONFLICTO ==========
+    public List<RelacionConf> guardarRelacionesConflicto(List<RelacionConf> relaciones, Long idUsuario) {
+        logger.info("💾 Guardando {} relaciones de conflicto para usuario ID: {}", relaciones.size(), idUsuario);
+        
+        try {
+            // Buscar usuario por ID
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<RelacionConf> relacionesGuardadas = new ArrayList<>();
+            
+            for (RelacionConf relacion : relaciones) {
+                // Asignar usuario a la relación
+                relacion.setUsuario(usuario.get());
+                
+                // Guardar relación
+                RelacionConf relacionGuardada = relacionConfRepository.save(relacion);
+                relacionesGuardadas.add(relacionGuardada);
+                logger.info("✅ Relación de conflicto guardada exitosamente con ID: {}", relacionGuardada.getIdRelacionConf());
+            }
+            
+            return relacionesGuardadas;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al guardar relaciones de conflicto: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al guardar relaciones de conflicto: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== ELIMINAR RELACIONES DE CONFLICTO ==========
+    public void eliminarRelacionesConflicto(Long idUsuario) {
+        logger.info("🗑️ Eliminando relaciones de conflicto para usuario ID: {}", idUsuario);
+        
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + idUsuario);
+            }
+            
+            List<RelacionConf> relaciones = relacionConfRepository.findByUsuarioIdUsuario(usuario.get().getIdUsuario());
+            relacionConfRepository.deleteAll(relaciones);
+            logger.info("✅ Relaciones de conflicto eliminadas exitosamente para usuario ID: {}", idUsuario);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al eliminar relaciones de conflicto: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar relaciones de conflicto: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== MÉTODOS AUXILIARES ==========
+    
+    private void actualizarCamposUsuario(Usuario usuarioActual, Usuario usuarioNuevo) {
+        if (usuarioNuevo.getNombre() != null) {
+            usuarioActual.setNombre(usuarioNuevo.getNombre());
+        }
+        if (usuarioNuevo.getCorreo() != null) {
+            usuarioActual.setCorreo(usuarioNuevo.getCorreo());
+        }
+        if (usuarioNuevo.getFechaNacimiento() != null) {
+            usuarioActual.setFechaNacimiento(usuarioNuevo.getFechaNacimiento());
+        }
+        if (usuarioNuevo.getCedulaExpedicion() != null) {
+            usuarioActual.setCedulaExpedicion(usuarioNuevo.getCedulaExpedicion());
+        }
+        if (usuarioNuevo.getPaisNacimiento() != null) {
+            usuarioActual.setPaisNacimiento(usuarioNuevo.getPaisNacimiento());
+        }
+        if (usuarioNuevo.getCiudadNacimiento() != null) {
+            usuarioActual.setCiudadNacimiento(usuarioNuevo.getCiudadNacimiento());
+        }
+        if (usuarioNuevo.getCargo() != null) {
+            usuarioActual.setCargo(usuarioNuevo.getCargo());
+        }
+        if (usuarioNuevo.getArea() != null) {
+            usuarioActual.setArea(usuarioNuevo.getArea());
+        }
+        if (usuarioNuevo.getEstadoCivil() != null) {
+            usuarioActual.setEstadoCivil(usuarioNuevo.getEstadoCivil());
+        }
+        if (usuarioNuevo.getTipoSangre() != null) {
+            usuarioActual.setTipoSangre(usuarioNuevo.getTipoSangre());
+        }
+        if (usuarioNuevo.getNumeroFijo() != null) {
+            usuarioActual.setNumeroFijo(usuarioNuevo.getNumeroFijo());
+        }
+        if (usuarioNuevo.getNumeroCelular() != null) {
+            usuarioActual.setNumeroCelular(usuarioNuevo.getNumeroCelular());
+        }
+        if (usuarioNuevo.getNumeroCorp() != null) {
+            usuarioActual.setNumeroCorp(usuarioNuevo.getNumeroCorp());
+        }
     }
 } 

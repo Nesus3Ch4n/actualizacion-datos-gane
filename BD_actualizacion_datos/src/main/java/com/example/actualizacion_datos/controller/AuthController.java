@@ -13,10 +13,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class AuthController {
 
     @Autowired
@@ -483,7 +484,9 @@ public class AuthController {
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Usuario de prueba creado exitosamente",
+                "message", usuario.getIdUsuario() != null ? 
+                    "Usuario de prueba actualizado exitosamente" : 
+                    "Usuario de prueba creado exitosamente",
                 "user", usuario,
                 "timestamp", System.currentTimeMillis()
             ));
@@ -491,7 +494,7 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
-                "error", "Error creando usuario de prueba: " + e.getMessage()
+                "error", "Error creando/actualizando usuario de prueba: " + e.getMessage()
             ));
         }
     }

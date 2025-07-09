@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,19 +29,44 @@ public class UsuarioService {
     
     // ========== CREAR USUARIO COMPLETO ==========
     public Usuario crearUsuarioCompleto(UsuarioCompletoDTO usuarioDTO) {
-        logger.info("🏗️ Creando usuario completo para: {}", usuarioDTO.getNombre());
+        logger.info("🏗️ Creando usuario completo");
         
         try {
-            // Validar que la cédula sea válida
             Long cedula = convertirALong(usuarioDTO.getCedula());
             if (cedula == null) {
                 throw new IllegalArgumentException("La cédula debe ser un número válido");
             }
             
             // Verificar si ya existe un usuario con esta cédula
-            Optional<Usuario> usuarioExistente = usuarioRepository.findByCedula(cedula);
+            Optional<Usuario> usuarioExistente = usuarioRepository.findByDocumento(cedula);
             if (usuarioExistente.isPresent()) {
-                throw new RuntimeException("Ya existe un usuario con cédula: " + cedula);
+                logger.info("📝 Usuario existente encontrado con cédula {}, actualizando en lugar de crear...", cedula);
+                
+                // Actualizar usuario existente en lugar de crear uno nuevo
+                Usuario usuarioActual = usuarioExistente.get();
+                
+                // Actualizar campos del usuario existente
+                if (usuarioDTO.getNombre() != null) {
+                    usuarioActual.setNombre(usuarioDTO.getNombre());
+                }
+                if (usuarioDTO.getCorreo() != null) {
+                    usuarioActual.setCorreo(usuarioDTO.getCorreo());
+                }
+                if (usuarioDTO.getFechaNacimiento() != null) {
+                    usuarioActual.setFechaNacimiento(usuarioDTO.getFechaNacimiento());
+                }
+                
+                // Mapear campos adicionales
+                mapearInformacionPersonal(usuarioDTO, usuarioActual, cedula);
+                
+                // Incrementar versión
+                usuarioActual.setVersion(usuarioActual.getVersion() + 1);
+                
+                Usuario usuarioActualizado = usuarioRepository.save(usuarioActual);
+                logger.info("✅ Usuario actualizado exitosamente con ID: {} y cédula: {}", 
+                    usuarioActualizado.getIdUsuario(), usuarioActualizado.getDocumento());
+                
+                return usuarioActualizado;
             }
             
             // Crear nueva entidad Usuario
@@ -51,7 +77,8 @@ public class UsuarioService {
             
             // Guardar usuario
             Usuario usuarioGuardado = usuarioRepository.save(usuario);
-            logger.info("✅ Usuario creado exitosamente con ID: {}", usuarioGuardado.getId());
+            logger.info("✅ Usuario creado exitosamente con ID: {} y cédula: {}", 
+                usuarioGuardado.getIdUsuario(), usuarioGuardado.getDocumento());
             
             return usuarioGuardado;
             
@@ -76,20 +103,22 @@ public class UsuarioService {
             }
             
             // Verificar si ya existe
-            Optional<Usuario> usuarioExistente = usuarioRepository.findByCedula(cedula);
+            Optional<Usuario> usuarioExistente = usuarioRepository.findByDocumento(cedula);
             if (usuarioExistente.isPresent()) {
-                logger.info("📝 Usuario existente encontrado, actualizando...");
+                logger.info("📝 Usuario existente encontrado con cédula {}, actualizando...", cedula);
                 return actualizarUsuarioDesdeMap(usuarioExistente.get(), usuarioData);
             }
             
             // Crear nuevo usuario
-            Usuario usuario = new Usuario(nombre, cedula, correo);
+            Usuario usuario = new Usuario(cedula, nombre, LocalDate.now()); // Usar constructor correcto
+            usuario.setCorreo(correo);
             
             // Mapear campos adicionales si están presentes
             mapearCamposAdicionales(usuarioData, usuario);
             
             Usuario usuarioGuardado = usuarioRepository.save(usuario);
-            logger.info("✅ Usuario básico creado exitosamente con ID: {}", usuarioGuardado.getId());
+            logger.info("✅ Usuario básico creado exitosamente con ID: {} y cédula: {}", 
+                usuarioGuardado.getIdUsuario(), usuarioGuardado.getDocumento());
             
             return usuarioGuardado;
             
@@ -101,27 +130,40 @@ public class UsuarioService {
     
     // ========== ACTUALIZAR USUARIO DESDE MAP ==========
     private Usuario actualizarUsuarioDesdeMap(Usuario usuario, Map<String, Object> usuarioData) {
-        logger.info("🔄 Actualizando usuario existente ID: {}", usuario.getId());
+        logger.info("🔄 Actualizando usuario existente ID: {} con cédula: {}", 
+            usuario.getIdUsuario(), usuario.getDocumento());
         
-        // Actualizar campos si están presentes
+        // Actualizar campos básicos si están presentes
+        if (usuarioData.get("nombre") != null) {
+            usuario.setNombre(convertirAString(usuarioData.get("nombre")));
+        }
+        if (usuarioData.get("correo") != null) {
+            usuario.setCorreo(convertirAString(usuarioData.get("correo")));
+        }
+        
+        // Actualizar campos adicionales si están presentes
         mapearCamposAdicionales(usuarioData, usuario);
         
         // Incrementar versión
         usuario.setVersion(usuario.getVersion() + 1);
         
-        return usuarioRepository.save(usuario);
+        Usuario usuarioActualizado = usuarioRepository.save(usuario);
+        logger.info("✅ Usuario actualizado exitosamente con ID: {} y cédula: {}", 
+            usuarioActualizado.getIdUsuario(), usuarioActualizado.getDocumento());
+        
+        return usuarioActualizado;
     }
     
     // ========== MAPEAR CAMPOS ADICIONALES ==========
     private void mapearCamposAdicionales(Map<String, Object> datos, Usuario usuario) {
         if (datos.get("numeroFijo") != null) {
-            usuario.setNumeroFijo(convertirAString(datos.get("numeroFijo")));
+            usuario.setNumeroFijo(convertirALong(datos.get("numeroFijo")));
         }
         if (datos.get("numeroCelular") != null) {
-            usuario.setNumeroCelular(convertirAString(datos.get("numeroCelular")));
+            usuario.setNumeroCelular(convertirALong(datos.get("numeroCelular")));
         }
         if (datos.get("numeroCorp") != null) {
-            usuario.setNumeroCorp(convertirAString(datos.get("numeroCorp")));
+            usuario.setNumeroCorp(convertirALong(datos.get("numeroCorp")));
         }
         if (datos.get("cedulaExpedicion") != null) {
             usuario.setCedulaExpedicion(convertirAString(datos.get("cedulaExpedicion")));
@@ -170,18 +212,18 @@ public class UsuarioService {
     // ========== MAPEAR INFORMACIÓN PERSONAL ==========
     private void mapearInformacionPersonal(UsuarioCompletoDTO dto, Usuario usuario, Long cedula) {
         usuario.setNombre(dto.getNombre());
-        usuario.setCedula(cedula);
+        usuario.setDocumento(cedula);
         usuario.setCorreo(dto.getCorreo());
         
         // Mapear campos disponibles en DTO que corresponden a campos de la entidad
         if (dto.getNumeroFijo() != null) {
-            usuario.setNumeroFijo(dto.getNumeroFijo());
+            usuario.setNumeroFijo(convertirALong(dto.getNumeroFijo()));
         }
         if (dto.getNumeroCelular() != null) {
-            usuario.setNumeroCelular(dto.getNumeroCelular());
+            usuario.setNumeroCelular(convertirALong(dto.getNumeroCelular()));
         }
         if (dto.getNumeroCorp() != null) {
-            usuario.setNumeroCorp(dto.getNumeroCorp());
+            usuario.setNumeroCorp(convertirALong(dto.getNumeroCorp()));
         }
         if (dto.getCedulaExpedicion() != null) {
             usuario.setCedulaExpedicion(dto.getCedulaExpedicion());
@@ -229,7 +271,18 @@ public class UsuarioService {
     @Transactional(readOnly = true)
     public Optional<Usuario> obtenerUsuarioPorCedula(Long cedula) {
         logger.info("🔍 Buscando usuario por cédula: {}", cedula);
-        return usuarioRepository.findByCedula(cedula);
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findByDocumento(cedula);
+            if (usuario.isPresent()) {
+                logger.info("✅ Usuario encontrado para cédula: {} con ID: {}", cedula, usuario.get().getIdUsuario());
+            } else {
+                logger.warn("⚠️ Usuario no encontrado para cédula: {}", cedula);
+            }
+            return usuario;
+        } catch (Exception e) {
+            logger.error("❌ Error al buscar usuario por cédula {}: {}", cedula, e.getMessage(), e);
+            throw new RuntimeException("Error al buscar usuario por cédula: " + e.getMessage(), e);
+        }
     }
     
     @Transactional(readOnly = true)
@@ -244,27 +297,34 @@ public class UsuarioService {
         return usuarioRepository.findByNombreContainingIgnoreCase(nombre);
     }
     
-    // ========== MÉTODOS DE ACTUALIZACIÓN ==========
-    
+    // ========== ACTUALIZAR USUARIO ==========
     public Usuario actualizarUsuario(Long id, UsuarioCompletoDTO usuarioDTO) {
         logger.info("🔄 Actualizando usuario con ID: {}", id);
         
-        Optional<Usuario> usuarioExistente = usuarioRepository.findById(id);
-        if (usuarioExistente.isEmpty()) {
-            throw new RuntimeException("Usuario no encontrado con ID: " + id);
-        }
-        
         try {
-            Usuario usuario = usuarioExistente.get();
+            Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+            if (usuarioOpt.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + id);
+            }
             
-            // Actualizar información personal
-            mapearInformacionPersonal(usuarioDTO, usuario, usuario.getCedula());
+            Usuario usuario = usuarioOpt.get();
+            
+            // Actualizar campos
+            if (usuarioDTO.getNombre() != null) {
+                usuario.setNombre(usuarioDTO.getNombre());
+            }
+            if (usuarioDTO.getCorreo() != null) {
+                usuario.setCorreo(usuarioDTO.getCorreo());
+            }
+            if (usuarioDTO.getFechaNacimiento() != null) {
+                usuario.setFechaNacimiento(usuarioDTO.getFechaNacimiento());
+            }
             
             // Incrementar versión
             usuario.setVersion(usuario.getVersion() + 1);
             
             Usuario usuarioActualizado = usuarioRepository.save(usuario);
-            logger.info("✅ Usuario actualizado exitosamente");
+            logger.info("✅ Usuario actualizado exitosamente con ID: {}", usuarioActualizado.getIdUsuario());
             
             return usuarioActualizado;
             
@@ -274,22 +334,25 @@ public class UsuarioService {
         }
     }
     
-    // ========== MÉTODOS DE ELIMINACIÓN ==========
-    
+    // ========== ELIMINAR USUARIO ==========
     public void eliminarUsuario(Long id) {
         logger.info("🗑️ Eliminando usuario con ID: {}", id);
         
-        Optional<Usuario> usuario = usuarioRepository.findById(id);
-        if (usuario.isEmpty()) {
-            throw new RuntimeException("Usuario no encontrado con ID: " + id);
+        try {
+            if (!usuarioRepository.existsById(id)) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + id);
+            }
+            
+            usuarioRepository.deleteById(id);
+            logger.info("✅ Usuario eliminado exitosamente con ID: {}", id);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al eliminar usuario: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al eliminar usuario: " + e.getMessage(), e);
         }
-        
-        usuarioRepository.delete(usuario.get());
-        logger.info("✅ Usuario eliminado exitosamente");
     }
     
     // ========== MÉTODOS DE ESTADÍSTICAS ==========
-    
     @Transactional(readOnly = true)
     public long contarUsuarios() {
         return usuarioRepository.count();

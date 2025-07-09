@@ -1,7 +1,7 @@
 package com.example.actualizacion_datos.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "RELACION_CONF")
@@ -10,49 +10,51 @@ public class RelacionConf {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_RELACION_CONF")
-    private Long id;
+    private Long idRelacionConf;
     
-    @Column(name = "ID_USUARIO", nullable = false)
-    private Long idUsuario;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ID_USUARIO", nullable = false)
+    private Usuario usuario;
     
-    @Column(name = "NOMBRE_COMPLETO")
+    @Column(name = "NOMBRE_COMPLETO", length = 100)
     private String nombreCompleto;
     
-    @Column(name = "PARENTESCO")
+    @Column(name = "PARENTESCO", length = 50)
     private String parentesco;
     
-    @Column(name = "TIPO_PARTE_ASOC")
+    @Column(name = "TIPO_PARTE_ASOC", length = 100)
     private String tipoParteAsoc;
     
     @Column(name = "TIENE_CL")
-    private String tieneCl;
+    private Integer tieneCl = 0;
     
     @Column(name = "ACTUALIZADO")
-    private String actualizado;
+    private Integer actualizado = 0;
     
     @Column(name = "VERSION")
-    private Integer version;
+    private Integer version = 1;
     
-    @Column(name = "FECHA_CREACION")
+    @Column(name = "FECHA_CREACION", length = 50)
     private String fechaCreacion;
+    
+    @Column(name = "FECHA_MODIFICACION")
+    private LocalDateTime fechaModificacion = LocalDateTime.now();
     
     // Constructores
     public RelacionConf() {}
     
-    public RelacionConf(Long idUsuario, String nombreCompleto, String parentesco, String tipoParteAsoc) {
-        this.idUsuario = idUsuario;
+    public RelacionConf(Usuario usuario, String nombreCompleto, String parentesco) {
+        this.usuario = usuario;
         this.nombreCompleto = nombreCompleto;
         this.parentesco = parentesco;
-        this.tipoParteAsoc = tipoParteAsoc;
-        this.version = 1;
     }
     
     // Getters y Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getIdRelacionConf() { return idRelacionConf; }
+    public void setIdRelacionConf(Long idRelacionConf) { this.idRelacionConf = idRelacionConf; }
     
-    public Long getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Long idUsuario) { this.idUsuario = idUsuario; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
     
     public String getNombreCompleto() { return nombreCompleto; }
     public void setNombreCompleto(String nombreCompleto) { this.nombreCompleto = nombreCompleto; }
@@ -63,11 +65,11 @@ public class RelacionConf {
     public String getTipoParteAsoc() { return tipoParteAsoc; }
     public void setTipoParteAsoc(String tipoParteAsoc) { this.tipoParteAsoc = tipoParteAsoc; }
     
-    public String getTieneCl() { return tieneCl; }
-    public void setTieneCl(String tieneCl) { this.tieneCl = tieneCl; }
+    public Integer getTieneCl() { return tieneCl; }
+    public void setTieneCl(Integer tieneCl) { this.tieneCl = tieneCl; }
     
-    public String getActualizado() { return actualizado; }
-    public void setActualizado(String actualizado) { this.actualizado = actualizado; }
+    public Integer getActualizado() { return actualizado; }
+    public void setActualizado(Integer actualizado) { this.actualizado = actualizado; }
     
     public Integer getVersion() { return version; }
     public void setVersion(Integer version) { this.version = version; }
@@ -75,18 +77,16 @@ public class RelacionConf {
     public String getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(String fechaCreacion) { this.fechaCreacion = fechaCreacion; }
     
+    public LocalDateTime getFechaModificacion() { return fechaModificacion; }
+    public void setFechaModificacion(LocalDateTime fechaModificacion) { this.fechaModificacion = fechaModificacion; }
+    
     @Override
     public String toString() {
         return "RelacionConf{" +
-                "id=" + id +
-                ", idUsuario=" + idUsuario +
+                "idRelacionConf=" + idRelacionConf +
                 ", nombreCompleto='" + nombreCompleto + '\'' +
                 ", parentesco='" + parentesco + '\'' +
                 ", tipoParteAsoc='" + tipoParteAsoc + '\'' +
-                ", tieneCl='" + tieneCl + '\'' +
-                ", actualizado='" + actualizado + '\'' +
-                ", version=" + version +
-                ", fechaCreacion='" + fechaCreacion + '\'' +
                 '}';
     }
 } 

@@ -21,7 +21,7 @@
               </div>
               <div class="info-item">
                 <span class="label">Cédula:</span>
-                <span class="value">{{data.usuario?.cedula || 'No especificado'}}</span>
+                <span class="value">{{data.usuario?.documento || 'No especificado'}}</span>
               </div>
               <div class="info-item">
                 <span class="label">Correo electrónico:</span>
@@ -99,7 +99,7 @@
               <div class="info-grid">
                 <div class="info-item">
                   <span class="label">Nivel educativo:</span>
-                  <span class="value">{{estudio.nivelEducativo || 'No especificado'}}</span>
+                  <span class="value">{{estudio.nivelAcademico || 'No especificado'}}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">Institución:</span>
@@ -107,7 +107,7 @@
                 </div>
                 <div class="info-item">
                   <span class="label">Título/Programa:</span>
-                  <span class="value">{{estudio.titulo || 'No especificado'}}</span>
+                  <span class="value">{{estudio.programa || 'No especificado'}}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">Semestre:</span>
@@ -193,7 +193,7 @@
                 </div>
                 <div class="info-item">
                   <span class="label">Fecha de creación:</span>
-                  <span class="value">{{relacion.fechaCreacion || 'No especificado'}}</span>
+                  <span class="value">{{relacion.fechaModificacion || 'No especificado'}}</span>
                 </div>
               </div>
               <mat-divider *ngIf="i < data.relacionesConflicto.length - 1"></mat-divider>
@@ -232,7 +232,7 @@
                 </div>
                 <div class="info-item">
                   <span class="label">Año:</span>
-                  <span class="value">{{vehiculo.anio || 'No especificado'}}</span>
+                  <span class="value">{{vehiculo.ano || 'No especificado'}}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">Propietario:</span>

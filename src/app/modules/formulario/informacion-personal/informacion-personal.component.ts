@@ -87,51 +87,50 @@ export class InformacionPersonalComponent implements OnInit {
       // Obtener información personal de la base de datos
       const informacionExistente = await this.formDataService.obtenerDatosCompletos(cedula);
       
-      if (informacionExistente && informacionExistente.informacionPersonal) {
-        const info = informacionExistente.informacionPersonal;
-        console.log('✅ Información personal encontrada:', info);
+      if (informacionExistente) {
+        console.log('✅ Información personal encontrada:', informacionExistente);
         
-        // Mapear datos de la base de datos al formulario
+        // Mapear datos de la base de datos al formulario (los datos vienen directamente en el objeto raíz)
         this.myForm.patchValue({
-          documento: info.cedula || '',
-          cedula_expedida: info.cedulaExpedicion || '',
-          nombre_intg: info.nombre || '',
-          fecha_nacimiento: info.fechaNacimiento || '',
-          pais_nacimiento: info.paisNacimiento || '',
-          ciudad_nacimiento: info.ciudadNacimiento || '',
-          cargo: info.cargo || '',
-          area: info.area || '',
-          estadocivil: info.estadoCivil || '',
-          tipo_sangre: info.tipoSangre || '',
-          num_celular: info.numeroCelular || '',
-          num_fijo: info.numeroFijo || '',
-          num_corporativo: info.numeroCorp || '',
-          correo_personal: info.correo || ''
+          documento: informacionExistente.documento || informacionExistente.cedula || '',
+          cedula_expedida: informacionExistente.cedulaExpedicion || '',
+          nombre_intg: informacionExistente.nombre || '',
+          fecha_nacimiento: informacionExistente.fechaNacimiento || '',
+          pais_nacimiento: informacionExistente.paisNacimiento || '',
+          ciudad_nacimiento: informacionExistente.ciudadNacimiento || '',
+          cargo: informacionExistente.cargo || '',
+          area: informacionExistente.area || '',
+          estadocivil: informacionExistente.estadoCivil || '',
+          tipo_sangre: informacionExistente.tipoSangre || '',
+          num_celular: informacionExistente.numeroCelular || '',
+          num_fijo: informacionExistente.numeroFijo || '',
+          num_corporativo: informacionExistente.numeroCorp || '',
+          correo_personal: informacionExistente.correo || ''
         });
 
         // Guardar en el estado del formulario
         const mappedData = {
-          cedula: info.cedula,
-          cedulaExpedicion: info.cedulaExpedicion,
-          nombre: info.nombre,
-          fechaNacimiento: info.fechaNacimiento,
-          paisNacimiento: info.paisNacimiento,
-          ciudadNacimiento: info.ciudadNacimiento,
-          cargo: info.cargo,
-          area: info.area,
-          estadoCivil: info.estadoCivil,
-          tipoSangre: info.tipoSangre,
-          numeroCelular: info.numeroCelular,
-          numeroFijo: info.numeroFijo,
-          numeroCorp: info.numeroCorp,
-          correo: info.correo
+          cedula: informacionExistente.documento || informacionExistente.cedula,
+          cedulaExpedicion: informacionExistente.cedulaExpedicion,
+          nombre: informacionExistente.nombre,
+          fechaNacimiento: informacionExistente.fechaNacimiento,
+          paisNacimiento: informacionExistente.paisNacimiento,
+          ciudadNacimiento: informacionExistente.ciudadNacimiento,
+          cargo: informacionExistente.cargo,
+          area: informacionExistente.area,
+          estadoCivil: informacionExistente.estadoCivil,
+          tipoSangre: informacionExistente.tipoSangre,
+          numeroCelular: informacionExistente.numeroCelular,
+          numeroFijo: informacionExistente.numeroFijo,
+          numeroCorp: informacionExistente.numeroCorp,
+          correo: informacionExistente.correo
         };
 
         this.formStateService.setInformacionPersonal(mappedData);
         
         // Establecer el usuario en el servicio de sesión
-        if (info.id) {
-          this.usuarioSessionService.setUsuarioActual(info);
+        if (informacionExistente.idUsuario) {
+          this.usuarioSessionService.setUsuarioActual(informacionExistente);
         }
 
         this.notificationService.showInfo(
@@ -278,7 +277,7 @@ export class InformacionPersonalComponent implements OnInit {
           // Establecer el ID del usuario en el servicio de sesión
           // IMPORTANTE: También establecer el usuario completo en UsuarioSessionService
           // para que funcione con otros componentes que lo usan
-          const usuarioCompleto = { ...mappedData, id: parseInt(usuarioId) };
+          const usuarioCompleto = { ...mappedData, idUsuario: parseInt(usuarioId) };
           this.usuarioSessionService.setUsuarioActual(usuarioCompleto);
           
           // Verificar que la sesión se estableció correctamente

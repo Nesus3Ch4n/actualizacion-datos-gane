@@ -24,11 +24,17 @@ export class InformacionPersonalService {
       console.log('💾 Guardando información personal en base de datos:', informacion);
       console.log('👤 Usuario ID:', idUsuario);
 
+      // Asegurar que la información tenga el ID del usuario
+      const datosCompletos = {
+        ...informacion,
+        idUsuario: idUsuario
+      };
+
       // Guardar en el backend usando el endpoint del FormularioController
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
           `${this.backendService.getApiUrl()}/formulario/informacion-personal/guardar`, 
-          informacion,
+          datosCompletos,
           this.backendService.getHttpOptions()
         ).pipe(
           map((res: any) => res),

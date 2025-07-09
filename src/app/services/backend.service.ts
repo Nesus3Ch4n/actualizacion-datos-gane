@@ -3,6 +3,8 @@ import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http
 import { Observable, throwError, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface BackendResponse<T = any> {
   success: boolean;
@@ -16,7 +18,7 @@ export interface BackendResponse<T = any> {
   providedIn: 'root'
 })
 export class BackendService {
-  private readonly API_URL = 'http://localhost:8080/api';
+  private readonly API_URL = environment.apiBaseUrl;
   
   private httpOptions = {
     headers: new HttpHeaders({
@@ -26,7 +28,10 @@ export class BackendService {
     })
   };
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
 
   // ========== MÉTODO SIMPLE PARA CREAR USUARIO ==========
   
@@ -38,9 +43,9 @@ export class BackendService {
     console.log('🌐 URL del API:', this.API_URL);
     console.log('📡 Headers:', this.httpOptions);
     
-    console.log('🚀 Enviando petición HTTP POST a:', `${this.API_URL}/USUARIO`);
+    console.log('🚀 Enviando petición HTTP POST a:', `${this.API_URL}/usuarios`);
     
-    return this.http.post<any>(`${this.API_URL}/USUARIO`, usuarioData, this.httpOptions)
+    return this.http.post<any>(`${this.API_URL}/usuarios`, usuarioData, this.httpOptions)
       .pipe(
         map(response => {
           console.log('✅ Respuesta del backend:', response);
@@ -106,7 +111,14 @@ export class BackendService {
   /**
    * Obtener las opciones HTTP para uso en otros servicios
    */
-  getHttpOptions(): any {
+  getHttpOptions(): { headers: HttpHeaders } {
+    // Si el usuario está autenticado, usar headers con token
+    if (this.authService.isAuthenticated()) {
+      return {
+        headers: this.authService.getAuthHeaders()
+      };
+    }
+    // Si no está autenticado, usar headers básicos
     return this.httpOptions;
   }
 
@@ -118,7 +130,7 @@ export class BackendService {
   crearUsuarioCompleto(usuarioData: any): Observable<any> {
     console.log('🚀 Enviando datos al backend:', usuarioData);
     
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/crear-completo`, usuarioData, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/usuarios/completo`, usuarioData, this.getHttpOptions())
       .pipe(
         map(response => {
           console.log('✅ Respuesta del backend:', response);
@@ -142,7 +154,7 @@ export class BackendService {
   crearUsuarioPrueba(usuarioData: any): Observable<any> {
     console.log('🚀 Enviando datos al backend (prueba):', usuarioData);
     
-    return this.http.post<BackendResponse>(`${this.API_URL}/USUARIO/test/crear-usuario`, usuarioData, this.httpOptions)
+    return this.http.post<BackendResponse>(`${this.API_URL}/usuarios/basico`, usuarioData, this.getHttpOptions())
       .pipe(
         map(response => {
           console.log('✅ Respuesta del backend (prueba):', response);
@@ -164,7 +176,7 @@ export class BackendService {
    * Obtener todos los usuarios
    */
   obtenerUsuarios(): Observable<any[]> {
-    return this.http.get<any>(`${this.API_URL}/consulta/bd/usuarios`, this.httpOptions)
+    return this.http.get<any>(`${this.API_URL}/usuarios`, this.getHttpOptions())
       .pipe(
         map(response => {
           console.log('✅ Respuesta completa de usuarios:', response);
@@ -188,7 +200,7 @@ export class BackendService {
    * Obtener usuario por ID
    */
   obtenerUsuarioPorId(id: number): Observable<any> {
-    return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/${id}`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/usuarios/${id}`, this.getHttpOptions())
       .pipe(
         map(response => {
           if (response.success && response.data) {
@@ -205,7 +217,7 @@ export class BackendService {
    * Obtener usuario por cédula
    */
   obtenerUsuarioPorCedula(cedula: string): Observable<any> {
-    return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/cedula/${cedula}`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/usuarios/cedula/${cedula}`, this.getHttpOptions())
       .pipe(
         map(response => {
           if (response.success && response.data) {
@@ -222,7 +234,7 @@ export class BackendService {
    * Buscar usuarios por nombre
    */
   buscarUsuariosPorNombre(nombre: string): Observable<any[]> {
-    return this.http.get<BackendResponse>(`${this.API_URL}/USUARIO/buscar?nombre=${nombre}`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/usuarios/buscar?nombre=${nombre}`, this.getHttpOptions())
       .pipe(
         map(response => {
           if (response.success && response.data) {
@@ -241,7 +253,7 @@ export class BackendService {
   actualizarUsuario(usuarioId: number, datos: any): Observable<any> {
     console.log('🔄 Actualizando usuario ID:', usuarioId, 'con datos:', datos);
     
-    return this.http.put(`${this.API_URL}/USUARIO/${usuarioId}`, datos, this.httpOptions).pipe(
+    return this.http.put(`${this.API_URL}/usuarios/${usuarioId}`, datos, this.getHttpOptions()).pipe(
       map((response: any) => {
         console.log('✅ Usuario actualizado exitosamente:', response);
         return { success: true, data: response };
@@ -257,7 +269,7 @@ export class BackendService {
    * Eliminar usuario
    */
   eliminarUsuario(id: number): Observable<any> {
-    return this.http.delete<BackendResponse>(`${this.API_URL}/USUARIO/${id}`, this.httpOptions)
+    return this.http.delete<BackendResponse>(`${this.API_URL}/usuarios/${id}`, this.getHttpOptions())
       .pipe(
         map(response => {
           if (response.success) {
@@ -274,7 +286,7 @@ export class BackendService {
    * Obtener estadísticas
    */
   obtenerEstadisticas(): Observable<any> {
-    return this.http.get<BackendResponse>(`${this.API_URL}/estadisticas`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/estadisticas`, this.getHttpOptions())
       .pipe(
         map(response => {
           if (response.success) {
@@ -291,7 +303,7 @@ export class BackendService {
    * Verificar salud del backend
    */
   verificarSalud(): Observable<any> {
-    return this.http.get<BackendResponse>(`${this.API_URL}/auth/health`, this.httpOptions)
+    return this.http.get<BackendResponse>(`${this.API_URL}/auth/health`, this.getHttpOptions())
       .pipe(
         map(response => {
           if (response.success) {
@@ -324,102 +336,90 @@ export class BackendService {
   /**
    * Guardar estudios académicos
    */
-  guardarEstudios(usuarioId: number, estudios: any[]): Observable<any> {
-    return this.http.post<BackendResponse>(`${this.API_URL}/estudios/usuario/${usuarioId}`, estudios, this.httpOptions)
+  guardarEstudios(cedula: number, estudios: any[]): Observable<any> {
+    console.log(`📚 Guardando ${estudios.length} estudios para cédula: ${cedula}`);
+    
+    return this.http.post<any>(`${this.API_URL}/formulario/estudios/guardar?cedula=${cedula}`, estudios, this.httpOptions)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al guardar estudios');
-          }
-        }),
-        catchError(this.handleError)
+        catchError(error => {
+          console.error('❌ Error al guardar estudios:', error);
+          return throwError(() => new Error(`Error al guardar estudios: ${error.message || error}`));
+        })
       );
   }
 
   /**
    * Guardar vehículos
    */
-  guardarVehiculos(usuarioId: number, vehiculos: any[]): Observable<any> {
-    return this.http.post<BackendResponse>(`${this.API_URL}/vehiculos/usuario/${usuarioId}`, vehiculos, this.httpOptions)
+  guardarVehiculos(cedula: number, vehiculos: any[]): Observable<any> {
+    console.log(`🚗 Guardando ${vehiculos.length} vehículos para cédula: ${cedula}`);
+    
+    return this.http.post<any>(`${this.API_URL}/formulario/vehiculos/guardar?cedula=${cedula}`, vehiculos, this.httpOptions)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al guardar vehículos');
-          }
-        }),
-        catchError(this.handleError)
+        catchError(error => {
+          console.error('❌ Error al guardar vehículos:', error);
+          return throwError(() => new Error(`Error al guardar vehículos: ${error.message || error}`));
+        })
       );
   }
 
   /**
    * Guardar vivienda
    */
-  guardarVivienda(usuarioId: number, vivienda: any): Observable<any> {
-    return this.http.post<BackendResponse>(`${this.API_URL}/vivienda/usuario/${usuarioId}`, vivienda, this.httpOptions)
+  guardarVivienda(cedula: number, vivienda: any): Observable<any> {
+    console.log(`🏠 Guardando vivienda para cédula: ${cedula}`);
+    
+    return this.http.post<any>(`${this.API_URL}/formulario/vivienda/guardar?cedula=${cedula}`, vivienda, this.httpOptions)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al guardar vivienda');
-          }
-        }),
-        catchError(this.handleError)
+        catchError(error => {
+          console.error('❌ Error al guardar vivienda:', error);
+          return throwError(() => new Error(`Error al guardar vivienda: ${error.message || error}`));
+        })
       );
   }
 
   /**
    * Guardar personas a cargo
    */
-  guardarPersonasACargo(usuarioId: number, personas: any[]): Observable<any> {
-    return this.http.post<BackendResponse>(`${this.API_URL}/personas-cargo/usuario/${usuarioId}`, personas, this.httpOptions)
+  guardarPersonasACargo(cedula: number, personas: any[]): Observable<any> {
+    console.log(`👨‍👩‍👧‍👦 Guardando ${personas.length} personas a cargo para cédula: ${cedula}`);
+    
+    return this.http.post<any>(`${this.API_URL}/formulario/personas-acargo/guardar?cedula=${cedula}`, personas, this.httpOptions)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al guardar personas a cargo');
-          }
-        }),
-        catchError(this.handleError)
+        catchError(error => {
+          console.error('❌ Error al guardar personas a cargo:', error);
+          return throwError(() => new Error(`Error al guardar personas a cargo: ${error.message || error}`));
+        })
       );
   }
 
   /**
    * Guardar contactos de emergencia
    */
-  guardarContactos(usuarioId: number, contactos: any[]): Observable<any> {
-    return this.http.post<BackendResponse>(`${this.API_URL}/contactos-emergencia/usuario/${usuarioId}`, contactos, this.httpOptions)
+  guardarContactos(cedula: number, contactos: any[]): Observable<any> {
+    console.log(`📞 Guardando ${contactos.length} contactos para cédula: ${cedula}`);
+    
+    return this.http.post<any>(`${this.API_URL}/formulario/contactos/guardar?cedula=${cedula}`, contactos, this.httpOptions)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al guardar contactos');
-          }
-        }),
-        catchError(this.handleError)
+        catchError(error => {
+          console.error('❌ Error al guardar contactos:', error);
+          return throwError(() => new Error(`Error al guardar contactos: ${error.message || error}`));
+        })
       );
   }
 
   /**
    * Guardar declaraciones de conflicto
    */
-  guardarDeclaraciones(usuarioId: number, declaraciones: any[]): Observable<any> {
-    return this.http.post<BackendResponse>(`${this.API_URL}/declaraciones-conflicto/usuario/${usuarioId}`, declaraciones, this.httpOptions)
+  guardarDeclaraciones(cedula: number, declaraciones: any[]): Observable<any> {
+    console.log(`⚖️ Guardando ${declaraciones.length} declaraciones para cédula: ${cedula}`);
+    
+    return this.http.post<any>(`${this.API_URL}/declaraciones/usuario/${cedula}`, declaraciones, this.httpOptions)
       .pipe(
-        map(response => {
-          if (response.success) {
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al guardar declaraciones');
-          }
-        }),
-        catchError(this.handleError)
+        catchError(error => {
+          console.error('❌ Error al guardar declaraciones:', error);
+          return throwError(() => new Error(`Error al guardar declaraciones: ${error.message || error}`));
+        })
       );
   }
 } 

@@ -11,27 +11,53 @@ import java.util.List;
 @Repository
 public interface EstudioAcademicoRepository extends JpaRepository<EstudioAcademico, Long> {
     
-    List<EstudioAcademico> findByIdUsuario(Long idUsuario);
+    /**
+     * Buscar estudios por usuario
+     */
+    List<EstudioAcademico> findByUsuarioIdUsuario(Long idUsuario);
     
-    @Query("SELECT ea FROM EstudioAcademico ea WHERE ea.idUsuario = :idUsuario")
-    List<EstudioAcademico> findByIdUsuarioAndActivoTrue(@Param("idUsuario") Long idUsuario);
+    /**
+     * Buscar estudios por nivel académico
+     */
+    List<EstudioAcademico> findByNivelAcademico(String nivelAcademico);
     
-    List<EstudioAcademico> findByNivelEducativo(String nivelEducativo);
+    /**
+     * Buscar estudios por programa
+     */
+    List<EstudioAcademico> findByPrograma(String programa);
     
+    /**
+     * Buscar estudios por institución
+     */
     List<EstudioAcademico> findByInstitucion(String institucion);
     
-    @Query("SELECT ea FROM EstudioAcademico ea WHERE ea.graduacion = 'Sí'")
-    List<EstudioAcademico> findByGraduadoTrue();
+    /**
+     * Buscar estudios por semestre
+     */
+    List<EstudioAcademico> findBySemestre(Integer semestre);
     
-    @Query("SELECT ea FROM EstudioAcademico ea WHERE ea.graduacion = 'En curso'")
-    List<EstudioAcademico> findByEnCursoTrue();
+    /**
+     * Buscar estudios por graduación
+     */
+    List<EstudioAcademico> findByGraduacion(String graduacion);
     
-    @Query("SELECT ea FROM EstudioAcademico ea WHERE ea.idUsuario = :idUsuario AND ea.graduacion = 'Sí'")
-    List<EstudioAcademico> findEstudiosGraduadosByIdUsuario(@Param("idUsuario") Long idUsuario);
+    /**
+     * Eliminar todos los estudios de un usuario
+     */
+    void deleteByUsuarioIdUsuario(Long idUsuario);
     
-    @Query("SELECT ea FROM EstudioAcademico ea WHERE ea.institucion LIKE %:institucion%")
-    List<EstudioAcademico> findByInstitucionContaining(@Param("institucion") String institucion);
-    
-    @Query("SELECT COUNT(ea) FROM EstudioAcademico ea WHERE ea.idUsuario = :idUsuario")
-    long countByIdUsuarioAndActivoTrue(@Param("idUsuario") Long idUsuario);
+    /**
+     * Consulta personalizada para buscar estudios con filtros
+     */
+    @Query("SELECT e FROM EstudioAcademico e WHERE " +
+           "(:idUsuario IS NULL OR e.usuario.idUsuario = :idUsuario) AND " +
+           "(:nivelAcademico IS NULL OR e.nivelAcademico = :nivelAcademico) AND " +
+           "(:programa IS NULL OR e.programa = :programa) AND " +
+           "(:institucion IS NULL OR e.institucion = :institucion)")
+    List<EstudioAcademico> findEstudiosWithFilters(
+            @Param("idUsuario") Long idUsuario,
+            @Param("nivelAcademico") String nivelAcademico,
+            @Param("programa") String programa,
+            @Param("institucion") String institucion
+    );
 } 

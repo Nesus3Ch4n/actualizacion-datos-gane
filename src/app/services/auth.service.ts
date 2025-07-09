@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 export interface UserInfo {
   id: number;
@@ -25,7 +26,7 @@ export interface TokenInfo {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:8080/api';
+  private readonly API_URL = environment.apiBaseUrl;
   private currentUserSubject = new BehaviorSubject<UserInfo | null>(null);
   private tokenSubject = new BehaviorSubject<string | null>(null);
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);

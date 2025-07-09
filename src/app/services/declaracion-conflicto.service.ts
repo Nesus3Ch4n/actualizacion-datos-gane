@@ -26,9 +26,9 @@ export class DeclaracionConflictoService {
 
       // Preparar datos para el backend - SOLO campos que existen en la tabla RELACION_CONF
       const declaracionesData = declaraciones.map(declaracion => ({
-        nombre: declaracion.nombre,                           // Se mapea a nombreCompleto en el backend
+        nombreCompleto: declaracion.nombre,                   // Se mapea a nombreCompleto en el backend
         parentesco: declaracion.parentesco,                   // Se mapea a parentesco en el backend
-        tipoParteInteresada: declaracion.tipoParteInteresada  // Se mapea a tipoParteAsoc en el backend
+        tipoParteAsoc: declaracion.tipoParteInteresada        // Se mapea a tipoParteAsoc en el backend
       }));
 
       console.log('📤 Datos formateados para el backend:', declaracionesData);
@@ -36,7 +36,7 @@ export class DeclaracionConflictoService {
       // Guardar en el backend usando el endpoint directo
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
-          `${this.backendService.getApiUrl()}/declaraciones-conflicto/usuario/${idUsuario}`, 
+          `${this.backendService.getApiUrl()}/formulario/relaciones-conflicto/guardar?idUsuario=${idUsuario}`, 
           declaracionesData,
           this.backendService.getHttpOptions()
         ).pipe(
@@ -87,7 +87,7 @@ export class DeclaracionConflictoService {
 
       const response = await firstValueFrom(
         this.backendService.getHttpClient().get<{success: boolean, declaraciones: any[], cantidad: number, message?: string}>(
-          `${this.backendService.getApiUrl()}/declaraciones-conflicto/usuario/${idUsuario}`,
+          `${this.backendService.getApiUrl()}/consulta/relaciones-conflicto-id/${idUsuario}`,
           this.backendService.getHttpOptions()
         ).pipe(
           map((res: any) => res),

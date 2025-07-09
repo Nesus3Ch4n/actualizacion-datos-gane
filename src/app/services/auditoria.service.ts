@@ -7,9 +7,9 @@ export interface AuditoriaDTO {
   id: number;
   tablaModificada: string;
   idRegistroModificado: number;
-  campoModificado: string;
-  valorAnterior: string;
-  valorNuevo: string;
+  campoModificado: string | null;
+  valorAnterior: string | null;
+  valorNuevo: string | null;
   tipoPeticion: string;
   usuarioModificador: string;
   fechaModificacion: string;
@@ -32,13 +32,18 @@ export interface FiltroAuditoria {
 })
 export class AuditoriaService {
 
-  private baseUrl = environment.apiUrl + '/auditoria';
+  private readonly baseUrl = environment.apiBaseUrl + '/auditoria';
 
   constructor(private http: HttpClient) { }
 
   // Obtener todas las auditorías
   obtenerTodasAuditorias(): Observable<AuditoriaDTO[]> {
     return this.http.get<AuditoriaDTO[]>(this.baseUrl);
+  }
+
+  // Obtener auditorías recientes
+  obtenerAuditoriasRecientes(): Observable<AuditoriaDTO[]> {
+    return this.http.get<AuditoriaDTO[]>(`${this.baseUrl}/recientes`);
   }
 
   // Obtener auditorías por ID de usuario
@@ -54,14 +59,6 @@ export class AuditoriaService {
   // Obtener auditorías por tipo de petición
   obtenerAuditoriasPorTipoPeticion(tipoPeticion: string): Observable<AuditoriaDTO[]> {
     return this.http.get<AuditoriaDTO[]>(`${this.baseUrl}/tipo/${tipoPeticion}`);
-  }
-
-  // Obtener auditorías por rango de fechas
-  obtenerAuditoriasPorRangoFechas(fechaInicio: string, fechaFin: string): Observable<AuditoriaDTO[]> {
-    const params = new HttpParams()
-      .set('fechaInicio', fechaInicio)
-      .set('fechaFin', fechaFin);
-    return this.http.get<AuditoriaDTO[]>(`${this.baseUrl}/fechas`, { params });
   }
 
   // Obtener auditorías con filtros múltiples
@@ -87,14 +84,13 @@ export class AuditoriaService {
     return this.http.get<AuditoriaDTO[]>(`${this.baseUrl}/filtros`, { params });
   }
 
-  // Obtener auditorías por tabla y ID de registro
-  obtenerAuditoriasPorTablaYRegistro(tablaModificada: string, idRegistroModificado: number): Observable<AuditoriaDTO[]> {
-    return this.http.get<AuditoriaDTO[]>(`${this.baseUrl}/tabla/${tablaModificada}/registro/${idRegistroModificado}`);
-  }
-
-  // Obtener auditorías recientes
-  obtenerAuditoriasRecientes(): Observable<AuditoriaDTO[]> {
-    return this.http.get<AuditoriaDTO[]>(`${this.baseUrl}/recientes`);
+  // Obtener auditorías por rango de fechas
+  obtenerAuditoriasPorRangoFechas(fechaInicio: string, fechaFin: string): Observable<AuditoriaDTO[]> {
+    const params = new HttpParams()
+      .set('fechaInicio', fechaInicio)
+      .set('fechaFin', fechaFin);
+    
+    return this.http.get<AuditoriaDTO[]>(`${this.baseUrl}/fechas`, { params });
   }
 
   // Obtener nombres de tablas disponibles
@@ -113,20 +109,6 @@ export class AuditoriaService {
   // Obtener tipos de petición disponibles
   obtenerTiposPeticionDisponibles(): string[] {
     return ['INSERT', 'UPDATE', 'DELETE'];
-  }
-
-  // Formatear fecha para mostrar
-  formatearFecha(fecha: string): string {
-    if (!fecha) return '';
-    const date = new Date(fecha);
-    return date.toLocaleString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
   }
 
   // Obtener nombre legible de la tabla
@@ -161,5 +143,34 @@ export class AuditoriaService {
       'DELETE': 'badge-danger'
     };
     return clases[tipo] || 'badge-secondary';
+  }
+
+  // Formatear fecha para mostrar
+  formatearFecha(fecha: string): string {
+    if (!fecha) return 'N/A';
+    
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleString('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (error) {
+      return fecha;
+    }
+  }
+
+  // Obtener resumen de auditorías
+  obtenerResumenAuditorias(auditorias: AuditoriaDTO[]): any {
+    return {
+      total: auditorias.length,
+      creaciones: auditorias.filter(a => a.tipoPeticion === 'INSERT').length,
+      actualizaciones: auditorias.filter(a => a.tipoPeticion === 'UPDATE').length,
+      eliminaciones: auditorias.filter(a => a.tipoPeticion === 'DELETE').length
+    };
   }
 } 

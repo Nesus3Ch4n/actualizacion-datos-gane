@@ -120,6 +120,8 @@ public class Auditoria {
                 ", fechaModificacion=" + fechaModificacion +
                 ", idUsuario=" + idUsuario +
                 ", descripcion='" + descripcion + '\'' +
+                ", ipAddress='" + ipAddress + '\'' +
+                ", userAgent='" + userAgent + '\'' +
                 '}';
     }
 } 

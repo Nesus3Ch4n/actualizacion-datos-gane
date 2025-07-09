@@ -7,22 +7,57 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface VehiculoRepository extends JpaRepository<Vehiculo, Long> {
     
-    List<Vehiculo> findByIdUsuario(Long idUsuario);
+    /**
+     * Buscar vehículos por usuario
+     */
+    List<Vehiculo> findByUsuarioIdUsuario(Long idUsuario);
     
-    Optional<Vehiculo> findByPlaca(String placa);
-    
+    /**
+     * Buscar vehículos por tipo
+     */
     List<Vehiculo> findByTipoVehiculo(String tipoVehiculo);
     
-    @Query("SELECT v FROM Vehiculo v WHERE v.marca LIKE %:marca%")
-    List<Vehiculo> findByMarcaContaining(@Param("marca") String marca);
+    /**
+     * Buscar vehículos por marca
+     */
+    List<Vehiculo> findByMarca(String marca);
     
-    @Query("SELECT COUNT(v) FROM Vehiculo v WHERE v.idUsuario = :idUsuario")
-    long countByIdUsuario(@Param("idUsuario") Long idUsuario);
+    /**
+     * Buscar vehículos por placa
+     */
+    List<Vehiculo> findByPlaca(String placa);
     
-    boolean existsByPlaca(String placa);
+    /**
+     * Buscar vehículos por propietario
+     */
+    List<Vehiculo> findByPropietario(String propietario);
+    
+    /**
+     * Buscar vehículos por año
+     */
+    List<Vehiculo> findByAno(Integer ano);
+    
+    /**
+     * Eliminar todos los vehículos de un usuario
+     */
+    void deleteByUsuarioIdUsuario(Long idUsuario);
+    
+    /**
+     * Consulta personalizada para buscar vehículos con filtros
+     */
+    @Query("SELECT v FROM Vehiculo v WHERE " +
+           "(:idUsuario IS NULL OR v.usuario.idUsuario = :idUsuario) AND " +
+           "(:tipoVehiculo IS NULL OR v.tipoVehiculo = :tipoVehiculo) AND " +
+           "(:marca IS NULL OR v.marca = :marca) AND " +
+           "(:placa IS NULL OR v.placa = :placa)")
+    List<Vehiculo> findVehiculosWithFilters(
+            @Param("idUsuario") Long idUsuario,
+            @Param("tipoVehiculo") String tipoVehiculo,
+            @Param("marca") String marca,
+            @Param("placa") String placa
+    );
 } 

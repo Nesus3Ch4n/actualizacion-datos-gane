@@ -82,18 +82,18 @@ export class ViviendaComponent implements OnInit {
       this.isLoading = true;
       console.log('🏠 Cargando datos de vivienda existentes...');
       
-      // Obtener la cédula del usuario desde el servicio de sesión
-      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
-      if (!cedula) {
-        console.log('⚠️ No hay cédula disponible para cargar vivienda');
+      // Obtener el ID del usuario desde el servicio de sesión
+      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      if (!idUsuario) {
+        console.log('⚠️ No hay ID de usuario disponible para cargar vivienda');
         return;
       }
 
       // Obtener todos los datos del usuario incluyendo vivienda
-      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      const datosCompletos = await this.formDataService.obtenerDatosCompletosPorId(idUsuario);
       
-      if (datosCompletos && datosCompletos.vivienda) {
-        const vivienda = datosCompletos.vivienda;
+      if (datosCompletos && datosCompletos.viviendas && datosCompletos.viviendas.length > 0) {
+        const vivienda = datosCompletos.viviendas[0]; // Tomar la primera vivienda
         console.log('✅ Vivienda cargada desde datos completos:', vivienda);
         
         // Cargar datos en el formulario
@@ -105,6 +105,7 @@ export class ViviendaComponent implements OnInit {
         );
       } else {
         console.log('ℹ️ No se encontraron datos de vivienda en los datos completos');
+        console.log('📋 Datos completos recibidos:', datosCompletos);
       }
       
     } catch (error) {

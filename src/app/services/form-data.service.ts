@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
 import { FormStateService, FormularioCompleto } from './form-state.service';
@@ -141,19 +142,44 @@ export class FormDataService {
       const usuarioExistente = await this.verificarUsuarioExistente(data.cedula);
       
       if (usuarioExistente) {
-        console.log('🔄 Usuario existente, actualizando...');
-        usuarioId = usuarioExistente.id.toString();
+        console.log('🔄 Usuario existente, obteniendo ID para actualizar...');
+        
+        // Determinar el ID del usuario
+        let userId: number;
+        if (usuarioExistente.idUsuario) {
+          // Si viene del endpoint autenticado, usar el ID real
+          userId = usuarioExistente.idUsuario;
+          console.log('✅ Usando ID real del usuario:', userId);
+        } else if (usuarioExistente.cedula) {
+          // Si viene del endpoint público, usar la cédula como ID temporal
+          userId = Number(usuarioExistente.cedula);
+          console.log('⚠️ Usando cédula como ID temporal:', userId);
+        } else {
+          throw new Error('No se pudo determinar el ID del usuario');
+        }
+        
+        usuarioId = userId.toString();
+        
         try {
-          await firstValueFrom(this.backendService.actualizarUsuario(Number(usuarioId), usuarioBasico));
+          // Intentar actualizar usando el ID correcto
+          await firstValueFrom(this.backendService.actualizarUsuario(userId, usuarioBasico));
+          console.log('✅ Usuario actualizado exitosamente');
         } catch (updateError: any) {
           console.error('❌ Error actualizando usuario:', updateError);
-          // Si falla la actualización por error 401, intentar crear nuevo
-          if (updateError.status === 401) {
-            console.log('🔄 Error 401 al actualizar, intentando crear nuevo usuario...');
+          // Si falla la actualización, intentar crear nuevo usuario
+          console.log('🔄 Error al actualizar, intentando crear nuevo usuario...');
+          try {
             const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
             usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
-          } else {
-            throw updateError;
+          } catch (createError: any) {
+            console.error('❌ Error creando usuario:', createError);
+            // Si es error 400 (usuario ya existe), usar el ID que ya tenemos
+            if (createError.status === 400 && createError.message?.includes('Ya existe un usuario con cédula')) {
+              console.log('ℹ️ Usuario ya existe, usando ID existente');
+              // Mantener el ID que ya teníamos
+            } else {
+              throw createError;
+            }
           }
         }
       } else {
@@ -222,8 +248,14 @@ export class FormDataService {
         usuarioId: Number(usuarioId)
       };
       
-      // Usar el método correcto del BackendService
-      await firstValueFrom(this.backendService.guardarEstudios(Number(usuarioId), [estudioData]));
+      // Usar el endpoint correcto con idUsuario
+      await firstValueFrom(
+        this.backendService.getHttpClient().post<any>(
+          `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${usuarioId}`,
+          [estudioData],
+          this.backendService.getHttpOptions()
+        )
+      );
       
       console.log('✅ Estudio académico guardado:', estudio.titulo);
     } catch (error) {
@@ -533,37 +565,43 @@ export class FormDataService {
     try {
       console.log('🔍 Verificando usuario existente con cédula:', cedula);
       
-      const usuarios = await this.obtenerUsuarios();
-      
-      // Verificar que usuarios sea un array válido
-      if (!Array.isArray(usuarios)) {
-        console.warn('⚠️ La respuesta de usuarios no es un array:', usuarios);
-        return null;
-      }
-      
-      console.log('📋 Usuarios encontrados:', usuarios.length);
-      
-      // Buscar usuario por cédula
-      const usuarioEncontrado = usuarios.find(usuario => {
-        // Convertir ambos a string para comparación
-        const usuarioCedula = String(usuario.cedula);
-        const cedulaBuscada = String(cedula);
-        return usuarioCedula === cedulaBuscada;
-      });
-      
-      if (usuarioEncontrado) {
-        console.log('✅ Usuario encontrado:', usuarioEncontrado);
-        return usuarioEncontrado;
-      } else {
-        console.log('❌ Usuario no encontrado');
-        return null;
+      // Primero intentar con el endpoint que requiere autenticación para obtener el ID
+      try {
+        const response = await firstValueFrom(
+          this.backendService.obtenerUsuarioPorCedula(cedula)
+        );
+        
+        console.log('📋 Usuario encontrado con ID:', response);
+        return response;
+      } catch (authError: any) {
+        console.log('⚠️ Error de autenticación, intentando endpoint público...');
+        
+        // Si falla por autenticación, usar el endpoint público
+        const publicResponse = await firstValueFrom(
+          this.backendService.getHttpClient().get<any>(
+            `${this.backendService.getApiUrl()}/consulta/verificar-usuario/${cedula}`,
+            this.backendService.getHttpOptions()
+          ).pipe(
+            map((data: any) => data)
+          )
+        );
+        
+        console.log('📋 Respuesta de verificación pública:', publicResponse);
+        
+        if (publicResponse && (publicResponse as any).existe) {
+          console.log('✅ Usuario encontrado (público):', publicResponse);
+          return publicResponse;
+        } else {
+          console.log('❌ Usuario no encontrado');
+          return null;
+        }
       }
     } catch (error: any) {
       console.error('❌ Error verificando usuario existente:', error);
       
-      // Si es error 401 (Unauthorized), permitir continuar para crear nuevo usuario
-      if (error.status === 401) {
-        console.log('ℹ️ Error 401 - Token inválido, permitiendo crear nuevo usuario');
+      // Si es error 404 (usuario no encontrado), retornar null
+      if (error.status === 404) {
+        console.log('ℹ️ Usuario no encontrado (404)');
         return null;
       }
       
@@ -588,21 +626,73 @@ export class FormDataService {
     try {
       console.log('📋 Obteniendo datos completos para cédula:', cedula);
       
+      // Crear opciones HTTP sin token para evitar problemas de autenticación
+      const httpOptions = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      };
+      
+      console.log('🌐 URL:', `${this.backendService.getApiUrl()}/consulta/datos-completos/${cedula}`);
+      console.log('📡 Headers:', httpOptions);
+      
       const response = await firstValueFrom(
         this.backendService.getHttpClient().get<any>(
-          `${this.backendService.getApiUrl()}/consulta/bd/${cedula}/completo`,
-          this.backendService.getHttpOptions()
+          `${this.backendService.getApiUrl()}/consulta/datos-completos/${cedula}`,
+          httpOptions
+        ).pipe(
+          map((data: any) => {
+            console.log('✅ Respuesta recibida del backend:', data);
+            
+            // Verificar si la respuesta tiene la nueva estructura
+            if (data && typeof data === 'object' && 'success' in data) {
+              console.log('📋 Respuesta estructurada detectada');
+              if (data.success) {
+                console.log('✅ Respuesta exitosa:', data.message);
+                return data.data || data; // Devolver los datos o la respuesta completa
+              } else {
+                console.error('❌ Respuesta con error:', data.message);
+                throw new Error(data.message || 'Error en la respuesta del servidor');
+              }
+            } else {
+              console.log('📋 Respuesta directa (formato anterior)');
+              return data; // Mantener compatibilidad con formato anterior
+            }
+          }),
+          catchError((error: any) => {
+            console.error('❌ Error en la petición HTTP:', error);
+            console.error('❌ Error status:', error.status);
+            console.error('❌ Error statusText:', error.statusText);
+            console.error('❌ Error url:', error.url);
+            console.error('❌ Error message:', error.message);
+            
+            // Si hay respuesta del servidor, mostrar más detalles
+            if (error.error) {
+              console.error('❌ Error response:', error.error);
+              console.error('❌ Error response details:', JSON.stringify(error.error, null, 2));
+            }
+            
+            // Si es un error 500, intentar obtener más información
+            if (error.status === 500 && error.error) {
+              console.error('❌ Error 500 details:', error.error);
+            }
+            
+            throw error;
+          })
         )
       );
       
-      console.log('✅ Datos completos obtenidos:', response);
+      console.log('✅ Datos completos obtenidos exitosamente:', response);
       return response;
       
     } catch (error: any) {
-      // Si el error es 404 (usuario no encontrado) o 500 (error interno), 
+      console.error('❌ Error completo al obtener datos completos:', error);
+      
+      // Si el error es 404 (usuario no encontrado), 401 (no autorizado), o 500 (error interno), 
       // no lanzar error, simplemente retornar null para permitir crear nuevo usuario
-      if (error.status === 404 || error.status === 500) {
-        console.log('ℹ️ Usuario no encontrado en base de datos, permitiendo crear nuevo registro');
+      if (error.status === 404 || error.status === 401 || error.status === 500) {
+        console.log(`ℹ️ Error ${error.status} - Usuario no encontrado o no autorizado, permitiendo crear nuevo registro`);
         return null;
       }
       
@@ -612,8 +702,91 @@ export class FormDataService {
         return null;
       }
       
-      console.error('❌ Error al obtener datos completos:', error);
-      // Para otros errores, también permitir continuar
+      // Para otros errores, también permitir continuar pero mostrar más información
+      console.log(`ℹ️ Error desconocido (status: ${error.status}), permitiendo crear nuevo registro`);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener todos los datos del usuario por ID incluyendo declaraciones de conflicto
+   */
+  async obtenerDatosCompletosPorId(idUsuario: number): Promise<any> {
+    try {
+      console.log('📋 Obteniendo datos completos para usuario ID:', idUsuario);
+      
+      // Crear opciones HTTP sin token para evitar problemas de autenticación
+      const httpOptions = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      };
+      
+      console.log('🌐 URL:', `${this.backendService.getApiUrl()}/consulta/datos-completos-id/${idUsuario}`);
+      console.log('📡 Headers:', httpOptions);
+      
+      const response = await firstValueFrom(
+        this.backendService.getHttpClient().get<any>(
+          `${this.backendService.getApiUrl()}/consulta/datos-completos-id/${idUsuario}`,
+          httpOptions
+        ).pipe(
+          map((data: any) => {
+            console.log('✅ Respuesta recibida del backend:', data);
+            
+            // Verificar si la respuesta tiene la nueva estructura
+            if (data && typeof data === 'object' && 'success' in data) {
+              console.log('📋 Respuesta estructurada detectada');
+              if (data.success) {
+                console.log('✅ Respuesta exitosa:', data.message);
+                return data.data || data; // Devolver los datos o la respuesta completa
+              } else {
+                console.error('❌ Respuesta con error:', data.message);
+                throw new Error(data.message || 'Error en la respuesta del servidor');
+              }
+            } else {
+              console.log('📋 Respuesta directa (formato anterior)');
+              return data; // Mantener compatibilidad con formato anterior
+            }
+          }),
+          catchError((error: any) => {
+            console.error('❌ Error en la petición HTTP:', error);
+            console.error('❌ Error status:', error.status);
+            console.error('❌ Error statusText:', error.statusText);
+            console.error('❌ Error url:', error.url);
+            console.error('❌ Error message:', error.message);
+            
+            // Si hay respuesta del servidor, mostrar más detalles
+            if (error.error) {
+              console.error('❌ Error response:', error.error);
+            }
+            
+            throw error;
+          })
+        )
+      );
+      
+      console.log('✅ Datos completos obtenidos exitosamente:', response);
+      return response;
+      
+    } catch (error: any) {
+      console.error('❌ Error completo al obtener datos completos por ID:', error);
+      
+      // Si el error es 404 (usuario no encontrado), 401 (no autorizado), o 500 (error interno), 
+      // no lanzar error, simplemente retornar null para permitir crear nuevo usuario
+      if (error.status === 404 || error.status === 401 || error.status === 500) {
+        console.log(`ℹ️ Error ${error.status} - Usuario no encontrado o no autorizado, permitiendo crear nuevo registro`);
+        return null;
+      }
+      
+      // Si el error es de conexión (status 0), también permitir continuar
+      if (error.status === 0) {
+        console.log('ℹ️ Backend no disponible, permitiendo crear nuevo registro sin conexión');
+        return null;
+      }
+      
+      // Para otros errores, también permitir continuar pero mostrar más información
+      console.log(`ℹ️ Error desconocido (status: ${error.status}), permitiendo crear nuevo registro`);
       return null;
     }
   }

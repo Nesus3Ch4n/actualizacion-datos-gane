@@ -327,15 +327,15 @@ export class DeclaracionComponent implements OnInit {
       this.isLoading = true;
       console.log('📋 Cargando declaraciones de conflicto automáticamente...');
       
-      // Obtener la cédula del usuario desde el servicio de sesión
-      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
-      if (!cedula) {
-        console.log('⚠️ No hay cédula disponible para cargar declaraciones');
+      // Obtener el ID del usuario desde el servicio de sesión
+      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      if (!idUsuario) {
+        console.log('⚠️ No hay ID de usuario disponible para cargar declaraciones');
         return;
       }
 
       // Obtener todos los datos del usuario incluyendo declaraciones de conflicto
-      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      const datosCompletos = await this.formDataService.obtenerDatosCompletosPorId(idUsuario);
       
       if (datosCompletos && datosCompletos.declaracionesConflicto) {
         const declaraciones = datosCompletos.declaracionesConflicto;

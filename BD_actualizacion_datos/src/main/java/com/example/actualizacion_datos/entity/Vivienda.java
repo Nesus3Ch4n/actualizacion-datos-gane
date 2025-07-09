@@ -1,6 +1,7 @@
 package com.example.actualizacion_datos.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "VIVIENDA")
@@ -11,52 +12,61 @@ public class Vivienda {
     @Column(name = "ID_VIVIENDA")
     private Long idVivienda;
     
-    @Column(name = "ID_USUARIO", nullable = false)
-    private Long idUsuario;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ID_USUARIO", nullable = false)
+    private Usuario usuario;
     
-    @Column(name = "TIPO_VIVIENDA")
+    @Column(name = "TIPO_VIVIENDA", length = 50)
     private String tipoVivienda;
     
-    @Column(name = "DIRECCION")
+    @Column(name = "DIRECCION", length = 200)
     private String direccion;
     
-    @Column(name = "INFO_ADICIONAL")
+    @Column(name = "INFO_ADICIONAL", length = 500)
     private String infoAdicional;
     
-    @Column(name = "BARRIO")
+    @Column(name = "BARRIO", length = 100)
     private String barrio;
     
-    @Column(name = "CIUDAD")
+    @Column(name = "CIUDAD", length = 100)
     private String ciudad;
     
-    @Column(name = "VIVIENDA")
+    @Column(name = "VIVIENDA", length = 100)
     private String vivienda;
     
-    @Column(name = "ENTIDAD")
+    @Column(name = "ENTIDAD", length = 100)
     private String entidad;
     
-    @Column(name = "ANIO")
-    private Integer anio;
+    @Column(name = "ANO")
+    private Integer ano;
     
-    @Column(name = "TIPO_ADQUISICION")
+    @Column(name = "TIPO_ADQUISICION", length = 50)
     private String tipoAdquisicion;
+    
+    @Column(name = "VERSION")
+    private Integer version = 1;
+    
+    @Column(name = "FECHA_CREACION")
+    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    
+    @Column(name = "FECHA_MODIFICACION")
+    private LocalDateTime fechaModificacion = LocalDateTime.now();
     
     // Constructores
     public Vivienda() {}
     
-    public Vivienda(Long idUsuario, String tipoVivienda, String direccion, String ciudad) {
-        this.idUsuario = idUsuario;
+    public Vivienda(Usuario usuario, String tipoVivienda, String direccion) {
+        this.usuario = usuario;
         this.tipoVivienda = tipoVivienda;
         this.direccion = direccion;
-        this.ciudad = ciudad;
     }
     
     // Getters y Setters
     public Long getIdVivienda() { return idVivienda; }
     public void setIdVivienda(Long idVivienda) { this.idVivienda = idVivienda; }
     
-    public Long getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Long idUsuario) { this.idUsuario = idUsuario; }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
     
     public String getTipoVivienda() { return tipoVivienda; }
     public void setTipoVivienda(String tipoVivienda) { this.tipoVivienda = tipoVivienda; }
@@ -79,25 +89,28 @@ public class Vivienda {
     public String getEntidad() { return entidad; }
     public void setEntidad(String entidad) { this.entidad = entidad; }
     
-    public Integer getAnio() { return anio; }
-    public void setAnio(Integer anio) { this.anio = anio; }
+    public Integer getAno() { return ano; }
+    public void setAno(Integer ano) { this.ano = ano; }
     
     public String getTipoAdquisicion() { return tipoAdquisicion; }
     public void setTipoAdquisicion(String tipoAdquisicion) { this.tipoAdquisicion = tipoAdquisicion; }
+    
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
+    
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+    
+    public LocalDateTime getFechaModificacion() { return fechaModificacion; }
+    public void setFechaModificacion(LocalDateTime fechaModificacion) { this.fechaModificacion = fechaModificacion; }
     
     @Override
     public String toString() {
         return "Vivienda{" +
                 "idVivienda=" + idVivienda +
-                ", idUsuario=" + idUsuario +
                 ", tipoVivienda='" + tipoVivienda + '\'' +
                 ", direccion='" + direccion + '\'' +
                 ", ciudad='" + ciudad + '\'' +
-                ", barrio='" + barrio + '\'' +
-                ", vivienda='" + vivienda + '\'' +
-                ", entidad='" + entidad + '\'' +
-                ", anio=" + anio +
-                ", tipoAdquisicion='" + tipoAdquisicion + '\'' +
                 '}';
     }
 } 

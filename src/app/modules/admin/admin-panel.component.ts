@@ -107,22 +107,30 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
    * Cargar usuarios de la base de datos
    */
   cargarUsuarios(): void {
+    console.log('🔄 AdminPanel: Iniciando carga de usuarios...');
     this.cargando = true;
     this.error = '';
 
     this.adminService.obtenerUsuarios().subscribe({
       next: (usuarios) => {
-        console.log('Usuarios cargados:', usuarios);
+        console.log('✅ AdminPanel: Usuarios cargados del backend:', usuarios);
+        console.log('📊 AdminPanel: Total usuarios:', usuarios.length);
+        if (usuarios.length > 0) {
+          console.log('👤 AdminPanel: Primer usuario:', usuarios[0]);
+          console.log('🆔 AdminPanel: ID del primer usuario:', usuarios[0].id);
+        }
         this.dataSource.data = usuarios;
         this.cargando = false;
       },
       error: (error) => {
-        console.error('Error cargando usuarios:', error);
+        console.error('❌ AdminPanel: Error cargando usuarios:', error);
         this.error = 'Error al cargar usuarios: ' + error.message;
         this.cargando = false;
         
+        console.log('⚠️ AdminPanel: Usando usuarios de prueba debido al error...');
         // Si hay error, usar usuarios de prueba
         this.adminService.obtenerUsuariosPrueba().subscribe(usuariosPrueba => {
+          console.log('🔄 AdminPanel: Usuarios de prueba cargados:', usuariosPrueba);
           this.dataSource.data = usuariosPrueba;
         });
       }
@@ -233,8 +241,17 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   // Acciones de usuario
   verDetalle(usuario: UsuarioAdmin): void {
     console.log('=== SOLICITANDO DETALLE DE USUARIO ===');
-    console.log('Usuario seleccionado:', usuario);
+    console.log('Usuario seleccionado completo:', usuario);
     console.log('ID del usuario:', usuario.id);
+    console.log('Tipo de ID:', typeof usuario.id);
+    console.log('¿ID es undefined?', usuario.id === undefined);
+    console.log('¿ID es null?', usuario.id === null);
+    
+    if (usuario.id === undefined || usuario.id === null) {
+      console.error('❌ ERROR: El ID del usuario es undefined o null');
+      alert('Error: No se puede obtener el detalle del usuario porque el ID no está disponible');
+      return;
+    }
     
     this.obtenerUsuarioDetalleCompleto.execute(usuario.id).subscribe({
       next: (detalle) => {

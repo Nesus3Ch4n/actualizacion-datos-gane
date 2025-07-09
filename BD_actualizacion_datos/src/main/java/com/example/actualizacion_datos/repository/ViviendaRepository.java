@@ -7,29 +7,57 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ViviendaRepository extends JpaRepository<Vivienda, Long> {
     
+    /**
+     * Buscar viviendas por usuario
+     */
+    List<Vivienda> findByUsuarioIdUsuario(Long idUsuario);
+    
+    /**
+     * Buscar viviendas por tipo
+     */
     List<Vivienda> findByTipoVivienda(String tipoVivienda);
     
-    List<Vivienda> findByTipoAdquisicion(String tipoAdquisicion);
-    
+    /**
+     * Buscar viviendas por ciudad
+     */
     List<Vivienda> findByCiudad(String ciudad);
     
+    /**
+     * Buscar viviendas por barrio
+     */
     List<Vivienda> findByBarrio(String barrio);
     
-    List<Vivienda> findByEntidad(String entidad);
+    /**
+     * Buscar viviendas por tipo de adquisición
+     */
+    List<Vivienda> findByTipoAdquisicion(String tipoAdquisicion);
     
-    @Query("SELECT v FROM Vivienda v WHERE v.anio BETWEEN :min AND :max")
-    List<Vivienda> findByAnioBetween(@Param("min") Integer minAnio, @Param("max") Integer maxAnio);
+    /**
+     * Buscar viviendas por año
+     */
+    List<Vivienda> findByAno(Integer ano);
     
-    @Query("SELECT COUNT(v) FROM Vivienda v WHERE v.tipoAdquisicion = 'PROPIA'")
-    long countViviendaPropia();
+    /**
+     * Eliminar todas las viviendas de un usuario
+     */
+    void deleteByUsuarioIdUsuario(Long idUsuario);
     
-    @Query("SELECT COUNT(v) FROM Vivienda v WHERE v.tipoAdquisicion = 'ARRENDADA'")
-    long countViviendaArrendada();
-    
-    Optional<Vivienda> findByIdUsuario(Long idUsuario);
+    /**
+     * Consulta personalizada para buscar viviendas con filtros
+     */
+    @Query("SELECT v FROM Vivienda v WHERE " +
+           "(:idUsuario IS NULL OR v.usuario.idUsuario = :idUsuario) AND " +
+           "(:tipoVivienda IS NULL OR v.tipoVivienda = :tipoVivienda) AND " +
+           "(:ciudad IS NULL OR v.ciudad = :ciudad) AND " +
+           "(:barrio IS NULL OR v.barrio = :barrio)")
+    List<Vivienda> findViviendasWithFilters(
+            @Param("idUsuario") Long idUsuario,
+            @Param("tipoVivienda") String tipoVivienda,
+            @Param("ciudad") String ciudad,
+            @Param("barrio") String barrio
+    );
 } 

@@ -33,7 +33,8 @@ export class UsuarioSessionService {
   // Obtener el ID del usuario actual
   getIdUsuarioActual(): number | null {
     const usuario = this.usuarioActualSubject.value;
-    return usuario ? usuario.id : null;
+    console.log('🔍 Usuario actual en sesión:', usuario);
+    return usuario ? usuario.idUsuario : null;
   }
 
   // Obtener el usuario completo
@@ -57,7 +58,7 @@ export class UsuarioSessionService {
         const usuario = await this.backendService.obtenerUsuarioPorCedula(cedula.toString()).toPromise();
         if (usuario) {
           this.setUsuarioActual(usuario);
-          console.log(`✅ Usuario encontrado directamente con ID: ${usuario.id}`);
+          console.log(`✅ Usuario encontrado directamente con ID: ${usuario.idUsuario}`);
           return usuario;
         }
       } catch (error) {
@@ -75,7 +76,7 @@ export class UsuarioSessionService {
         
         if (usuario) {
           this.setUsuarioActual(usuario);
-          console.log(`✅ Usuario encontrado en lista con ID: ${usuario.id}`);
+          console.log(`✅ Usuario encontrado en lista con ID: ${usuario.idUsuario}`);
           return usuario;
         }
       }

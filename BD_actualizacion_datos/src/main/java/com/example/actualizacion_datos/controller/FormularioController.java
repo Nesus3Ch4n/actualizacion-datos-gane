@@ -1,585 +1,378 @@
 package com.example.actualizacion_datos.controller;
 
-import com.example.actualizacion_datos.dto.*;
+import com.example.actualizacion_datos.entity.*;
 import com.example.actualizacion_datos.service.FormularioService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
+import com.example.actualizacion_datos.service.AuditoriaService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 @RestController
 @RequestMapping("/api/formulario")
-@Tag(name = "Formulario Controller", description = "API para el manejo del formulario de actualización de datos paso a paso")
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class FormularioController {
-
+    
+    private static final Logger logger = LoggerFactory.getLogger(FormularioController.class);
+    
     @Autowired
     private FormularioService formularioService;
-
-    // ========== ENDPOINTS DE GUARDADO TEMPORAL ==========
-
-    @PostMapping("/paso1/informacion-personal")
-    @Operation(summary = "Guardar información personal temporalmente",
-               description = "Guarda los datos personales del empleado en memoria temporal")
-    public ResponseEntity<Map<String, String>> guardarInformacionPersonal(
-            @Valid @RequestBody InformacionPersonalDTO informacionPersonal) {
+    
+    @Autowired
+    private AuditoriaService auditoriaService;
+    
+    // ========== GUARDAR ESTUDIOS ACADÉMICOS ==========
+    @PostMapping("/estudios/guardar")
+    public ResponseEntity<?> guardarEstudios(@RequestParam Long idUsuario, @RequestBody List<EstudioAcademico> estudios) {
+        logger.info("📚 Guardando {} estudios académicos para usuario ID: {}", estudios.size(), idUsuario);
         
         try {
-            formularioService.guardarInformacionPersonalTemporal(informacionPersonal);
+            // Obtener usuario para auditoría
+            Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
+            String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Información personal guardada temporalmente");
-            response.put("cedula", String.valueOf(informacionPersonal.getCedula()));
-            response.put("paso", "1");
-            response.put("timestamp", String.valueOf(System.currentTimeMillis()));
+            // Primero eliminar estudios existentes
+            formularioService.eliminarEstudiosAcademicos(idUsuario);
             
+            // Guardar nuevos estudios
+            List<EstudioAcademico> estudiosGuardados = formularioService.guardarEstudiosAcademicos(estudios, idUsuario);
+            
+            // Registrar auditoría
+            auditoriaService.registrarAuditoria(
+                "ESTUDIO_ACADEMICO",
+                idUsuario,
+                null,
+                null,
+                null,
+                "INSERT",
+                nombreUsuario,
+                idUsuario,
+                "Guardado de " + estudios.size() + " estudios académicos"
+            );
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Estudios académicos guardados exitosamente",
+                "data", estudiosGuardados
+            );
+            
+            logger.info("✅ Estudios académicos guardados exitosamente para usuario ID: {}", idUsuario);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Error al guardar información personal: " + e.getMessage());
-            error.put("cedula", String.valueOf(informacionPersonal.getCedula()));
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            logger.error("❌ Error al guardar estudios académicos: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "message", "Error al guardar estudios académicos: " + e.getMessage()
+            );
+            
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
-
-    @PostMapping("/paso2/estudios/{cedula}")
-    @Operation(summary = "Guardar estudios académicos temporalmente",
-               description = "Guarda la lista de estudios académicos del empleado en memoria temporal")
-    public ResponseEntity<Map<String, String>> guardarEstudios(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula,
-            @Valid @RequestBody List<EstudioAcademicoDTO> estudios) {
+    
+    // ========== GUARDAR VEHÍCULOS ==========
+    @PostMapping("/vehiculos/guardar")
+    public ResponseEntity<?> guardarVehiculos(@RequestParam Long idUsuario, @RequestBody List<Vehiculo> vehiculos) {
+        logger.info("🚗 Guardando {} vehículos para usuario ID: {}", vehiculos.size(), idUsuario);
         
         try {
-            formularioService.guardarEstudiosTemporal(cedula, estudios);
+            // Obtener usuario para auditoría
+            Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
+            String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Estudios guardados temporalmente");
-            response.put("cedula", cedula.toString());
-            response.put("paso", "2");
-            response.put("cantidad", String.valueOf(estudios.size()));
-            response.put("timestamp", String.valueOf(System.currentTimeMillis()));
+            // Primero eliminar vehículos existentes
+            formularioService.eliminarVehiculos(idUsuario);
             
+            // Guardar nuevos vehículos
+            List<Vehiculo> vehiculosGuardados = formularioService.guardarVehiculos(vehiculos, idUsuario);
+            
+            // Registrar auditoría
+            auditoriaService.registrarAuditoria(
+                "VEHICULO",
+                idUsuario,
+                null,
+                null,
+                null,
+                "INSERT",
+                nombreUsuario,
+                idUsuario,
+                "Guardado de " + vehiculos.size() + " vehículos"
+            );
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Vehículos guardados exitosamente",
+                "data", vehiculosGuardados
+            );
+            
+            logger.info("✅ Vehículos guardados exitosamente para usuario ID: {}", idUsuario);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Error al guardar estudios: " + e.getMessage());
-            error.put("cedula", cedula.toString());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            logger.error("❌ Error al guardar vehículos: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "message", "Error al guardar vehículos: " + e.getMessage()
+            );
+            
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
-
-    @PostMapping("/paso3/vehiculos/{cedula}")
-    @Operation(summary = "Guardar vehículos temporalmente",
-               description = "Guarda la lista de vehículos del empleado en memoria temporal")
-    public ResponseEntity<Map<String, String>> guardarVehiculos(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula,
-            @Valid @RequestBody List<VehiculoDTO> vehiculos) {
-        
-        try {
-            formularioService.guardarVehiculosTemporal(cedula, vehiculos);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Vehículos guardados temporalmente");
-            response.put("cedula", cedula.toString());
-            response.put("paso", "3");
-            response.put("cantidad", String.valueOf(vehiculos.size()));
-            response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Error al guardar vehículos: " + e.getMessage());
-            error.put("cedula", cedula.toString());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
-
-    @PostMapping("/paso4/vivienda/{cedula}")
-    @Operation(summary = "Guardar información de vivienda temporalmente",
-               description = "Guarda los datos de vivienda del empleado en memoria temporal")
-    public ResponseEntity<Map<String, String>> guardarVivienda(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula,
-            @Valid @RequestBody ViviendaDTO vivienda) {
-        
-        try {
-            formularioService.guardarViviendaTemporal(cedula, vivienda);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Información de vivienda guardada temporalmente");
-            response.put("cedula", cedula.toString());
-            response.put("paso", "4");
-            response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Error al guardar vivienda: " + e.getMessage());
-            error.put("cedula", cedula.toString());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
-
-    @PostMapping("/paso5/personas-cargo/{cedula}")
-    @Operation(summary = "Guardar personas a cargo temporalmente",
-               description = "Guarda la lista de personas a cargo del empleado en memoria temporal")
-    public ResponseEntity<Map<String, String>> guardarPersonasACargo(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula,
-            @Valid @RequestBody List<PersonaACargoDTO> personasACargo) {
-        
-        try {
-            formularioService.guardarPersonasACargoTemporal(cedula, personasACargo);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Personas a cargo guardadas temporalmente");
-            response.put("cedula", cedula.toString());
-            response.put("paso", "5");
-            response.put("cantidad", String.valueOf(personasACargo.size()));
-            response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Error al guardar personas a cargo: " + e.getMessage());
-            error.put("cedula", cedula.toString());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
-
-    @PostMapping("/paso6/contactos-emergencia/{cedula}")
-    @Operation(summary = "Guardar contactos de emergencia temporalmente",
-               description = "Guarda la lista de contactos de emergencia del empleado en memoria temporal")
-    public ResponseEntity<Map<String, String>> guardarContactosEmergencia(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula,
-            @Valid @RequestBody List<ContactoEmergenciaDTO> contactosEmergencia) {
-        
-        try {
-            formularioService.guardarContactosEmergenciaTemporal(cedula, contactosEmergencia);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("mensaje", "Contactos de emergencia guardados temporalmente");
-            response.put("cedula", cedula.toString());
-            response.put("paso", "6");
-            response.put("cantidad", String.valueOf(contactosEmergencia.size()));
-            response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Error al guardar contactos de emergencia: " + e.getMessage());
-            error.put("cedula", cedula.toString());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
-
-    // ========== ENDPOINTS DE CONSULTA TEMPORAL ==========
-
-    @GetMapping("/temporal/{cedula}/informacion-personal")
-    @Operation(summary = "Obtener información personal temporal",
-               description = "Recupera los datos personales guardados temporalmente")
-    public ResponseEntity<InformacionPersonalDTO> obtenerInformacionPersonalTemporal(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        InformacionPersonalDTO info = formularioService.obtenerInformacionPersonalTemporal(cedula);
-        return info != null ? ResponseEntity.ok(info) : ResponseEntity.notFound().build();
-    }
-
-    @GetMapping("/temporal/{cedula}/estudios")
-    @Operation(summary = "Obtener estudios académicos temporales",
-               description = "Recupera la lista de estudios guardados temporalmente")
-    public ResponseEntity<List<EstudioAcademicoDTO>> obtenerEstudiosTemporal(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        List<EstudioAcademicoDTO> estudios = formularioService.obtenerEstudiosTemporal(cedula);
-        return ResponseEntity.ok(estudios);
-    }
-
-    @GetMapping("/temporal/{cedula}/vehiculos")
-    @Operation(summary = "Obtener vehículos temporales",
-               description = "Recupera la lista de vehículos guardados temporalmente")
-    public ResponseEntity<List<VehiculoDTO>> obtenerVehiculosTemporal(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        List<VehiculoDTO> vehiculos = formularioService.obtenerVehiculosTemporal(cedula);
-        return ResponseEntity.ok(vehiculos);
-    }
-
-    @GetMapping("/temporal/{cedula}/vivienda")
-    @Operation(summary = "Obtener información de vivienda temporal",
-               description = "Recupera los datos de vivienda guardados temporalmente")
-    public ResponseEntity<ViviendaDTO> obtenerViviendaTemporal(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        ViviendaDTO vivienda = formularioService.obtenerViviendaTemporal(cedula);
-        return vivienda != null ? ResponseEntity.ok(vivienda) : ResponseEntity.notFound().build();
-    }
-
-    @GetMapping("/temporal/{cedula}/personas-cargo")
-    @Operation(summary = "Obtener personas a cargo temporales",
-               description = "Recupera la lista de personas a cargo guardadas temporalmente")
-    public ResponseEntity<List<PersonaACargoDTO>> obtenerPersonasACargoTemporal(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        List<PersonaACargoDTO> personas = formularioService.obtenerPersonasACargoTemporal(cedula);
-        return ResponseEntity.ok(personas);
-    }
-
-    @GetMapping("/temporal/{cedula}/contactos-emergencia")
-    @Operation(summary = "Obtener contactos de emergencia temporales",
-               description = "Recupera la lista de contactos de emergencia guardados temporalmente")
-    public ResponseEntity<List<ContactoEmergenciaDTO>> obtenerContactosEmergenciaTemporal(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        List<ContactoEmergenciaDTO> contactos = formularioService.obtenerContactosEmergenciaTemporal(cedula);
-        return ResponseEntity.ok(contactos);
-    }
-
-    // ========== ENDPOINT DE GUARDADO DEFINITIVO ==========
-
-    @PostMapping("/guardar-definitivo/{cedula}")
-    @Operation(summary = "Guardar formulario completo en base de datos",
-               description = "Guarda todos los datos temporales definitivamente en la base de datos SQLite y limpia la memoria temporal")
-    public ResponseEntity<Map<String, Object>> guardarFormularioDefinitivo(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        
-        try {
-            // Verificar que exista información personal temporal
-            if (!formularioService.tieneInformacionPersonalTemporal(cedula)) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("error", "No se encontró información personal temporal para la cédula: " + cedula);
-                error.put("cedula", cedula);
-                return ResponseEntity.badRequest().body(error);
-            }
-            
-            // Guardar todo en la base de datos
-            formularioService.guardarFormularioCompleto(cedula);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("mensaje", "Formulario guardado exitosamente en la base de datos");
-            response.put("cedula", cedula);
-            response.put("timestamp", System.currentTimeMillis());
-            response.put("estado", "guardado_definitivo");
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Error al guardar definitivamente: " + e.getMessage());
-            error.put("cedula", cedula);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
-
-    // ========== ENDPOINTS DE UTILIDAD ==========
-
-    @GetMapping("/estado/{cedula}")
-    @Operation(summary = "Obtener estado del formulario temporal",
-               description = "Verifica qué pasos del formulario están completados temporalmente")
-    public ResponseEntity<Map<String, Object>> obtenerEstadoFormulario(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        
-        Map<String, Object> estado = new HashMap<>();
-        estado.put("cedula", cedula);
-        estado.put("informacionPersonal", formularioService.tieneInformacionPersonalTemporal(cedula));
-        estado.put("estudios", !formularioService.obtenerEstudiosTemporal(cedula).isEmpty());
-        estado.put("vehiculos", !formularioService.obtenerVehiculosTemporal(cedula).isEmpty());
-        estado.put("vivienda", formularioService.obtenerViviendaTemporal(cedula) != null);
-        estado.put("personasACargo", !formularioService.obtenerPersonasACargoTemporal(cedula).isEmpty());
-        estado.put("contactosEmergencia", !formularioService.obtenerContactosEmergenciaTemporal(cedula).isEmpty());
-        estado.put("formularioCompleto", formularioService.formularioCompletoTemporal(cedula));
-        
-        return ResponseEntity.ok(estado);
-    }
-
-    @DeleteMapping("/limpiar/{cedula}")
-    @Operation(summary = "Limpiar datos temporales",
-               description = "Elimina todos los datos temporales de un empleado de la memoria")
-    public ResponseEntity<Map<String, String>> limpiarDatosTemporales(
-            @Parameter(description = "Cédula del empleado") @PathVariable Long cedula) {
-        
-        formularioService.limpiarDatosTemporales(cedula);
-        
-        Map<String, String> response = new HashMap<>();
-        response.put("mensaje", "Datos temporales eliminados");
-        response.put("cedula", cedula.toString());
-        response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-        
-        return ResponseEntity.ok(response);
-    }
-
-    // ========== ENDPOINTS DE GUARDADO DIRECTO EN BASE DE DATOS ==========
-
-    @PostMapping("/informacion-personal/guardar")
-    @Operation(summary = "Guardar información personal directamente en BD",
-               description = "Guarda la información personal directamente en la base de datos")
-    public ResponseEntity<Map<String, Object>> guardarInformacionPersonalDirecto(
-            @Valid @RequestBody Map<String, Object> informacionPersonal) {
-        
-        try {
-            Map<String, Object> usuario = formularioService.guardarInformacionPersonalDirecto(informacionPersonal);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Información personal guardada exitosamente en base de datos");
-            response.put("data", usuario);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "Error al guardar información personal: " + e.getMessage());
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
-
-    @PostMapping("/vehiculo/guardar")
-    @Operation(summary = "Guardar vehículos directamente en BD",
-               description = "Guarda los vehículos directamente en la base de datos")
-    public ResponseEntity<Map<String, Object>> guardarVehiculosDirecto(
-            @RequestParam Long idUsuario,
-            @Valid @RequestBody List<Map<String, Object>> vehiculos) {
-        
-        try {
-            List<Map<String, Object>> vehiculosGuardados = formularioService.guardarVehiculosDirecto(idUsuario, vehiculos);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Vehículos guardados exitosamente");
-            response.put("data", vehiculosGuardados);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al guardar vehículos: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
+    
+    // ========== GUARDAR VIVIENDA ==========
     @PostMapping("/vivienda/guardar")
-    @Operation(summary = "Guardar vivienda directamente en BD",
-               description = "Guarda la vivienda directamente en la base de datos")
-    public ResponseEntity<Map<String, Object>> guardarViviendaDirecto(
-            @RequestParam Long idUsuario,
-            @Valid @RequestBody Map<String, Object> vivienda) {
+    public ResponseEntity<?> guardarVivienda(@RequestParam Long idUsuario, @RequestBody Vivienda vivienda) {
+        logger.info("🏠 Guardando vivienda para usuario ID: {}", idUsuario);
         
         try {
-            Map<String, Object> viviendaGuardada = formularioService.guardarViviendaDirecto(idUsuario, vivienda);
+            // Obtener usuario para auditoría
+            Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
+            String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Vivienda guardada exitosamente");
-            response.put("data", viviendaGuardada);
+            // Primero eliminar viviendas existentes
+            formularioService.eliminarViviendas(idUsuario);
             
+            // Guardar nueva vivienda
+            Vivienda viviendaGuardada = formularioService.guardarVivienda(vivienda, idUsuario);
+            
+            // Registrar auditoría
+            auditoriaService.registrarAuditoria(
+                "VIVIENDA",
+                idUsuario,
+                null,
+                null,
+                null,
+                "INSERT",
+                nombreUsuario,
+                idUsuario,
+                "Guardado de información de vivienda"
+            );
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Vivienda guardada exitosamente",
+                "data", viviendaGuardada
+            );
+            
+            logger.info("✅ Vivienda guardada exitosamente para usuario ID: {}", idUsuario);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al guardar vivienda: " + e.getMessage());
+            logger.error("❌ Error al guardar vivienda: {}", e.getMessage(), e);
             
-            return ResponseEntity.badRequest().body(response);
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "message", "Error al guardar vivienda: " + e.getMessage()
+            );
+            
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
-
-    @PostMapping("/academico/guardar")
-    @Operation(summary = "Guardar estudios académicos directamente en BD",
-               description = "Guarda los estudios académicos directamente en la base de datos")
-    public ResponseEntity<Map<String, Object>> guardarEstudiosDirecto(
-            @RequestParam Long idUsuario,
-            @Valid @RequestBody List<Map<String, Object>> estudios) {
-        
-        try {
-            List<Map<String, Object>> estudiosGuardados = formularioService.guardarEstudiosDirecto(idUsuario, estudios);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Estudios académicos guardados exitosamente");
-            response.put("data", estudiosGuardados);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al guardar estudios: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
+    
+    // ========== GUARDAR PERSONAS A CARGO ==========
     @PostMapping("/personas-acargo/guardar")
-    @Operation(summary = "Guardar personas a cargo directamente en BD",
-               description = "Guarda las personas a cargo directamente en la base de datos")
-    public ResponseEntity<Map<String, Object>> guardarPersonasCargoDirecto(
-            @RequestParam Long idUsuario,
-            @Valid @RequestBody List<Map<String, Object>> personas) {
+    public ResponseEntity<?> guardarPersonasACargo(@RequestParam Long idUsuario, @RequestBody List<PersonaACargo> personas) {
+        logger.info("👨‍👩‍👧‍👦 Guardando {} personas a cargo para usuario ID: {}", personas.size(), idUsuario);
         
         try {
-            List<Map<String, Object>> personasGuardadas = formularioService.guardarPersonasCargoDirecto(idUsuario, personas);
+            // Obtener usuario para auditoría
+            Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
+            String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Personas a cargo guardadas exitosamente");
-            response.put("data", personasGuardadas);
+            // Primero eliminar personas existentes
+            formularioService.eliminarPersonasACargo(idUsuario);
             
+            // Guardar nuevas personas
+            List<PersonaACargo> personasGuardadas = formularioService.guardarPersonasACargo(personas, idUsuario);
+            
+            // Registrar auditoría
+            auditoriaService.registrarAuditoria(
+                "PERSONA_A_CARGO",
+                idUsuario,
+                null,
+                null,
+                null,
+                "INSERT",
+                nombreUsuario,
+                idUsuario,
+                "Guardado de " + personas.size() + " personas a cargo"
+            );
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Personas a cargo guardadas exitosamente",
+                "data", personasGuardadas
+            );
+            
+            logger.info("✅ Personas a cargo guardadas exitosamente para usuario ID: {}", idUsuario);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al guardar personas a cargo: " + e.getMessage());
+            logger.error("❌ Error al guardar personas a cargo: {}", e.getMessage(), e);
             
-            return ResponseEntity.badRequest().body(response);
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "message", "Error al guardar personas a cargo: " + e.getMessage()
+            );
+            
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
-
-    @PostMapping("/contacto-emergencia/guardar")
-    @Operation(summary = "Guardar contactos de emergencia directamente en BD",
-               description = "Guarda los contactos de emergencia directamente en la base de datos")
-    public ResponseEntity<Map<String, Object>> guardarContactosEmergenciaDirecto(
-            @RequestParam Long idUsuario,
-            @Valid @RequestBody List<Map<String, Object>> contactos) {
+    
+    // ========== GUARDAR CONTACTOS DE EMERGENCIA ==========
+    @PostMapping("/contactos/guardar")
+    public ResponseEntity<?> guardarContactos(@RequestParam Long idUsuario, @RequestBody List<ContactoEmergencia> contactos) {
+        logger.info("📞 Guardando {} contactos de emergencia para usuario ID: {}", contactos.size(), idUsuario);
         
         try {
-            List<Map<String, Object>> contactosGuardados = formularioService.guardarContactosEmergenciaDirecto(idUsuario, contactos);
+            // Obtener usuario para auditoría
+            Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
+            String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Contactos de emergencia guardados exitosamente");
-            response.put("data", contactosGuardados);
+            // Primero eliminar contactos existentes
+            formularioService.eliminarContactosEmergencia(idUsuario);
             
+            // Guardar nuevos contactos
+            List<ContactoEmergencia> contactosGuardados = formularioService.guardarContactosEmergencia(contactos, idUsuario);
+            
+            // Registrar auditoría
+            auditoriaService.registrarAuditoria(
+                "CONTACTO_EMERGENCIA",
+                idUsuario,
+                null,
+                null,
+                null,
+                "INSERT",
+                nombreUsuario,
+                idUsuario,
+                "Guardado de " + contactos.size() + " contactos de emergencia"
+            );
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Contactos de emergencia guardados exitosamente",
+                "data", contactosGuardados
+            );
+            
+            logger.info("✅ Contactos de emergencia guardados exitosamente para usuario ID: {}", idUsuario);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al guardar contactos de emergencia: " + e.getMessage());
+            logger.error("❌ Error al guardar contactos de emergencia: {}", e.getMessage(), e);
             
-            return ResponseEntity.badRequest().body(response);
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "message", "Error al guardar contactos de emergencia: " + e.getMessage()
+            );
+            
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+    
+    // ========== GUARDAR DECLARACIONES DE CONFLICTO ==========
+    @PostMapping("/relaciones-conflicto/guardar")
+    public ResponseEntity<?> guardarRelacionesConflicto(@RequestParam Long idUsuario, @RequestBody List<RelacionConf> relaciones) {
+        logger.info("⚖️ Guardando {} declaraciones de conflicto para usuario ID: {}", relaciones.size(), idUsuario);
+        
+        try {
+            // Obtener usuario para auditoría
+            Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
+            String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
+            
+            // Primero eliminar relaciones existentes
+            formularioService.eliminarRelacionesConflicto(idUsuario);
+            
+            // Guardar nuevas relaciones
+            List<RelacionConf> relacionesGuardadas = formularioService.guardarRelacionesConflicto(relaciones, idUsuario);
+            
+            // Registrar auditoría
+            auditoriaService.registrarAuditoria(
+                "RELACION_CONF",
+                idUsuario,
+                null,
+                null,
+                null,
+                "INSERT",
+                nombreUsuario,
+                idUsuario,
+                "Guardado de " + relaciones.size() + " declaraciones de conflicto"
+            );
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Declaraciones de conflicto guardadas exitosamente",
+                "data", relacionesGuardadas
+            );
+            
+            logger.info("✅ Declaraciones de conflicto guardadas exitosamente para usuario ID: {}", idUsuario);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error al guardar declaraciones de conflicto: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "message", "Error al guardar declaraciones de conflicto: " + e.getMessage()
+            );
+            
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 
-    // ========== ENDPOINTS DE CONSULTA ==========
-
-    @GetMapping("/vehiculo/obtener")
-    @Operation(summary = "Obtener vehículos por ID de usuario",
-               description = "Obtiene los vehículos de un usuario por ID")
-    public ResponseEntity<Map<String, Object>> obtenerVehiculosDirecto(@RequestParam Long idUsuario) {
+    // ========== GUARDAR INFORMACIÓN PERSONAL ==========
+    @PostMapping("/informacion-personal/guardar")
+    public ResponseEntity<?> guardarInformacionPersonal(@RequestBody Usuario usuario) {
+        logger.info("👤 Guardando información personal para usuario: {}", usuario.getDocumento());
+        
         try {
-            List<Map<String, Object>> vehiculos = formularioService.obtenerVehiculosDirecto(idUsuario);
+            // Verificar si el usuario ya existe para determinar si es INSERT o UPDATE
+            Usuario usuarioExistente = formularioService.obtenerUsuarioPorId(usuario.getIdUsuario());
+            String tipoPeticion = usuarioExistente != null ? "UPDATE" : "INSERT";
+            String descripcion = tipoPeticion.equals("INSERT") ? 
+                "Creación de información personal" : 
+                "Actualización de información personal";
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", vehiculos);
+            // Guardar información personal usando el servicio
+            Usuario usuarioGuardado = formularioService.guardarInformacionPersonal(usuario);
             
+            // Registrar auditoría
+            auditoriaService.registrarAuditoria(
+                "USUARIO", 
+                usuarioGuardado.getIdUsuario(), 
+                null, // campo modificado (se puede mejorar para detectar cambios específicos)
+                null, // valor anterior
+                null, // valor nuevo
+                tipoPeticion,
+                usuarioGuardado.getNombre(),
+                usuarioGuardado.getIdUsuario(),
+                descripcion
+            );
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Información personal guardada exitosamente",
+                "data", usuarioGuardado
+            );
+            
+            logger.info("✅ Información personal guardada exitosamente para usuario: {}", usuarioGuardado.getDocumento());
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al obtener vehículos: " + e.getMessage());
+            logger.error("❌ Error al guardar información personal: {}", e.getMessage(), e);
             
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
-    @GetMapping("/vivienda/obtener")
-    @Operation(summary = "Obtener vivienda por ID de usuario",
-               description = "Obtiene la vivienda de un usuario por ID")
-    public ResponseEntity<Map<String, Object>> obtenerViviendaDirecto(@RequestParam Long idUsuario) {
-        try {
-            Map<String, Object> vivienda = formularioService.obtenerViviendaDirecto(idUsuario);
+            Map<String, Object> errorResponse = Map.of(
+                "success", false,
+                "message", "Error al guardar información personal: " + e.getMessage()
+            );
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", vivienda);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al obtener vivienda: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
-    @GetMapping("/academico/obtener")
-    @Operation(summary = "Obtener estudios académicos por ID de usuario",
-               description = "Obtiene los estudios académicos de un usuario por ID")
-    public ResponseEntity<Map<String, Object>> obtenerEstudiosDirecto(@RequestParam Long idUsuario) {
-        try {
-            List<Map<String, Object>> estudios = formularioService.obtenerEstudiosDirecto(idUsuario);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", estudios);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al obtener estudios: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
-    @GetMapping("/personas-acargo/obtener")
-    @Operation(summary = "Obtener personas a cargo por ID de usuario",
-               description = "Obtiene las personas a cargo de un usuario por ID")
-    public ResponseEntity<Map<String, Object>> obtenerPersonasCargoDirecto(@RequestParam Long idUsuario) {
-        try {
-            List<Map<String, Object>> personas = formularioService.obtenerPersonasCargoDirecto(idUsuario);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", personas);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al obtener personas a cargo: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
-    @GetMapping("/contacto-emergencia/obtener")
-    @Operation(summary = "Obtener contactos de emergencia por ID de usuario",
-               description = "Obtiene los contactos de emergencia de un usuario por ID")
-    public ResponseEntity<Map<String, Object>> obtenerContactosEmergenciaDirecto(@RequestParam Long idUsuario) {
-        try {
-            List<Map<String, Object>> contactos = formularioService.obtenerContactosEmergenciaDirecto(idUsuario);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", contactos);
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Error al obtener contactos de emergencia: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 } 

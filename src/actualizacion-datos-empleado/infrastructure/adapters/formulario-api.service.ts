@@ -112,7 +112,7 @@ export interface EstadoFormulario {
   providedIn: 'root'
 })
 export class FormularioApiService {
-  private readonly apiUrl = environment.apiUrl;
+  private readonly apiUrl = environment.apiBaseUrl;
   private readonly headers = new HttpHeaders({
     'Content-Type': 'application/json'
   });
@@ -123,7 +123,7 @@ export class FormularioApiService {
 
   guardarInformacionPersonalTemporal(info: InformacionPersonalDTO): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
-      `${this.apiUrl}/api/formulario/paso1/informacion-personal`,
+      `${this.apiUrl}/formulario/paso1/informacion-personal`,
       info,
       { headers: this.headers }
     ).pipe(
@@ -137,7 +137,7 @@ export class FormularioApiService {
 
   guardarEstudiosTemporal(cedula: number, estudios: EstudioAcademicoDTO[]): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
-      `${this.apiUrl}/api/formulario/paso2/estudios/${cedula}`,
+      `${this.apiUrl}/formulario/paso2/estudios/${cedula}`,
       estudios,
       { headers: this.headers }
     ).pipe(
@@ -151,7 +151,7 @@ export class FormularioApiService {
 
   guardarVehiculosTemporal(cedula: number, vehiculos: VehiculoDTO[]): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
-      `${this.apiUrl}/api/formulario/paso3/vehiculos/${cedula}`,
+      `${this.apiUrl}/formulario/paso3/vehiculos/${cedula}`,
       vehiculos,
       { headers: this.headers }
     ).pipe(
@@ -165,7 +165,7 @@ export class FormularioApiService {
 
   guardarViviendaTemporal(cedula: number, vivienda: ViviendaDTO): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
-      `${this.apiUrl}/api/formulario/paso4/vivienda/${cedula}`,
+      `${this.apiUrl}/formulario/paso4/vivienda/${cedula}`,
       vivienda,
       { headers: this.headers }
     ).pipe(
@@ -179,7 +179,7 @@ export class FormularioApiService {
 
   guardarPersonasACargoTemporal(cedula: number, personas: PersonaACargoDTO[]): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
-      `${this.apiUrl}/api/formulario/paso5/personas-cargo/${cedula}`,
+      `${this.apiUrl}/formulario/paso5/personas-cargo/${cedula}`,
       personas,
       { headers: this.headers }
     ).pipe(
@@ -193,7 +193,7 @@ export class FormularioApiService {
 
   guardarContactosEmergenciaTemporal(cedula: number, contactos: ContactoEmergenciaDTO[]): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
-      `${this.apiUrl}/api/formulario/paso6/contactos-emergencia/${cedula}`,
+      `${this.apiUrl}/formulario/paso6/contactos-emergencia/${cedula}`,
       contactos,
       { headers: this.headers }
     ).pipe(
@@ -209,7 +209,7 @@ export class FormularioApiService {
 
   obtenerInformacionPersonalTemporal(cedula: number): Observable<InformacionPersonalDTO | null> {
     return this.http.get<InformacionPersonalDTO>(
-      `${this.apiUrl}/api/formulario/temporal/${cedula}/informacion-personal`
+      `${this.apiUrl}/formulario/temporal/${cedula}/informacion-personal`
     ).pipe(
       catchError(error => {
         if (error.status === 404) {
@@ -222,7 +222,7 @@ export class FormularioApiService {
 
   obtenerEstudiosTemporal(cedula: number): Observable<EstudioAcademicoDTO[]> {
     return this.http.get<EstudioAcademicoDTO[]>(
-      `${this.apiUrl}/api/formulario/temporal/${cedula}/estudios`
+      `${this.apiUrl}/formulario/temporal/${cedula}/estudios`
     ).pipe(
       catchError(this.handleError<EstudioAcademicoDTO[]>('obtenerEstudiosTemporal'))
     );
@@ -230,7 +230,7 @@ export class FormularioApiService {
 
   obtenerVehiculosTemporal(cedula: number): Observable<VehiculoDTO[]> {
     return this.http.get<VehiculoDTO[]>(
-      `${this.apiUrl}/api/formulario/temporal/${cedula}/vehiculos`
+      `${this.apiUrl}/formulario/temporal/${cedula}/vehiculos`
     ).pipe(
       catchError(this.handleError<VehiculoDTO[]>('obtenerVehiculosTemporal'))
     );
@@ -238,7 +238,7 @@ export class FormularioApiService {
 
   obtenerViviendaTemporal(cedula: number): Observable<ViviendaDTO | null> {
     return this.http.get<ViviendaDTO>(
-      `${this.apiUrl}/api/formulario/temporal/${cedula}/vivienda`
+      `${this.apiUrl}/formulario/temporal/${cedula}/vivienda`
     ).pipe(
       catchError(error => {
         if (error.status === 404) {
@@ -251,7 +251,7 @@ export class FormularioApiService {
 
   obtenerPersonasACargoTemporal(cedula: number): Observable<PersonaACargoDTO[]> {
     return this.http.get<PersonaACargoDTO[]>(
-      `${this.apiUrl}/api/formulario/temporal/${cedula}/personas-cargo`
+      `${this.apiUrl}/formulario/temporal/${cedula}/personas-cargo`
     ).pipe(
       catchError(this.handleError<PersonaACargoDTO[]>('obtenerPersonasACargoTemporal'))
     );
@@ -259,7 +259,7 @@ export class FormularioApiService {
 
   obtenerContactosEmergenciaTemporal(cedula: number): Observable<ContactoEmergenciaDTO[]> {
     return this.http.get<ContactoEmergenciaDTO[]>(
-      `${this.apiUrl}/api/formulario/temporal/${cedula}/contactos-emergencia`
+      `${this.apiUrl}/formulario/temporal/${cedula}/contactos-emergencia`
     ).pipe(
       catchError(this.handleError<ContactoEmergenciaDTO[]>('obtenerContactosEmergenciaTemporal'))
     );
@@ -269,7 +269,7 @@ export class FormularioApiService {
 
   guardarFormularioDefinitivo(cedula: number): Observable<any> {
     return this.http.post(
-      `${this.apiUrl}/api/formulario/guardar-definitivo/${cedula}`,
+      `${this.apiUrl}/formulario/guardar-definitivo/${cedula}`,
       {},
       { headers: this.headers }
     ).pipe(
@@ -285,20 +285,18 @@ export class FormularioApiService {
 
   obtenerInformacionPersonalBD(cedula: number): Observable<InformacionPersonalDTO | null> {
     return this.http.get<InformacionPersonalDTO>(
-      `${this.apiUrl}/api/consulta/bd/${cedula}/informacion-personal`
+      `${this.apiUrl}/consulta/informacion-personal/${cedula}`
     ).pipe(
       catchError(error => {
-        if (error.status === 404) {
-          return throwError(() => null);
-        }
-        return this.handleError<InformacionPersonalDTO>('obtenerInformacionPersonalBD')(error);
+        console.error('Error obteniendo información personal de BD:', error);
+        return throwError(() => error);
       })
     );
   }
 
   obtenerEstudiosBD(cedula: number): Observable<EstudioAcademicoDTO[]> {
     return this.http.get<EstudioAcademicoDTO[]>(
-      `${this.apiUrl}/api/consulta/bd/${cedula}/estudios`
+      `${this.apiUrl}/consulta/estudios-academicos/${cedula}`
     ).pipe(
       catchError(this.handleError<EstudioAcademicoDTO[]>('obtenerEstudiosBD'))
     );
@@ -306,7 +304,7 @@ export class FormularioApiService {
 
   obtenerVehiculosBD(cedula: number): Observable<VehiculoDTO[]> {
     return this.http.get<VehiculoDTO[]>(
-      `${this.apiUrl}/api/consulta/bd/${cedula}/vehiculos`
+      `${this.apiUrl}/consulta/vehiculos/${cedula}`
     ).pipe(
       catchError(this.handleError<VehiculoDTO[]>('obtenerVehiculosBD'))
     );
@@ -314,20 +312,18 @@ export class FormularioApiService {
 
   obtenerViviendaBD(cedula: number): Observable<ViviendaDTO | null> {
     return this.http.get<ViviendaDTO>(
-      `${this.apiUrl}/api/consulta/bd/${cedula}/vivienda`
+      `${this.apiUrl}/consulta/viviendas/${cedula}`
     ).pipe(
       catchError(error => {
-        if (error.status === 404) {
-          return throwError(() => null);
-        }
-        return this.handleError<ViviendaDTO>('obtenerViviendaBD')(error);
+        console.error('Error obteniendo vivienda de BD:', error);
+        return throwError(() => error);
       })
     );
   }
 
   obtenerPersonasACargoBD(cedula: number): Observable<PersonaACargoDTO[]> {
     return this.http.get<PersonaACargoDTO[]>(
-      `${this.apiUrl}/api/consulta/bd/${cedula}/personas-cargo`
+      `${this.apiUrl}/consulta/personas-acargo/${cedula}`
     ).pipe(
       catchError(this.handleError<PersonaACargoDTO[]>('obtenerPersonasACargoBD'))
     );
@@ -335,7 +331,7 @@ export class FormularioApiService {
 
   obtenerContactosEmergenciaBD(cedula: number): Observable<ContactoEmergenciaDTO[]> {
     return this.http.get<ContactoEmergenciaDTO[]>(
-      `${this.apiUrl}/api/consulta/bd/${cedula}/contactos-emergencia`
+      `${this.apiUrl}/consulta/contactos-emergencia/${cedula}`
     ).pipe(
       catchError(this.handleError<ContactoEmergenciaDTO[]>('obtenerContactosEmergenciaBD'))
     );
@@ -343,7 +339,7 @@ export class FormularioApiService {
 
   obtenerDatosCompletosBD(cedula: number): Observable<any> {
     return this.http.get(
-      `${this.apiUrl}/api/consulta/bd/${cedula}/completo`
+      `${this.apiUrl}/consulta/datos-completos/${cedula}`
     ).pipe(
       catchError(this.handleError<any>('obtenerDatosCompletosBD'))
     );
@@ -353,7 +349,7 @@ export class FormularioApiService {
 
   obtenerEstadoFormulario(cedula: number): Observable<EstadoFormulario> {
     return this.http.get<EstadoFormulario>(
-      `${this.apiUrl}/api/formulario/estado/${cedula}`
+      `${this.apiUrl}/formulario/estado/${cedula}`
     ).pipe(
       catchError(this.handleError<EstadoFormulario>('obtenerEstadoFormulario'))
     );
@@ -361,7 +357,7 @@ export class FormularioApiService {
 
   limpiarDatosTemporales(cedula: number): Observable<any> {
     return this.http.delete(
-      `${this.apiUrl}/api/formulario/limpiar/${cedula}`
+      `${this.apiUrl}/formulario/limpiar/${cedula}`
     ).pipe(
       catchError(this.handleError<any>('limpiarDatosTemporales'))
     );
@@ -369,7 +365,7 @@ export class FormularioApiService {
 
   verificarExistencia(cedula: number): Observable<any> {
     return this.http.get(
-      `${this.apiUrl}/api/consulta/existe/${cedula}`
+      `${this.apiUrl}/consulta/existe/${cedula}`
     ).pipe(
       catchError(this.handleError<any>('verificarExistencia'))
     );

@@ -26,6 +26,12 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // Verificar si la URL está en la lista de exclusiones
+        String requestURI = request.getRequestURI();
+        if (isExcludedPath(requestURI)) {
+            return true; // Permitir acceso sin autenticación
+        }
+
         // Obtener el token del header Authorization
         String authHeader = request.getHeader("Authorization");
         
@@ -67,7 +73,7 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
                 }
                 
                 // Agregar información del usuario al request para uso posterior
-                request.setAttribute("userId", usuario.get().getId());
+                request.setAttribute("userId", usuario.get().getIdUsuario());
                 request.setAttribute("userCedula", cedula);
                 request.setAttribute("userInfo", userInfo);
                 
@@ -88,5 +94,37 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             response.getWriter().write("{\"error\": \"Error al procesar el token\"}");
             return false;
         }
+    }
+
+    /**
+     * Verificar si la ruta está en la lista de exclusiones
+     */
+    private boolean isExcludedPath(String requestURI) {
+        String[] excludedPaths = {
+            "/api/auth/",
+            "/api/public/",
+            "/api/usuarios",
+            "/api/usuarios/",
+            "/api/usuarios/test/",
+            "/api/usuarios/health",
+            "/api/usuarios/verify-columns",
+            "/api/usuarios/completo",
+            "/api/usuarios/basico",
+            "/api/consulta/",
+            "/api/formulario/",
+            "/api/database/",
+            "/api/auditoria",
+            "/api/auditoria/",
+            "/actuator/",
+            "/swagger-ui/",
+            "/v3/api-docs/",
+            "/error"
+        };
+        for (String excludedPath : excludedPaths) {
+            if (requestURI.startsWith(excludedPath)) {
+                return true;
+            }
+        }
+        return false;
     }
 } 

@@ -143,9 +143,16 @@ public class AuditoriaService {
     }
     
     /**
+     * Obtener el repositorio de auditoría
+     */
+    public AuditoriaRepository getAuditoriaRepository() {
+        return auditoriaRepository;
+    }
+    
+    /**
      * Convertir entidad a DTO
      */
-    private AuditoriaDTO convertirADTO(Auditoria auditoria) {
+    public AuditoriaDTO convertirADTO(Auditoria auditoria) {
         AuditoriaDTO dto = new AuditoriaDTO();
         dto.setId(auditoria.getId());
         dto.setTablaModificada(auditoria.getTablaModificada());

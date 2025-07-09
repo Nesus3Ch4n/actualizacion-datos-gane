@@ -27,9 +27,9 @@ export class ContactoEmergenciaService {
 
       // Preparar datos para el backend - SOLO campos que existen en la tabla CONTACTO
       const contactosData = contactos.map(contacto => ({
-        nombre: contacto.nombre,           // Se mapea a nombreCompleto en el backend
-        parentesco: contacto.parentesco,   // Se mapea a parentesco en el backend
-        telefono: contacto.telefono        // Se mapea a numeroCelular en el backend
+        nombreCompleto: contacto.nombre,           // Se mapea a nombreCompleto en el backend
+        parentesco: contacto.parentesco,           // Se mapea a parentesco en el backend
+        numeroCelular: contacto.telefono           // Se mapea a numeroCelular en el backend
       }));
 
       console.log('📤 Datos formateados para el backend:', contactosData);
@@ -37,7 +37,7 @@ export class ContactoEmergenciaService {
       // Guardar en el backend usando el endpoint directo
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
-          `${this.backendService.getApiUrl()}/contactos-emergencia/usuario/${idUsuario}`, 
+          `${this.backendService.getApiUrl()}/formulario/contactos/guardar?idUsuario=${idUsuario}`, 
           contactosData,
           this.backendService.getHttpOptions()
         ).pipe(
@@ -88,7 +88,7 @@ export class ContactoEmergenciaService {
 
       const response = await firstValueFrom(
         this.backendService.getHttpClient().get<{success: boolean, data: any[], message?: string}>(
-          `${this.backendService.getApiUrl()}/formulario/contacto-emergencia/obtener?idUsuario=${idUsuario}`,
+          `${this.backendService.getApiUrl()}/consulta/contactos-emergencia-id/${idUsuario}`,
           this.backendService.getHttpOptions()
         ).pipe(
           map((res: any) => res),
@@ -101,7 +101,10 @@ export class ContactoEmergenciaService {
       
       console.log('✅ Contactos obtenidos exitosamente:', response);
       
-      if (response.success) {
+      // El endpoint devuelve directamente la lista de contactos, no una respuesta estructurada
+      if (Array.isArray(response)) {
+        return response;
+      } else if (response.success) {
         return response.data || [];
       } else {
         throw new Error(response.message || 'Error desconocido');

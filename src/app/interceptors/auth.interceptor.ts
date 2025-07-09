@@ -55,9 +55,10 @@ export class AuthInterceptor implements HttpInterceptor {
           }
           
           // Para endpoints de creación de usuarios, permitir continuar sin token
-          if (request.url.includes('/crear-completo') || 
+          if (request.url.includes('/usuarios/completo') || 
               request.url.includes('/crear') || 
-              request.url.includes('/consulta/bd/usuarios')) {
+              request.url.includes('/consulta/bd/usuarios') ||
+              request.url.includes('/consulta/bd/') && request.url.includes('/completo')) {
             console.log('ℹ️ Endpoint de creación/consulta, permitiendo continuar sin token...');
             return throwError(() => error);
           }

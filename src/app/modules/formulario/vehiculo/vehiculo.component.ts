@@ -83,15 +83,17 @@ export class VehiculoComponent implements OnInit {
       this.isLoading = true;
       console.log('🚗 Cargando datos de vehículo existentes...');
       
-      // Obtener la cédula del usuario desde el servicio de sesión
-      const cedula = this.usuarioSessionService.getCedulaUsuarioActual();
-      if (!cedula) {
-        console.log('⚠️ No hay cédula disponible para cargar vehículo');
+      // Obtener el ID del usuario desde el servicio de sesión
+      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+      if (!idUsuario) {
+        console.log('⚠️ No hay ID de usuario disponible para cargar vehículo');
         return;
       }
 
-      // Obtener todos los datos del usuario incluyendo vehículos
-      const datosCompletos = await this.formDataService.obtenerDatosCompletos(cedula.toString());
+      console.log('👤 Cargando vehículos para usuario ID:', idUsuario);
+      
+      // Obtener todos los datos del usuario incluyendo vehículos usando ID
+      const datosCompletos = await this.formDataService.obtenerDatosCompletosPorId(idUsuario);
       
       if (datosCompletos && datosCompletos.vehiculos && datosCompletos.vehiculos.length > 0) {
         const vehiculos = datosCompletos.vehiculos;
@@ -102,7 +104,7 @@ export class VehiculoComponent implements OnInit {
           tipo_vehiculo: vehiculo.tipoVehiculo || '',
           marca: vehiculo.marca || '',
           placa: vehiculo.placa || '',
-          anio: vehiculo.anio || '',
+          anio: vehiculo.ano || vehiculo.anio || '',
           propietario: vehiculo.propietario || ''
         }));
         
@@ -141,7 +143,7 @@ export class VehiculoComponent implements OnInit {
       tipo_vehiculo: vehiculo.tipoVehiculo || '',
       marca: vehiculo.marca || '',
       modelo: vehiculo.modelo || '',
-      año: vehiculo.anio || '',
+      año: vehiculo.ano || vehiculo.anio || '',
       placa: vehiculo.placa || '',
       valor_comercial: vehiculo.valorComercial || '',
       deudas_vehiculo: vehiculo.tieneDeudas || '',
@@ -279,7 +281,12 @@ export class VehiculoComponent implements OnInit {
   }
 
   async validateAndNext(): Promise<void> {
+    console.log('🚀 Iniciando validateAndNext...');
+    console.log('📋 Vehículos en memoria:', this.vehiculos);
+    
     const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
+    console.log('👤 ID Usuario actual:', idUsuario);
+    
     if (!idUsuario) {
       this.notificationService.showError(
         '❌ Error',
@@ -292,26 +299,46 @@ export class VehiculoComponent implements OnInit {
     
     try {
       console.log('🚗 Guardando vehículos en base de datos...');
+      console.log('📊 Cantidad de vehículos a guardar:', this.vehiculos.length);
+      
+      if (this.vehiculos.length === 0) {
+        console.log('ℹ️ No hay vehículos para guardar, continuando...');
+        // Guardar en el estado del formulario
+        this.formStateService.setVehiculos(this.vehiculos);
+        
+        this.notificationService.showSuccess(
+          '✅ Éxito',
+          'Información de vehículos guardada (sin vehículos)'
+        );
+        
+        // Navegar al siguiente paso
+        this.formNavigationService.next();
+        return;
+      }
       
       // Preparar datos de vehículos - CORREGIDO para coincidir con la tabla VEHICULO
       const vehiculosData = this.vehiculos.map(vehiculo => ({
         tipoVehiculo: vehiculo.tipo_vehiculo,
         marca: vehiculo.marca,
         placa: vehiculo.placa,
-        anio: vehiculo.anio,
+        ano: vehiculo.anio, // Cambiar de 'anio' a 'ano' para coincidir con el backend
         propietario: vehiculo.propietario
       }));
 
       console.log('📤 Datos de vehículos a guardar:', vehiculosData);
+      console.log('🔗 URL del endpoint:', `${this.backendService.getApiUrl()}/formulario/vehiculos/guardar?idUsuario=${idUsuario}`);
 
-      // Guardar en el backend usando el endpoint directo
+      // Guardar en el backend usando el endpoint correcto
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
-          `${this.backendService.getApiUrl()}/formulario/vehiculo/guardar?idUsuario=${idUsuario}`, 
+          `${this.backendService.getApiUrl()}/formulario/vehiculos/guardar?idUsuario=${idUsuario}`, 
           vehiculosData,
           this.backendService.getHttpOptions()
         ).pipe(
-          map((res: any) => res),
+          map((res: any) => {
+            console.log('📥 Respuesta del backend:', res);
+            return res;
+          }),
           catchError((error) => {
             console.error('❌ Error en backend:', error);
             throw error;
@@ -322,6 +349,7 @@ export class VehiculoComponent implements OnInit {
       console.log('✅ Vehículos guardados exitosamente:', response);
       
       if (response.success) {
+        console.log('✅ Respuesta exitosa, guardando en estado del formulario...');
         // Guardar en el estado del formulario también
         this.formStateService.setVehiculos(this.vehiculos);
         
@@ -330,20 +358,29 @@ export class VehiculoComponent implements OnInit {
           'Vehículos guardados exitosamente en la base de datos'
         );
         
+        console.log('🔄 Navegando al siguiente paso...');
         // Navegar al siguiente paso
         this.formNavigationService.next();
+        console.log('✅ Navegación completada');
       } else {
+        console.log('❌ Respuesta no exitosa:', response);
         throw new Error(response.message || 'Error desconocido');
       }
 
     } catch (error) {
       console.error('❌ Error al guardar vehículos:', error);
+      console.error('🔍 Detalles del error:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        error: error
+      });
       
       this.notificationService.showError(
         '❌ Error',
         'No se pudieron guardar los vehículos: ' + (error as Error).message
       );
     } finally {
+      console.log('🏁 Finalizando validateAndNext, isLoading:', this.isLoading);
       this.isLoading = false;
     }
   }
