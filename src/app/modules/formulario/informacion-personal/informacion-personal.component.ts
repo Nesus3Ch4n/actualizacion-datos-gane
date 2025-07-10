@@ -7,6 +7,7 @@ import { UsuarioSessionService } from '../../../services/usuario-session.service
 import { BackendService } from '../../../services/backend.service';
 import { AuthService } from '../../../services/auth.service';
 import { FormDataService } from '../../../services/form-data.service';
+import { AutoSaveService } from '../../../services/auto-save.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -30,7 +31,8 @@ export class InformacionPersonalComponent implements OnInit {
     private usuarioSessionService: UsuarioSessionService,
     private backendService: BackendService,
     private authService: AuthService,
-    private formDataService: FormDataService
+    private formDataService: FormDataService,
+    private autoSaveService: AutoSaveService
   ) {
     this.generateYears();
   }
@@ -57,6 +59,9 @@ export class InformacionPersonalComponent implements OnInit {
       num_corporativo: [''],
       correo_personal: ['', [Validators.required, Validators.email]]
     });
+
+    // Establecer el paso actual en el servicio de auto-guardado
+    this.autoSaveService.setCurrentStep('personal');
 
     // Cargar datos existentes de la base de datos
     this.loadExistingData();
@@ -235,10 +240,10 @@ export class InformacionPersonalComponent implements OnInit {
       try {
         console.log('📋 Validando y guardando información personal...');
         
-        // Preparar datos del formulario - MAPEAR CORRECTAMENTE
+        // Preparar datos del formulario
         const formData = this.myForm.value;
         
-        // Mapear campos del formulario al formato esperado por el servicio
+        // Mapear campos del formulario al formato esperado
         const mappedData = {
           cedula: formData.documento,
           cedulaExpedicion: formData.cedula_expedida,
@@ -256,94 +261,48 @@ export class InformacionPersonalComponent implements OnInit {
           correo: formData.correo_personal
         };
         
-        // Verificar si el backend está disponible antes de intentar guardar
-        const backendDisponible = await this.formDataService.verificarConexionBackend();
+        // Usar el servicio de auto-guardado para guardar con detección de cambios
+        const success = await this.autoSaveService.saveStepData('personal', mappedData);
         
-        if (backendDisponible) {
+        if (success) {
           // Obtener ID del usuario del sessionStorage
           const idUsuario = sessionStorage.getItem('id_usuario');
-          const idUsuarioNum = idUsuario ? parseInt(idUsuario) : 1;
           
-          // Guardar en base de datos y obtener el usuario creado/actualizado
-          const usuarioId = await this.formDataService.guardarInformacionPersonal(mappedData);
-          
-          // Verificar que el ID existe
-          if (!usuarioId) {
-            throw new Error('El backend no retornó el ID del usuario correctamente.');
+          if (idUsuario) {
+            // Establecer el usuario en el servicio de sesión
+            const usuarioCompleto = { ...mappedData, idUsuario: parseInt(idUsuario) };
+            this.usuarioSessionService.setUsuarioActual(usuarioCompleto);
+            
+            // Establecer también en el FormDataService
+            this.formDataService.setCurrentUserId(idUsuario);
+            
+            this.notificationService.showSuccess(
+              '✅ Éxito', 
+              `Información personal guardada exitosamente. Usuario ID: ${idUsuario}`
+            );
+          } else {
+            this.notificationService.showSuccess(
+              '✅ Éxito', 
+              'Información personal guardada exitosamente'
+            );
           }
           
-          console.log('✅ Usuario guardado con ID:', usuarioId);
+          // Guardar en el estado del formulario
+          this.formStateService.setInformacionPersonal(mappedData);
           
-          // Establecer el ID del usuario en el servicio de sesión
-          // IMPORTANTE: También establecer el usuario completo en UsuarioSessionService
-          // para que funcione con otros componentes que lo usan
-          const usuarioCompleto = { ...mappedData, idUsuario: parseInt(usuarioId) };
-          this.usuarioSessionService.setUsuarioActual(usuarioCompleto);
-          
-          // Verificar que la sesión se estableció correctamente
-          const idVerificacion = this.usuarioSessionService.getIdUsuarioActual();
-          
-          if (!idVerificacion) {
-            throw new Error('Error: No se pudo establecer la sesión del usuario correctamente');
-          }
-          
-          this.notificationService.showSuccess(
-            '✅ Éxito', 
-            `Información personal guardada exitosamente. Usuario ID: ${usuarioId}`
-          );
+          // Navegar al siguiente paso
+          this.formNavigationService.next();
         } else {
-          // Backend no disponible, solo guardar en memoria
-          console.log('⚠️ Backend no disponible, guardando solo en memoria');
-          
-          this.notificationService.showWarning(
-            '⚠️ Modo Sin Conexión', 
-            'El servidor no está disponible. Los datos se guardarán en memoria y se sincronizarán cuando el servidor esté activo.'
-          );
+          throw new Error('No se pudo guardar la información personal');
         }
-        
-        // Guardar en el estado del formulario (usar los datos mapeados)
-        this.formStateService.setInformacionPersonal(mappedData);
-        
-        // Navegar al siguiente paso
-        this.formNavigationService.next();
         
       } catch (error: any) {
         console.error('❌ Error en validateAndNext:', error);
         
-        // Si es error de conexión, permitir continuar
-        if (error.status === 0 || error.message?.includes('conexión') || error.message?.includes('servidor')) {
-          this.notificationService.showWarning(
-            '⚠️ Sin Conexión', 
-            'No se pudo conectar al servidor. Los datos se guardarán en memoria y podrá continuar con el formulario.'
-          );
-          
-          // Guardar en memoria y continuar
-          const formData = this.myForm.value;
-          const mappedData = {
-            cedula: formData.documento,
-            cedulaExpedicion: formData.cedula_expedida,
-            nombre: formData.nombre_intg,
-            fechaNacimiento: formData.fecha_nacimiento,
-            paisNacimiento: formData.pais_nacimiento,
-            ciudadNacimiento: formData.ciudad_nacimiento,
-            cargo: formData.cargo,
-            area: formData.area,
-            estadoCivil: formData.estadocivil,
-            tipoSangre: formData.tipo_sangre,
-            numeroCelular: formData.num_celular,
-            numeroFijo: formData.num_fijo,
-            numeroCorp: formData.num_corporativo,
-            correo: formData.correo_personal
-          };
-          
-          this.formStateService.setInformacionPersonal(mappedData);
-          this.formNavigationService.next();
-        } else {
-          this.notificationService.showError(
-            '❌ Error', 
-            'Error al guardar la información: ' + (error as Error).message
-          );
-        }
+        this.notificationService.showError(
+          '❌ Error', 
+          'Error al guardar la información: ' + (error as Error).message
+        );
       } finally {
         this.isLoading = false;
       }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.RequestMethod;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/formulario")
@@ -36,24 +37,35 @@ public class FormularioController {
             Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
             String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            // Primero eliminar estudios existentes
-            formularioService.eliminarEstudiosAcademicos(idUsuario);
+            // Obtener estudios existentes
+            List<EstudioAcademico> estudiosExistentes = formularioService.obtenerEstudiosAcademicos(idUsuario);
             
-            // Guardar nuevos estudios
-            List<EstudioAcademico> estudiosGuardados = formularioService.guardarEstudiosAcademicos(estudios, idUsuario);
+            // Actualizar o crear estudios según corresponda
+            List<EstudioAcademico> estudiosGuardados = new ArrayList<>();
             
-            // Registrar auditoría
-            auditoriaService.registrarAuditoria(
-                "ESTUDIO_ACADEMICO",
-                idUsuario,
-                null,
-                null,
-                null,
-                "INSERT",
-                nombreUsuario,
-                idUsuario,
-                "Guardado de " + estudios.size() + " estudios académicos"
-            );
+            for (int i = 0; i < estudios.size(); i++) {
+                EstudioAcademico estudio = estudios.get(i);
+                estudio.setUsuario(usuario);
+                
+                if (i < estudiosExistentes.size()) {
+                    // Actualizar estudio existente
+                    EstudioAcademico estudioExistente = estudiosExistentes.get(i);
+                    actualizarCamposEstudio(estudioExistente, estudio);
+                    EstudioAcademico estudioActualizado = formularioService.actualizarEstudioAcademico(estudioExistente);
+                    estudiosGuardados.add(estudioActualizado);
+                } else {
+                    // Crear nuevo estudio
+                    EstudioAcademico estudioNuevo = formularioService.guardarEstudiosAcademicos(estudio, idUsuario);
+                    estudiosGuardados.add(estudioNuevo);
+                }
+            }
+            
+            // Eliminar estudios sobrantes si hay menos en la nueva lista
+            if (estudios.size() < estudiosExistentes.size()) {
+                for (int i = estudios.size(); i < estudiosExistentes.size(); i++) {
+                    formularioService.eliminarEstudioAcademico(estudiosExistentes.get(i).getIdEstudios());
+                }
+            }
             
             Map<String, Object> response = Map.of(
                 "success", true,
@@ -86,24 +98,35 @@ public class FormularioController {
             Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
             String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            // Primero eliminar vehículos existentes
-            formularioService.eliminarVehiculos(idUsuario);
+            // Obtener vehículos existentes
+            List<Vehiculo> vehiculosExistentes = formularioService.obtenerVehiculos(idUsuario);
             
-            // Guardar nuevos vehículos
-            List<Vehiculo> vehiculosGuardados = formularioService.guardarVehiculos(vehiculos, idUsuario);
+            // Actualizar o crear vehículos según corresponda
+            List<Vehiculo> vehiculosGuardados = new ArrayList<>();
             
-            // Registrar auditoría
-            auditoriaService.registrarAuditoria(
-                "VEHICULO",
-                idUsuario,
-                null,
-                null,
-                null,
-                "INSERT",
-                nombreUsuario,
-                idUsuario,
-                "Guardado de " + vehiculos.size() + " vehículos"
-            );
+            for (int i = 0; i < vehiculos.size(); i++) {
+                Vehiculo vehiculo = vehiculos.get(i);
+                vehiculo.setUsuario(usuario);
+                
+                if (i < vehiculosExistentes.size()) {
+                    // Actualizar vehículo existente
+                    Vehiculo vehiculoExistente = vehiculosExistentes.get(i);
+                    actualizarCamposVehiculo(vehiculoExistente, vehiculo);
+                    Vehiculo vehiculoActualizado = formularioService.actualizarVehiculo(vehiculoExistente);
+                    vehiculosGuardados.add(vehiculoActualizado);
+                } else {
+                    // Crear nuevo vehículo
+                    Vehiculo vehiculoNuevo = formularioService.guardarVehiculos(vehiculo, idUsuario);
+                    vehiculosGuardados.add(vehiculoNuevo);
+                }
+            }
+            
+            // Eliminar vehículos sobrantes si hay menos en la nueva lista
+            if (vehiculos.size() < vehiculosExistentes.size()) {
+                for (int i = vehiculos.size(); i < vehiculosExistentes.size(); i++) {
+                    formularioService.eliminarVehiculo(vehiculosExistentes.get(i).getIdVehiculo());
+                }
+            }
             
             Map<String, Object> response = Map.of(
                 "success", true,
@@ -136,33 +159,38 @@ public class FormularioController {
             Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
             String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            // Primero eliminar viviendas existentes
-            formularioService.eliminarViviendas(idUsuario);
+            // Obtener vivienda existente
+            List<Vivienda> viviendasExistentes = formularioService.obtenerViviendas(idUsuario);
             
-            // Guardar nueva vivienda
-            Vivienda viviendaGuardada = formularioService.guardarVivienda(vivienda, idUsuario);
-            
-            // Registrar auditoría
-            auditoriaService.registrarAuditoria(
-                "VIVIENDA",
-                idUsuario,
-                null,
-                null,
-                null,
-                "INSERT",
-                nombreUsuario,
-                idUsuario,
-                "Guardado de información de vivienda"
-            );
-            
-            Map<String, Object> response = Map.of(
-                "success", true,
-                "message", "Vivienda guardada exitosamente",
-                "data", viviendaGuardada
-            );
-            
-            logger.info("✅ Vivienda guardada exitosamente para usuario ID: {}", idUsuario);
-            return ResponseEntity.ok(response);
+            if (!viviendasExistentes.isEmpty()) {
+                // Actualizar vivienda existente
+                Vivienda viviendaExistente = viviendasExistentes.get(0);
+                actualizarCamposVivienda(viviendaExistente, vivienda);
+                viviendaExistente.setUsuario(usuario);
+                Vivienda viviendaActualizada = formularioService.actualizarVivienda(viviendaExistente);
+                
+                Map<String, Object> response = Map.of(
+                    "success", true,
+                    "message", "Vivienda actualizada exitosamente",
+                    "data", viviendaActualizada
+                );
+                
+                logger.info("✅ Vivienda actualizada exitosamente para usuario ID: {}", idUsuario);
+                return ResponseEntity.ok(response);
+            } else {
+                // Crear nueva vivienda
+                vivienda.setUsuario(usuario);
+                Vivienda viviendaGuardada = formularioService.guardarVivienda(vivienda, idUsuario);
+                
+                Map<String, Object> response = Map.of(
+                    "success", true,
+                    "message", "Vivienda guardada exitosamente",
+                    "data", viviendaGuardada
+                );
+                
+                logger.info("✅ Vivienda guardada exitosamente para usuario ID: {}", idUsuario);
+                return ResponseEntity.ok(response);
+            }
             
         } catch (Exception e) {
             logger.error("❌ Error al guardar vivienda: {}", e.getMessage(), e);
@@ -186,24 +214,35 @@ public class FormularioController {
             Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
             String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            // Primero eliminar personas existentes
-            formularioService.eliminarPersonasACargo(idUsuario);
+            // Obtener personas existentes
+            List<PersonaACargo> personasExistentes = formularioService.obtenerPersonasACargo(idUsuario);
             
-            // Guardar nuevas personas
-            List<PersonaACargo> personasGuardadas = formularioService.guardarPersonasACargo(personas, idUsuario);
+            // Actualizar o crear personas según corresponda
+            List<PersonaACargo> personasGuardadas = new ArrayList<>();
             
-            // Registrar auditoría
-            auditoriaService.registrarAuditoria(
-                "PERSONA_A_CARGO",
-                idUsuario,
-                null,
-                null,
-                null,
-                "INSERT",
-                nombreUsuario,
-                idUsuario,
-                "Guardado de " + personas.size() + " personas a cargo"
-            );
+            for (int i = 0; i < personas.size(); i++) {
+                PersonaACargo persona = personas.get(i);
+                persona.setUsuario(usuario);
+                
+                if (i < personasExistentes.size()) {
+                    // Actualizar persona existente
+                    PersonaACargo personaExistente = personasExistentes.get(i);
+                    actualizarCamposPersonaACargo(personaExistente, persona);
+                    PersonaACargo personaActualizada = formularioService.actualizarPersonaACargo(personaExistente);
+                    personasGuardadas.add(personaActualizada);
+                } else {
+                    // Crear nueva persona
+                    PersonaACargo personaNueva = formularioService.guardarPersonasACargo(persona, idUsuario);
+                    personasGuardadas.add(personaNueva);
+                }
+            }
+            
+            // Eliminar personas sobrantes si hay menos en la nueva lista
+            if (personas.size() < personasExistentes.size()) {
+                for (int i = personas.size(); i < personasExistentes.size(); i++) {
+                    formularioService.eliminarPersonaACargo(personasExistentes.get(i).getIdFamilia());
+                }
+            }
             
             Map<String, Object> response = Map.of(
                 "success", true,
@@ -236,24 +275,35 @@ public class FormularioController {
             Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
             String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            // Primero eliminar contactos existentes
-            formularioService.eliminarContactosEmergencia(idUsuario);
+            // Obtener contactos existentes
+            List<ContactoEmergencia> contactosExistentes = formularioService.obtenerContactosEmergencia(idUsuario);
             
-            // Guardar nuevos contactos
-            List<ContactoEmergencia> contactosGuardados = formularioService.guardarContactosEmergencia(contactos, idUsuario);
+            // Actualizar o crear contactos según corresponda
+            List<ContactoEmergencia> contactosGuardados = new ArrayList<>();
             
-            // Registrar auditoría
-            auditoriaService.registrarAuditoria(
-                "CONTACTO_EMERGENCIA",
-                idUsuario,
-                null,
-                null,
-                null,
-                "INSERT",
-                nombreUsuario,
-                idUsuario,
-                "Guardado de " + contactos.size() + " contactos de emergencia"
-            );
+            for (int i = 0; i < contactos.size(); i++) {
+                ContactoEmergencia contacto = contactos.get(i);
+                contacto.setUsuario(usuario);
+                
+                if (i < contactosExistentes.size()) {
+                    // Actualizar contacto existente
+                    ContactoEmergencia contactoExistente = contactosExistentes.get(i);
+                    actualizarCamposContactoEmergencia(contactoExistente, contacto);
+                    ContactoEmergencia contactoActualizado = formularioService.actualizarContactoEmergencia(contactoExistente);
+                    contactosGuardados.add(contactoActualizado);
+                } else {
+                    // Crear nuevo contacto
+                    ContactoEmergencia contactoNuevo = formularioService.guardarContactosEmergencia(contacto, idUsuario);
+                    contactosGuardados.add(contactoNuevo);
+                }
+            }
+            
+            // Eliminar contactos sobrantes si hay menos en la nueva lista
+            if (contactos.size() < contactosExistentes.size()) {
+                for (int i = contactos.size(); i < contactosExistentes.size(); i++) {
+                    formularioService.eliminarContactoEmergencia(contactosExistentes.get(i).getIdContacto());
+                }
+            }
             
             Map<String, Object> response = Map.of(
                 "success", true,
@@ -286,24 +336,35 @@ public class FormularioController {
             Usuario usuario = formularioService.obtenerUsuarioPorId(idUsuario);
             String nombreUsuario = usuario != null ? usuario.getNombre() : "Usuario " + idUsuario;
             
-            // Primero eliminar relaciones existentes
-            formularioService.eliminarRelacionesConflicto(idUsuario);
+            // Obtener relaciones existentes
+            List<RelacionConf> relacionesExistentes = formularioService.obtenerRelacionesConflicto(idUsuario);
             
-            // Guardar nuevas relaciones
-            List<RelacionConf> relacionesGuardadas = formularioService.guardarRelacionesConflicto(relaciones, idUsuario);
+            // Actualizar o crear relaciones según corresponda
+            List<RelacionConf> relacionesGuardadas = new ArrayList<>();
             
-            // Registrar auditoría
-            auditoriaService.registrarAuditoria(
-                "RELACION_CONF",
-                idUsuario,
-                null,
-                null,
-                null,
-                "INSERT",
-                nombreUsuario,
-                idUsuario,
-                "Guardado de " + relaciones.size() + " declaraciones de conflicto"
-            );
+            for (int i = 0; i < relaciones.size(); i++) {
+                RelacionConf relacion = relaciones.get(i);
+                relacion.setUsuario(usuario);
+                
+                if (i < relacionesExistentes.size()) {
+                    // Actualizar relación existente
+                    RelacionConf relacionExistente = relacionesExistentes.get(i);
+                    actualizarCamposRelacionConf(relacionExistente, relacion);
+                    RelacionConf relacionActualizada = formularioService.actualizarRelacionConf(relacionExistente);
+                    relacionesGuardadas.add(relacionActualizada);
+                } else {
+                    // Crear nueva relación
+                    RelacionConf relacionNueva = formularioService.guardarRelacionConflicto(relacion, idUsuario);
+                    relacionesGuardadas.add(relacionNueva);
+                }
+            }
+            
+            // Eliminar relaciones sobrantes si hay menos en la nueva lista
+            if (relaciones.size() < relacionesExistentes.size()) {
+                for (int i = relaciones.size(); i < relacionesExistentes.size(); i++) {
+                    formularioService.eliminarRelacionConf(relacionesExistentes.get(i).getIdRelacionConf());
+                }
+            }
             
             Map<String, Object> response = Map.of(
                 "success", true,
@@ -332,28 +393,8 @@ public class FormularioController {
         logger.info("👤 Guardando información personal para usuario: {}", usuario.getDocumento());
         
         try {
-            // Verificar si el usuario ya existe para determinar si es INSERT o UPDATE
-            Usuario usuarioExistente = formularioService.obtenerUsuarioPorId(usuario.getIdUsuario());
-            String tipoPeticion = usuarioExistente != null ? "UPDATE" : "INSERT";
-            String descripcion = tipoPeticion.equals("INSERT") ? 
-                "Creación de información personal" : 
-                "Actualización de información personal";
-            
-            // Guardar información personal usando el servicio
+            // Guardar información personal usando el servicio (la auditoría se maneja automáticamente)
             Usuario usuarioGuardado = formularioService.guardarInformacionPersonal(usuario);
-            
-            // Registrar auditoría
-            auditoriaService.registrarAuditoria(
-                "USUARIO", 
-                usuarioGuardado.getIdUsuario(), 
-                null, // campo modificado (se puede mejorar para detectar cambios específicos)
-                null, // valor anterior
-                null, // valor nuevo
-                tipoPeticion,
-                usuarioGuardado.getNombre(),
-                usuarioGuardado.getIdUsuario(),
-                descripcion
-            );
             
             Map<String, Object> response = Map.of(
                 "success", true,
@@ -374,5 +415,48 @@ public class FormularioController {
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
+    }
+    
+    // ========== MÉTODOS AUXILIARES PARA ACTUALIZAR CAMPOS ==========
+    
+    private void actualizarCamposEstudio(EstudioAcademico estudioExistente, EstudioAcademico estudioNuevo) {
+        estudioExistente.setNivelAcademico(estudioNuevo.getNivelAcademico());
+        estudioExistente.setPrograma(estudioNuevo.getPrograma());
+        estudioExistente.setInstitucion(estudioNuevo.getInstitucion());
+        estudioExistente.setSemestre(estudioNuevo.getSemestre());
+        estudioExistente.setGraduacion(estudioNuevo.getGraduacion());
+    }
+    
+    private void actualizarCamposVehiculo(Vehiculo vehiculoExistente, Vehiculo vehiculoNuevo) {
+        vehiculoExistente.setTipoVehiculo(vehiculoNuevo.getTipoVehiculo());
+        vehiculoExistente.setMarca(vehiculoNuevo.getMarca());
+        vehiculoExistente.setPlaca(vehiculoNuevo.getPlaca());
+        vehiculoExistente.setAno(vehiculoNuevo.getAno());
+        vehiculoExistente.setPropietario(vehiculoNuevo.getPropietario());
+    }
+    
+    private void actualizarCamposVivienda(Vivienda viviendaExistente, Vivienda viviendaNueva) {
+        viviendaExistente.setDireccion(viviendaNueva.getDireccion());
+        viviendaExistente.setTipoVivienda(viviendaNueva.getTipoVivienda());
+        viviendaExistente.setTipoAdquisicion(viviendaNueva.getTipoAdquisicion());
+    }
+    
+    private void actualizarCamposPersonaACargo(PersonaACargo personaExistente, PersonaACargo personaNueva) {
+        personaExistente.setNombre(personaNueva.getNombre());
+        personaExistente.setParentesco(personaNueva.getParentesco());
+        personaExistente.setFechaNacimiento(personaNueva.getFechaNacimiento());
+        personaExistente.setEdad(personaNueva.getEdad());
+    }
+    
+    private void actualizarCamposContactoEmergencia(ContactoEmergencia contactoExistente, ContactoEmergencia contactoNuevo) {
+        contactoExistente.setNombreCompleto(contactoNuevo.getNombreCompleto());
+        contactoExistente.setParentesco(contactoNuevo.getParentesco());
+        contactoExistente.setNumeroCelular(contactoNuevo.getNumeroCelular());
+    }
+    
+    private void actualizarCamposRelacionConf(RelacionConf relacionExistente, RelacionConf relacionNueva) {
+        relacionExistente.setNombreCompleto(relacionNueva.getNombreCompleto());
+        relacionExistente.setParentesco(relacionNueva.getParentesco());
+        relacionExistente.setTipoParteAsoc(relacionNueva.getTipoParteAsoc());
     }
 } 

@@ -1,0 +1,212 @@
+@import "../../../app/shared/styles/variables";
+
+.modal-container {
+  background: #fff;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-lg;
+  padding: $spacing-xl $spacing-xxl $spacing-lg $spacing-xxl;
+  min-width: 350px;
+  max-width: 800px;
+  font-family: $font-family-primary;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  color: $primary-color;
+  font-size: $font-size-xxl;
+  font-weight: 500;
+  margin-bottom: $spacing-lg;
+  .title-icon {
+    color: $primary-color;
+    font-size: 24px;
+  }
+}
+
+.modal-content {
+  padding: 0;
+}
+
+.custom-tab-group {
+  .mat-mdc-tab-labels {
+    background: $light-blue;
+    border-radius: $border-radius-md $border-radius-md 0 0;
+  }
+  .mat-mdc-tab-label {
+    color: $primary-color;
+    font-weight: 500;
+    font-size: $font-size-large;
+    opacity: 0.8;
+    &.mat-mdc-tab-label-active {
+      color: $secondary-color;
+      opacity: 1;
+    }
+  }
+  .mat-mdc-tab-body {
+    background: #fff;
+    border-radius: 0 0 $border-radius-md $border-radius-md;
+    box-shadow: $shadow-sm;
+    padding: $spacing-xl $spacing-lg;
+  }
+}
+
+.tab-content {
+  margin-top: $spacing-lg;
+}
+
+.info-section {
+  margin-bottom: $spacing-xl;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  color: $primary-color;
+  font-size: $font-size-xl;
+  font-weight: 500;
+  margin-bottom: $spacing-md;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md $spacing-xl;
+  margin-bottom: $spacing-lg;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: $spacing-sm;
+  .label {
+    color: $gray-medium;
+    font-size: $font-size-small;
+    font-weight: 500;
+  }
+  .value {
+    color: $gray-dark;
+    font-size: $font-size-large;
+    font-weight: 400;
+    word-break: break-word;
+
+    &.old-value {
+      color: darken($error-color, 10%);
+      text-decoration: line-through;
+      font-weight: 600;
+      background: rgba(darken($error-color, 10%), 0.1);
+      padding: $spacing-xs $spacing-sm;
+      border-radius: $border-radius-sm;
+      border-left: 3px solid $error-color;
+    }
+
+    &.new-value {
+      color: darken($success-color, 10%);
+      font-weight: 600;
+      background: rgba(darken($success-color, 10%), 0.1);
+      padding: $spacing-xs $spacing-sm;
+      border-radius: $border-radius-sm;
+      border-left: 3px solid $success-color;
+    }
+  }
+}
+
+.item-block {
+  background: $gray-light;
+  border-radius: $border-radius-sm;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-lg;
+  box-shadow: $shadow-sm;
+}
+
+.item-title {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  color: $primary-color;
+  font-size: $font-size-large;
+  font-weight: 500;
+  margin-bottom: $spacing-md;
+}
+
+.badge {
+  display: inline-block;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-sm;
+  font-size: $font-size-small;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &.badge-success {
+    background: lighten($success-color, 40%);
+    color: darken($success-color, 10%);
+  }
+
+  &.badge-warning {
+    background-color: lighten($warning-color, 40%);
+    color: darken($warning-color, 10%);
+  }
+
+  &.badge-danger {
+    background-color: lighten($error-color, 40%);
+    color: darken($error-color, 10%);
+  }
+
+  &.badge-secondary {
+    background-color: lighten($gray-medium, 40%);
+    color: darken($gray-medium, 10%);
+  }
+}
+
+.no-data {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  color: $gray-medium;
+  font-size: $font-size-large;
+  margin: $spacing-md 0;
+  mat-icon {
+    color: $warning-color;
+    font-size: 20px;
+  }
+}
+
+.modal-actions {
+  margin-top: $spacing-lg;
+  padding-top: $spacing-md;
+  border-top: 1px solid $gray-border;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.close-button {
+  color: $primary-color;
+  font-weight: 500;
+  font-size: $font-size-large;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color $transition-fast;
+  &:hover {
+    color: $secondary-color;
+  }
+  mat-icon {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: $breakpoint-sm) {
+  .modal-container {
+    padding: $spacing-md $spacing-sm;
+    min-width: 0;
+    max-width: 98vw;
+  }
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}

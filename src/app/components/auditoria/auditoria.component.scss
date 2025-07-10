@@ -1,3 +1,5 @@
+@import '../../../app/shared/styles/variables';
+
 .auditoria-container {
   padding: 24px;
   max-width: 1400px;
@@ -18,7 +20,7 @@
       gap: 12px;
 
       i {
-        color: #3498db;
+        color: $primary-color; 
       }
     }
 
@@ -81,25 +83,25 @@
 
       &.total {
         .card-icon {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: $primary-color;
         }
       }
 
       &.creaciones {
         .card-icon {
-          background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+          background:$create-color;
         }
       }
 
       &.actualizaciones {
         .card-icon {
-          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+          background: $actualizar-color;
         }
       }
 
       &.eliminaciones {
         .card-icon {
-          background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+          background: $eliminar-color;
         }
       }
     }
@@ -130,7 +132,7 @@
         gap: 8px;
 
         i {
-          color: #3498db;
+          color: $primary-color;
         }
       }
 
@@ -226,7 +228,7 @@
           color: #2c3e50;
 
           i {
-            color: #3498db;
+            color: $primary-color;
             font-size: 0.8rem;
           }
         }
@@ -239,7 +241,7 @@
           color: #2c3e50;
 
           i {
-            color: #e74c3c;
+            color: $primary-color;
             font-size: 0.8rem;
           }
         }
@@ -253,23 +255,23 @@
           letter-spacing: 0.5px;
 
           &.badge-success {
-            background: #d4edda;
-            color: #155724;
+            background: lighten($success-color, 40%);
+            color: darken($success-color, 10%);
           }
 
           &.badge-warning {
-            background: #fff3cd;
-            color: #856404;
+            background-color: lighten($warning-color, 40%);
+            color: darken($warning-color, 10%);
           }
 
           &.badge-danger {
-            background: #f8d7da;
-            color: #721c24;
+            background: lighten($error-color, 40%);
+            color: darken($error-color, 10%);
           }
 
           &.badge-secondary {
-            background: #e2e3e5;
-            color: #383d41;
+            background: lighten($gray-medium, 40%);
+            color: darken($gray-medium, 10%);
           }
         }
 
@@ -281,7 +283,7 @@
           color: #2c3e50;
 
           i {
-            color: #27ae60;
+            color: $primary-color;
             font-size: 0.8rem;
           }
         }
@@ -351,6 +353,19 @@
       }
     }
 
+    .detalles-cell {
+      .detalles-text {
+        p {
+          margin: 0;
+          font-size: 0.8rem;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          text-align: left;
+        }
+      }
+    } 
+
     .no-data {
       text-align: center;
       padding: 60px 20px;
@@ -373,6 +388,15 @@
         font-size: 1rem;
       }
     }
+  }
+}
+
+.btn-accion {
+  background: $primary-color;
+  color: white;
+  border-radius: 50%;
+  i {
+    font-size: 1.2rem;
   }
 }
 

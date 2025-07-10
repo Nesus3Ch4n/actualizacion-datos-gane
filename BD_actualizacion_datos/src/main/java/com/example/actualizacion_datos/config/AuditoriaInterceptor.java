@@ -42,21 +42,37 @@ public class AuditoriaInterceptor implements HandlerInterceptor {
     public void registrarActualizacion(String tabla, Object entidadAnterior, Object entidadNueva, 
                                       Long idUsuario, String usuarioModificador) {
         try {
-            Map<String, Object> cambios = detectarCambios(entidadAnterior, entidadNueva);
+            System.out.println("🔍 AuditoriaInterceptor: Registrando actualización para tabla: " + tabla);
+            System.out.println("🔍 AuditoriaInterceptor: Entidad anterior: " + entidadAnterior);
+            System.out.println("🔍 AuditoriaInterceptor: Entidad nueva: " + entidadNueva);
             
-            for (Map.Entry<String, Object> cambio : cambios.entrySet()) {
-                String campo = cambio.getKey();
-                Map<String, Object> valores = (Map<String, Object>) cambio.getValue();
-                
-                String valorAnterior = valores.get("anterior") != null ? valores.get("anterior").toString() : null;
-                String valorNuevo = valores.get("nuevo") != null ? valores.get("nuevo").toString() : null;
-                
-                String descripcion = String.format("Actualización del campo '%s' en tabla %s", campo, tabla);
-                auditoriaService.registrarActualizacion(tabla, obtenerIdEntidad(entidadNueva), campo, 
-                                                       valorAnterior, valorNuevo, usuarioModificador, idUsuario, descripcion);
+            Map<String, Object> cambios = detectarCambios(entidadAnterior, entidadNueva);
+            System.out.println("🔍 AuditoriaInterceptor: Cambios detectados: " + cambios.size());
+            
+            if (cambios.isEmpty()) {
+                System.out.println("⚠️ AuditoriaInterceptor: No se detectaron cambios, registrando actualización general");
+                String descripcion = "Actualización general en tabla " + tabla;
+                auditoriaService.registrarActualizacion(tabla, obtenerIdEntidad(entidadNueva), null, 
+                                                       null, null, usuarioModificador, idUsuario, descripcion);
+            } else {
+                for (Map.Entry<String, Object> cambio : cambios.entrySet()) {
+                    String campo = cambio.getKey();
+                    Map<String, Object> valores = (Map<String, Object>) cambio.getValue();
+                    
+                    String valorAnterior = valores.get("anterior") != null ? valores.get("anterior").toString() : null;
+                    String valorNuevo = valores.get("nuevo") != null ? valores.get("nuevo").toString() : null;
+                    
+                    System.out.println("🔍 AuditoriaInterceptor: Registrando cambio en campo '" + campo + 
+                                     "': '" + valorAnterior + "' -> '" + valorNuevo + "'");
+                    
+                    String descripcion = String.format("Actualización del campo '%s' en tabla %s", campo, tabla);
+                    auditoriaService.registrarActualizacion(tabla, obtenerIdEntidad(entidadNueva), campo, 
+                                                           valorAnterior, valorNuevo, usuarioModificador, idUsuario, descripcion);
+                }
             }
         } catch (Exception e) {
-            System.err.println("Error registrando auditoría de actualización: " + e.getMessage());
+            System.err.println("❌ Error registrando auditoría de actualización: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
@@ -77,12 +93,27 @@ public class AuditoriaInterceptor implements HandlerInterceptor {
      */
     private Long obtenerIdEntidad(Object entidad) {
         try {
-            Field idField = entidad.getClass().getDeclaredField("id");
-            idField.setAccessible(true);
-            return (Long) idField.get(entidad);
+            // Intentar diferentes nombres de campos ID comunes
+            String[] posiblesNombresId = {"id", "idUsuario", "idEstudios", "idVehiculo", 
+                                        "idVivienda", "idFamilia", "idContacto", "idRelacionConf"};
+            
+            for (String nombreId : posiblesNombresId) {
+                try {
+                    Field idField = entidad.getClass().getDeclaredField(nombreId);
+                    idField.setAccessible(true);
+                    Object valor = idField.get(entidad);
+                    if (valor != null) {
+                        return (Long) valor;
+                    }
+                } catch (NoSuchFieldException e) {
+                    // Continuar con el siguiente nombre
+                    continue;
+                }
+            }
         } catch (Exception e) {
-            return null;
+            System.err.println("Error obteniendo ID de entidad: " + e.getMessage());
         }
+        return null;
     }
     
     /**
@@ -92,15 +123,31 @@ public class AuditoriaInterceptor implements HandlerInterceptor {
         Map<String, Object> cambios = new HashMap<>();
         
         if (objetoAnterior == null || objetoNuevo == null) {
+            System.out.println("⚠️ AuditoriaInterceptor: Objeto anterior o nuevo es null");
             return cambios;
         }
         
         try {
+            System.out.println("🔍 AuditoriaInterceptor: Detectando cambios entre objetos de tipo: " + objetoAnterior.getClass().getSimpleName());
+            
             Field[] campos = objetoAnterior.getClass().getDeclaredFields();
             
             for (Field campo : campos) {
                 // Ignorar campos que no queremos auditar
-                if (campo.getName().equals("id") || campo.getName().equals("serialVersionUID")) {
+                String nombreCampo = campo.getName();
+                if (nombreCampo.equals("serialVersionUID") || 
+                    nombreCampo.equals("id") || 
+                    nombreCampo.equals("idUsuario") || 
+                    nombreCampo.equals("idEstudios") || 
+                    nombreCampo.equals("idVehiculo") || 
+                    nombreCampo.equals("idVivienda") || 
+                    nombreCampo.equals("idFamilia") || 
+                    nombreCampo.equals("idContacto") || 
+                    nombreCampo.equals("idRelacionConf") ||
+                    nombreCampo.equals("usuario") || // Ignorar relaciones
+                    nombreCampo.equals("fechaCreacion") || // Ignorar campos de auditoría
+                    nombreCampo.equals("fechaModificacion") ||
+                    nombreCampo.equals("version")) {
                     continue;
                 }
                 
@@ -112,14 +159,21 @@ public class AuditoriaInterceptor implements HandlerInterceptor {
                 if ((valorAnterior == null && valorNuevo != null) || 
                     (valorAnterior != null && !valorAnterior.equals(valorNuevo))) {
                     
+                    System.out.println("🔍 AuditoriaInterceptor: Cambio detectado en campo '" + nombreCampo + 
+                                     "': '" + valorAnterior + "' -> '" + valorNuevo + "'");
+                    
                     Map<String, Object> cambio = new HashMap<>();
                     cambio.put("anterior", valorAnterior);
                     cambio.put("nuevo", valorNuevo);
                     cambios.put(campo.getName(), cambio);
                 }
             }
+            
+            System.out.println("🔍 AuditoriaInterceptor: Total de cambios detectados: " + cambios.size());
+            
         } catch (Exception e) {
-            System.err.println("Error detectando cambios: " + e.getMessage());
+            System.err.println("❌ Error detectando cambios: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return cambios;

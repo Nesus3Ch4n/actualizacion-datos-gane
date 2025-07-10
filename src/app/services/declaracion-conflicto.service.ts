@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
 import { AuthService } from './auth.service';
+import { AutoSaveService } from './auto-save.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
@@ -13,7 +14,8 @@ export class DeclaracionConflictoService {
   constructor(
     private backendService: BackendService,
     private notificationService: NotificationService,
-    private authService: AuthService
+    private authService: AuthService,
+    private autoSaveService: AutoSaveService
   ) {}
 
   /**
@@ -21,44 +23,33 @@ export class DeclaracionConflictoService {
    */
   async guardarDeclaracionesConflicto(idUsuario: number, declaraciones: any[]): Promise<any> {
     try {
-      console.log('💾 Guardando declaraciones de conflicto en base de datos:', declaraciones);
+      console.log('💾 Guardando declaraciones de conflicto usando AutoSaveService:', declaraciones);
       console.log('👤 Usuario ID:', idUsuario);
 
-      // Preparar datos para el backend - SOLO campos que existen en la tabla RELACION_CONF
-      const declaracionesData = declaraciones.map(declaracion => ({
-        nombreCompleto: declaracion.nombre,                   // Se mapea a nombreCompleto en el backend
-        parentesco: declaracion.parentesco,                   // Se mapea a parentesco en el backend
-        tipoParteAsoc: declaracion.tipoParteInteresada        // Se mapea a tipoParteAsoc en el backend
-      }));
+      // Preparar datos para el auto-guardado
+      const declaracionesData = {
+        tieneConflicto: declaraciones.length > 0,
+        personas: declaraciones.map(declaracion => ({
+          nombre: declaracion.nombre,
+          parentesco: declaracion.parentesco,
+          tipoParteInteresada: declaracion.tipoParteInteresada
+        }))
+      };
 
-      console.log('📤 Datos formateados para el backend:', declaracionesData);
+      console.log('📤 Datos formateados para AutoSaveService:', declaracionesData);
 
-      // Guardar en el backend usando el endpoint directo
-      const response = await firstValueFrom(
-        this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
-          `${this.backendService.getApiUrl()}/formulario/relaciones-conflicto/guardar?idUsuario=${idUsuario}`, 
-          declaracionesData,
-          this.backendService.getHttpOptions()
-        ).pipe(
-          map((res: any) => res),
-          catchError((error: any) => {
-            console.error('❌ Error HTTP en declaraciones de conflicto:', error);
-            throw error;
-          })
-        )
-      );
+      // Usar el servicio de auto-guardado para guardar con detección de cambios
+      const success = await this.autoSaveService.saveStepData('declaracion', declaracionesData, true);
       
-      console.log('✅ Declaraciones guardadas exitosamente en base de datos:', response);
-      
-      if (response.success) {
+      if (success) {
         this.notificationService.showSuccess(
           '✅ Éxito',
-          'Declaraciones de conflicto guardadas exitosamente en la base de datos'
+          'Declaraciones de conflicto guardadas exitosamente usando actualización inteligente'
         );
         
-        return response; // Retorna la respuesta completa
+        return { success: true, data: declaracionesData };
       } else {
-        throw new Error(response.message || 'Error desconocido');
+        throw new Error('No se pudo guardar la información de declaraciones de conflicto');
       }
 
     } catch (error) {

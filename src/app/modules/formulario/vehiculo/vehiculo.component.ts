@@ -7,6 +7,7 @@ import { VehiculoService } from '../../../services/vehiculo.service';
 import { UsuarioSessionService } from '../../../services/usuario-session.service';
 import { BackendService } from '../../../services/backend.service';
 import { AuthService } from '../../../services/auth.service';
+import { AutoSaveService } from '../../../services/auto-save.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -32,7 +33,8 @@ export class VehiculoComponent implements OnInit {
     private usuarioSessionService: UsuarioSessionService,
     private backendService: BackendService,
     private authService: AuthService,
-    private formDataService: FormDataService
+    private formDataService: FormDataService,
+    private autoSaveService: AutoSaveService
   ) {
     this.generateYears();
   }
@@ -51,6 +53,9 @@ export class VehiculoComponent implements OnInit {
       cuota_mensual: [{ value: '', disabled: true }],
       prop_vehiculo: [{ value: '', disabled: true }] // Agregado campo propietario
     });
+
+    // Establecer el paso actual en el servicio de auto-guardado
+    this.autoSaveService.setCurrentStep('vehiculo');
 
     this.vehicleForm.get('vehiculo')?.valueChanges.subscribe(value => {
       this.toggleVehicleFields(value);
@@ -281,106 +286,47 @@ export class VehiculoComponent implements OnInit {
   }
 
   async validateAndNext(): Promise<void> {
-    console.log('🚀 Iniciando validateAndNext...');
-    console.log('📋 Vehículos en memoria:', this.vehiculos);
-    
-    const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-    console.log('👤 ID Usuario actual:', idUsuario);
-    
-    if (!idUsuario) {
-      this.notificationService.showError(
-        '❌ Error',
-        'No hay usuario en sesión. Por favor vuelva al paso anterior.'
-      );
-      return;
-    }
-
-    this.isLoading = true;
-    
     try {
-      console.log('🚗 Guardando vehículos en base de datos...');
-      console.log('📊 Cantidad de vehículos a guardar:', this.vehiculos.length);
+      this.isLoading = true;
+
+      // Preparar datos para el auto-guardado
+      const vehicleData = {
+        tieneVehiculos: this.vehicleForm.get('vehiculo')?.value === '2',
+        vehiculos: this.vehiculos.map(vehiculo => ({
+          tipoVehiculo: vehiculo.tipo_vehiculo,
+          marca: vehiculo.marca,
+          modelo: vehiculo.modelo,
+          placa: vehiculo.placa,
+          anio: vehiculo.anio,
+          propietario: vehiculo.propietario
+        }))
+      };
+
+      // Usar el servicio de auto-guardado para guardar con detección de cambios
+      const success = await this.autoSaveService.saveStepData('vehiculo', vehicleData);
       
-      if (this.vehiculos.length === 0) {
-        console.log('ℹ️ No hay vehículos para guardar, continuando...');
+      if (success) {
+        this.notificationService.showSuccess(
+          '✅ Éxito', 
+          'Información de vehículos guardada exitosamente'
+        );
+        
         // Guardar en el estado del formulario
         this.formStateService.setVehiculos(this.vehiculos);
         
-        this.notificationService.showSuccess(
-          '✅ Éxito',
-          'Información de vehículos guardada (sin vehículos)'
-        );
-        
         // Navegar al siguiente paso
         this.formNavigationService.next();
-        return;
-      }
-      
-      // Preparar datos de vehículos - CORREGIDO para coincidir con la tabla VEHICULO
-      const vehiculosData = this.vehiculos.map(vehiculo => ({
-        tipoVehiculo: vehiculo.tipo_vehiculo,
-        marca: vehiculo.marca,
-        placa: vehiculo.placa,
-        ano: vehiculo.anio, // Cambiar de 'anio' a 'ano' para coincidir con el backend
-        propietario: vehiculo.propietario
-      }));
-
-      console.log('📤 Datos de vehículos a guardar:', vehiculosData);
-      console.log('🔗 URL del endpoint:', `${this.backendService.getApiUrl()}/formulario/vehiculos/guardar?idUsuario=${idUsuario}`);
-
-      // Guardar en el backend usando el endpoint correcto
-      const response = await firstValueFrom(
-        this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
-          `${this.backendService.getApiUrl()}/formulario/vehiculos/guardar?idUsuario=${idUsuario}`, 
-          vehiculosData,
-          this.backendService.getHttpOptions()
-        ).pipe(
-          map((res: any) => {
-            console.log('📥 Respuesta del backend:', res);
-            return res;
-          }),
-          catchError((error) => {
-            console.error('❌ Error en backend:', error);
-            throw error;
-          })
-        )
-      );
-      
-      console.log('✅ Vehículos guardados exitosamente:', response);
-      
-      if (response.success) {
-        console.log('✅ Respuesta exitosa, guardando en estado del formulario...');
-        // Guardar en el estado del formulario también
-        this.formStateService.setVehiculos(this.vehiculos);
-        
-        this.notificationService.showSuccess(
-          '✅ Éxito',
-          'Vehículos guardados exitosamente en la base de datos'
-        );
-        
-        console.log('🔄 Navegando al siguiente paso...');
-        // Navegar al siguiente paso
-        this.formNavigationService.next();
-        console.log('✅ Navegación completada');
       } else {
-        console.log('❌ Respuesta no exitosa:', response);
-        throw new Error(response.message || 'Error desconocido');
+        throw new Error('No se pudo guardar la información de vehículos');
       }
 
     } catch (error) {
-      console.error('❌ Error al guardar vehículos:', error);
-      console.error('🔍 Detalles del error:', {
-        message: (error as Error).message,
-        stack: (error as Error).stack,
-        error: error
-      });
-      
+      console.error('Error al validar vehículos:', error);
       this.notificationService.showError(
         '❌ Error',
         'No se pudieron guardar los vehículos: ' + (error as Error).message
       );
     } finally {
-      console.log('🏁 Finalizando validateAndNext, isLoading:', this.isLoading);
       this.isLoading = false;
     }
   }

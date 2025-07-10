@@ -9,6 +9,7 @@ import { UsuarioSessionService } from '../../../services/usuario-session.service
 import { BackendService } from '../../../services/backend.service';
 import { AuthService } from '../../../services/auth.service';
 import { FormDataService } from '../../../services/form-data.service';
+import { AutoSaveService } from '../../../services/auto-save.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -32,7 +33,8 @@ export class AcademicoComponent implements OnInit {
     private usuarioSessionService: UsuarioSessionService,
     private backendService: BackendService,
     private authService: AuthService,
-    private formDataService: FormDataService
+    private formDataService: FormDataService,
+    private autoSaveService: AutoSaveService
   ) {
     this.generateYears();
   }
@@ -52,6 +54,9 @@ export class AcademicoComponent implements OnInit {
       graduado: [{ value: '', disabled: true }],
       fecha_grado: [{ value: '', disabled: true }]
     });
+
+    // Establecer el paso actual en el servicio de auto-guardado
+    this.autoSaveService.setCurrentStep('academico');
 
     this.academicoForm.get('academico')?.valueChanges.subscribe(value => {
       this.toggleAcademicoFields(value);
@@ -249,7 +254,7 @@ export class AcademicoComponent implements OnInit {
         // Intentar convertir a número para validar que sea un semestre válido
         const semestreNum = parseInt(semestreValue);
         if (!isNaN(semestreNum)) {
-          semestre = semestreValue; // Guardar como string pero con valor numérico
+          semestre = semestreNum; // Guardar como número para el backend
         }
       }
     }
@@ -320,70 +325,36 @@ export class AcademicoComponent implements OnInit {
     try {
       this.isLoading = true;
 
-      // Obtener el ID del usuario actual
-      const usuarioId = this.formDataService.getCurrentUserIdValue();
-      
-      if (!usuarioId) {
-        throw new Error('No hay usuario activo. Complete primero la información personal.');
-      }
-
-      console.log('🎓 Procesando estudios académicos para usuario ID:', usuarioId);
-
-      // Si el usuario tiene estudios (opción "2"), validar que haya agregado al menos uno
-      if (this.academicoForm.get('academico')?.value === '2') {
-        if (this.estudios.length === 0) {
-          this.notificationService.showWarning(
-            '⚠️ Sin estudios agregados',
-            'Por favor, agrega al menos un estudio académico antes de continuar'
-          );
-          return;
-        }
-
-        // Guardar estudios en el backend usando el endpoint correcto
-        console.log('💾 Guardando estudios académicos en el backend...');
-        
-        // Preparar datos para el backend
-        const estudiosData = this.estudios.map(estudio => ({
-          nivelAcademico: estudio.nivelEducativo,
-          programa: estudio.titulo,
+      // Preparar datos para el auto-guardado
+      const academicData = {
+        tieneEstudios: this.academicoForm.get('academico')?.value === '2',
+        estudios: this.estudios.map(estudio => ({
+          nivelEducativo: estudio.nivelEducativo,
+          titulo: estudio.titulo,
           institucion: estudio.institucion,
-          semestre: estudio.semestre && estudio.semestre !== 'Graduado' ? parseInt(estudio.semestre) : null,
-          graduacion: estudio.graduado ? 'Graduado' : (estudio.enCurso ? 'En Curso' : 'No Graduado')
-        }));
+          semestre: estudio.semestre,
+          graduado: estudio.graduado,
+          enCurso: estudio.enCurso
+        }))
+      };
 
-        // Guardar usando el endpoint correcto con idUsuario
-        await firstValueFrom(
-          this.backendService.getHttpClient().post<any>(
-            `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${usuarioId}`,
-            estudiosData,
-            this.backendService.getHttpOptions()
-          )
-        );
-        
-        console.log('✅ Estudios académicos guardados en BD');
-        
+      // Usar el servicio de auto-guardado para guardar con detección de cambios
+      const success = await this.autoSaveService.saveStepData('academico', academicData);
+      
+      if (success) {
         this.notificationService.showSuccess(
-          '✅ Información académica guardada',
-          `Se registraron ${this.estudios.length} estudio(s) académico(s) en la base de datos`
-        );
-      } else {
-        // Usuario no tiene estudios - guardar lista vacía
-        await firstValueFrom(
-          this.backendService.getHttpClient().post<any>(
-            `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${usuarioId}`,
-            [],
-            this.backendService.getHttpOptions()
-          )
+          '✅ Éxito', 
+          'Información académica guardada exitosamente'
         );
         
-        this.notificationService.showInfo(
-          'ℹ️ Sin estudios académicos',
-          'Se registró que no tienes estudios académicos actualmente'
-        );
+        // Guardar en el estado del formulario
+        this.formStateService.setEstudiosAcademicos(this.estudios);
+        
+        // Continuar al siguiente paso
+        this.formNavigationService.next();
+      } else {
+        throw new Error('No se pudo guardar la información académica');
       }
-
-      // Continuar al siguiente paso
-      this.formNavigationService.next();
 
     } catch (error) {
       console.error('Error al validar estudios:', error);

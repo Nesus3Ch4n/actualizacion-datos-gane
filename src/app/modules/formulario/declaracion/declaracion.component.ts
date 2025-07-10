@@ -10,6 +10,7 @@ import { NotificationService } from '../../../services/notification.service';
 import { FormNavigationService } from '../../../services/form-navigation.service';
 import { DeclaracionConflictoService } from '../../../services/declaracion-conflicto.service';
 import { UsuarioSessionService } from '../../../services/usuario-session.service';
+import { AutoSaveService } from '../../../services/auto-save.service';
 
 interface PersonaConflicto {
   nombre: string;
@@ -38,7 +39,8 @@ export class DeclaracionComponent implements OnInit {
     private notificationService: NotificationService,
     private formNavigationService: FormNavigationService,
     private declaracionConflictoService: DeclaracionConflictoService,
-    private usuarioSessionService: UsuarioSessionService
+    private usuarioSessionService: UsuarioSessionService,
+    private autoSaveService: AutoSaveService
   ) {}
 
   ngOnInit(): void {
@@ -48,6 +50,9 @@ export class DeclaracionComponent implements OnInit {
       dconf_parentesco: [{ value: '', disabled: true }],
       dconf_parte: [{ value: '', disabled: true }]
     });
+
+    // Establecer el paso actual en el servicio de auto-guardado
+    this.autoSaveService.setCurrentStep('declaracion');
 
     // Escuchar cambios en la opción principal
     this.conflictForm.get('opcion_conflicto')?.valueChanges.subscribe(value => {
@@ -225,77 +230,44 @@ export class DeclaracionComponent implements OnInit {
     try {
       this.isLoading = true;
 
-      console.log('🚀 Iniciando envío de declaraciones de conflicto...');
+      // Preparar datos para el auto-guardado
+      const declaracionesData = {
+        tieneConflicto: this.conflictForm.get('opcion_conflicto')?.value === '1',
+        personas: this.personasConflicto.map(persona => ({
+          nombre: persona.nombre,
+          parentesco: persona.parentesco,
+          tipoParteInteresada: persona.tipoParteInteresada
+        }))
+      };
 
-      // Obtener el ID del usuario actual
-      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-      if (!idUsuario) {
-        throw new Error('No hay usuario activo. Complete primero la información personal.');
-      }
-
-      console.log('👤 Usuario ID:', idUsuario);
-
-      // Verificar si ya existen declaraciones de conflicto para este usuario
-      const declaracionesExistentes = await this.declaracionConflictoService.obtenerDeclaracionesPorUsuario(idUsuario);
-      const tieneDeclaracionesExistentes = declaracionesExistentes && declaracionesExistentes.length > 0;
-
-      // Guardar solo las declaraciones de conflicto si las hay
-      if (this.conflictForm.get('opcion_conflicto')?.value === '1' && this.personasConflicto.length > 0) {
-        console.log('📝 Guardando declaraciones de conflicto...');
-        
-        // Guardar declaraciones de conflicto en la base de datos
-        const resultado = await this.declaracionConflictoService.guardarDeclaracionesConflicto(idUsuario, this.personasConflicto);
-        
-        if (resultado && resultado.success) {
-          // Mostrar mensaje apropiado según si existían datos previos
-          if (tieneDeclaracionesExistentes) {
-            this.notificationService.showSuccess(
-              '✅ Declaraciones actualizadas',
-              'Las declaraciones de conflicto han sido actualizadas correctamente en la base de datos'
-            );
-          } else {
-          this.notificationService.showSuccess(
-            '✅ Declaraciones guardadas',
-            'Las declaraciones de conflicto han sido guardadas correctamente en la base de datos'
-          );
-          }
-        } else {
-          throw new Error('Error al guardar declaraciones de conflicto');
-        }
-      } else {
-        console.log('ℹ️ No hay declaraciones de conflicto para guardar');
-        
-        // Si no hay declaraciones pero existían antes, limpiar la base de datos
-        if (tieneDeclaracionesExistentes) {
-          await this.declaracionConflictoService.guardarDeclaracionesConflicto(idUsuario, []);
-          this.notificationService.showInfo(
-            'ℹ️ Datos actualizados',
-            'Se actualizó el registro indicando que no tienes declaraciones de conflicto'
-          );
-        } else {
-        this.notificationService.showInfo(
-          'ℹ️ Sin declaraciones',
-          'No se encontraron declaraciones de conflicto para guardar'
-        );
-        }
-      }
-
-      // Si estamos en modo conflict-only, resetear el modo
-      if (this.navigationModeService.isConflictOnlyMode()) {
-        this.navigationModeService.resetToCompleteMode();
-      }
-
-      console.log('✅ Proceso completado exitosamente');
+      // Usar el servicio de auto-guardado para guardar con detección de cambios
+      const success = await this.autoSaveService.saveStepData('declaracion', declaracionesData);
       
-      // Navegar a página de confirmación
-      this.router.navigate(['/completado']);
+      if (success) {
+        this.notificationService.showSuccess(
+          '✅ Éxito', 
+          'Información de declaraciones de conflicto guardada exitosamente'
+        );
+        
+        // Guardar en el estado del formulario
+        this.formStateService.setDeclaraciones(this.personasConflicto);
+        
+        // Si estamos en modo conflict-only, resetear el modo
+        if (this.navigationModeService.isConflictOnlyMode()) {
+          this.navigationModeService.resetToCompleteMode();
+        }
+
+        // Navegar a página de confirmación
+        this.router.navigate(['/completado']);
+      } else {
+        throw new Error('No se pudo guardar la información de declaraciones de conflicto');
+      }
 
     } catch (error) {
-      console.error('❌ Error al enviar declaraciones:', error);
-      
+      console.error('Error al enviar declaraciones:', error);
       this.notificationService.showError(
         '❌ Error al guardar',
-        'No se pudieron guardar las declaraciones de conflicto. Verifica tu conexión e intenta de nuevo.'
+        'No se pudieron guardar las declaraciones de conflicto: ' + (error as Error).message
       );
     } finally {
       this.isLoading = false;

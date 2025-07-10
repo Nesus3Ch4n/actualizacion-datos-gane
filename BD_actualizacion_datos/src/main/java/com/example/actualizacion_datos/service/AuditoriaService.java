@@ -78,10 +78,20 @@ public class AuditoriaService {
     }
     
     /**
+     * Obtener auditorías recientes (últimas 50 ordenadas por fecha)
+     */
+    public List<AuditoriaDTO> obtenerAuditoriasRecientes() {
+        return auditoriaRepository.findAllByOrderByFechaModificacionDesc().stream()
+                .limit(50)
+                .map(this::convertirADTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
      * Obtener todas las auditorías
      */
     public List<AuditoriaDTO> obtenerTodasAuditorias() {
-        return auditoriaRepository.findAll().stream()
+        return auditoriaRepository.findAllByOrderByFechaModificacionDesc().stream()
                 .map(this::convertirADTO)
                 .collect(Collectors.toList());
     }

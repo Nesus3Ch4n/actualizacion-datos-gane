@@ -12,6 +12,9 @@ import java.util.List;
 @Repository
 public interface AuditoriaRepository extends JpaRepository<Auditoria, Long> {
     
+    // Obtener todas las auditorías ordenadas por fecha descendente
+    List<Auditoria> findAllByOrderByFechaModificacionDesc();
+    
     // Buscar auditoría por ID de usuario
     List<Auditoria> findByIdUsuarioOrderByFechaModificacionDesc(Long idUsuario);
     

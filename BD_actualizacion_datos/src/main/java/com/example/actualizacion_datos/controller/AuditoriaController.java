@@ -151,11 +151,7 @@ public class AuditoriaController {
      */
     @GetMapping("/recientes")
     public ResponseEntity<List<AuditoriaDTO>> obtenerAuditoriasRecientes() {
-        List<AuditoriaDTO> auditorias = auditoriaService.obtenerTodasAuditorias();
-        // Limitar a las últimas 50 auditorías
-        if (auditorias.size() > 50) {
-            auditorias = auditorias.subList(0, 50);
-        }
+        List<AuditoriaDTO> auditorias = auditoriaService.obtenerAuditoriasRecientes();
         return ResponseEntity.ok(auditorias);
     }
 } 

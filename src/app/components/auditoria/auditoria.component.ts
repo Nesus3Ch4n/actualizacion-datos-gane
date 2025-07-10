@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { AuditoriaService, AuditoriaDTO, FiltroAuditoria } from '../../services/auditoria.service';
 import { NotificationService } from '../../services/notification.service';
+import { MatDialog } from '@angular/material/dialog';
+import { AuditoriaDetalleModalComponent } from './auditoria-detalle-modal.component';
 
 @Component({
   selector: 'app-auditoria',
@@ -31,7 +33,8 @@ export class AuditoriaComponent implements OnInit {
   constructor(
     private auditoriaService: AuditoriaService,
     private notificationService: NotificationService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private dialog: MatDialog
   ) {
     this.filtroForm = this.fb.group({
       idUsuario: [''],
@@ -44,7 +47,7 @@ export class AuditoriaComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarOpcionesFiltros();
-    this.cargarAuditoriasRecientes();
+    this.cargarTodasAuditorias();
   }
 
   cargarOpcionesFiltros(): void {
@@ -186,30 +189,14 @@ export class AuditoriaComponent implements OnInit {
   verDetalles(auditoria: AuditoriaDTO): void {
     console.log('🔍 Detalles de auditoría:', auditoria);
     
-    // Crear mensaje con todos los detalles
-    let detalles = `📋 Detalles de Auditoría\n\n`;
-    detalles += `🆔 ID: ${auditoria.id}\n`;
-    detalles += `📊 Tabla: ${this.auditoriaService.obtenerNombreLegibleTabla(auditoria.tablaModificada)}\n`;
-    detalles += `🔢 ID Registro: ${auditoria.idRegistroModificado}\n`;
-    detalles += `👤 Usuario: ${auditoria.usuarioModificador}\n`;
-    detalles += `🆔 ID Usuario: ${auditoria.idUsuario}\n`;
-    detalles += `📅 Fecha: ${this.auditoriaService.formatearFecha(auditoria.fechaModificacion)}\n`;
-    detalles += `🔄 Tipo: ${this.auditoriaService.obtenerNombreLegibleTipoPeticion(auditoria.tipoPeticion)}\n`;
-    detalles += `📝 Descripción: ${auditoria.descripcion}\n`;
-    detalles += `🌐 IP: ${auditoria.ipAddress || 'N/A'}\n`;
-    detalles += `💻 User Agent: ${auditoria.userAgent || 'N/A'}\n`;
-    
-    if (auditoria.campoModificado) {
-      detalles += `\n📝 Campo Modificado: ${auditoria.campoModificado}\n`;
-    }
-    if (auditoria.valorAnterior) {
-      detalles += `📤 Valor Anterior: ${auditoria.valorAnterior}\n`;
-    }
-    if (auditoria.valorNuevo) {
-      detalles += `📥 Valor Nuevo: ${auditoria.valorNuevo}\n`;
-    }
-    
-    // Mostrar en alert o modal
-    alert(detalles);
+    // Abrir modal con los detalles de auditoría
+    this.dialog.open(AuditoriaDetalleModalComponent, {
+      width: '800px',
+      maxWidth: '90vw',
+      maxHeight: '90vh',
+      data: auditoria,
+      disableClose: false,
+      autoFocus: false
+    });
   }
 } 

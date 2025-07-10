@@ -1,0 +1,11 @@
+{
+  "tipoVivienda": "Casa",
+  "direccion": "Calle 123 #45-67",
+  "barrio": "Centro",
+  "ciudad": "Cali",
+  "vivienda": "Casa",
+  "infoAdicional": "Casa de 2 pisos",
+  "entidad": "Banco ABC",
+  "ano": 2020,
+  "tipoAdquisicion": "Compra"
+} 

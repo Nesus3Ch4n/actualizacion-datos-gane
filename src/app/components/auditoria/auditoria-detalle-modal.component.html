@@ -1,0 +1,213 @@
+<div class="modal-container">
+  <h2 mat-dialog-title class="modal-title">
+    <mat-icon class="title-icon">history</mat-icon>
+    Detalle Completo de Auditoría
+  </h2>
+  
+  <mat-dialog-content class="modal-content">
+    <mat-tab-group class="custom-tab-group">
+      <!-- Tab Información General -->
+      <mat-tab label="Información General" class="custom-tab">
+        <div class="tab-content">
+          <div class="info-section">
+            <h3 class="section-title">
+              <mat-icon>info</mat-icon>
+              Datos de la Auditoría
+            </h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">ID de Auditoría:</span>
+                <span class="value">{{data.id || 'N/A'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Tabla Modificada:</span>
+                <span class="value">{{obtenerNombreLegibleTabla(data.tablaModificada)}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">ID Registro Modificado:</span>
+                <span class="value">{{data.idRegistroModificado || 'N/A'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Tipo de Petición:</span>
+                <span class="value">
+                  <span class="badge" [ngClass]="obtenerClaseTipoPeticion(data.tipoPeticion)">
+                    {{obtenerNombreLegibleTipoPeticion(data.tipoPeticion)}}
+                  </span>
+                </span>
+              </div>
+              <div class="info-item">
+                <span class="label">Usuario Modificador:</span>
+                <span class="value">{{data.usuarioModificador || 'Sistema'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">ID Usuario:</span>
+                <span class="value">{{data.idUsuario || 'N/A'}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Fecha de Modificación:</span>
+                <span class="value">{{formatearFecha(data.fechaModificacion)}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Descripción:</span>
+                <span class="value">{{data.descripcion || 'Sin descripción'}}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section" *ngIf="data.ipAddress || data.userAgent">
+            <h3 class="section-title">
+              <mat-icon>computer</mat-icon>
+              Información Técnica
+            </h3>
+            <div class="info-grid">
+              <div class="info-item" *ngIf="data.ipAddress">
+                <span class="label">Dirección IP:</span>
+                <span class="value">{{data.ipAddress}}</span>
+              </div>
+              <div class="info-item" *ngIf="data.userAgent">
+                <span class="label">User Agent:</span>
+                <span class="value">{{data.userAgent}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Detalles de Cambios -->
+      <mat-tab label="Detalles de Cambios" class="custom-tab" *ngIf="data.campoModificado || data.valorAnterior || data.valorNuevo">
+        <div class="tab-content">
+          <div class="info-section">
+            <h3 class="section-title">
+              <mat-icon>edit</mat-icon>
+              Cambios Realizados
+            </h3>
+            
+            <div class="item-block" *ngIf="data.campoModificado">
+              <h4 class="item-title">
+                <mat-icon>field</mat-icon>
+                Campo Modificado
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Campo:</span>
+                  <span class="value">{{data.campoModificado}}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-block" *ngIf="data.valorAnterior">
+              <h4 class="item-title">
+                <mat-icon>arrow_back</mat-icon>
+                Valor Anterior
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Valor:</span>
+                  <span class="value old-value">{{data.valorAnterior}}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-block" *ngIf="data.valorNuevo">
+              <h4 class="item-title">
+                <mat-icon>arrow_forward</mat-icon>
+                Valor Nuevo
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Valor:</span>
+                  <span class="value new-value">{{data.valorNuevo}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Resumen -->
+      <mat-tab label="Resumen" class="custom-tab">
+        <div class="tab-content">
+          <div class="info-section">
+            <h3 class="section-title">
+              <mat-icon>summarize</mat-icon>
+              Resumen de la Auditoría
+            </h3>
+            
+            <div class="item-block">
+              <h4 class="item-title">
+                <mat-icon>event</mat-icon>
+                Información Temporal
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Fecha y Hora:</span>
+                  <span class="value">{{formatearFecha(data.fechaModificacion)}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Operación:</span>
+                  <span class="value">
+                    <span class="badge" [ngClass]="obtenerClaseTipoPeticion(data.tipoPeticion)">
+                      {{obtenerNombreLegibleTipoPeticion(data.tipoPeticion)}}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-block">
+              <h4 class="item-title">
+                <mat-icon>person</mat-icon>
+                Información del Usuario
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Usuario que Realizó:</span>
+                  <span class="value">{{data.usuarioModificador || 'Sistema'}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">ID Usuario Afectado:</span>
+                  <span class="value">{{data.idUsuario || 'N/A'}}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-block">
+              <h4 class="item-title">
+                <mat-icon>table_chart</mat-icon>
+                Información de la Tabla
+              </h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Tabla Afectada:</span>
+                  <span class="value">{{obtenerNombreLegibleTabla(data.tablaModificada)}}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">ID Registro:</span>
+                  <span class="value">{{data.idRegistroModificado || 'N/A'}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tab Sin Cambios -->
+      <mat-tab label="Sin Cambios" class="custom-tab" *ngIf="!data.campoModificado && !data.valorAnterior && !data.valorNuevo">
+        <div class="tab-content">
+          <div class="no-data">
+            <mat-icon>info</mat-icon>
+            <p>Esta auditoría no registra cambios específicos de campos.</p>
+            <p>Puede ser una creación o eliminación completa.</p>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="modal-actions">
+    <button mat-button class="close-button" (click)="close()">
+      <mat-icon>close</mat-icon>
+      Cerrar
+    </button>
+  </mat-dialog-actions>
+</div> 

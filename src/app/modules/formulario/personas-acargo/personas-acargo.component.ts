@@ -6,6 +6,7 @@ import { NotificationService } from '../../../services/notification.service';
 import { FormNavigationService } from '../../../services/form-navigation.service';
 import { PersonaACargoService } from '../../../services/persona-acargo.service';
 import { UsuarioSessionService } from '../../../services/usuario-session.service';
+import { AutoSaveService } from '../../../services/auto-save.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -47,6 +48,7 @@ export class PersonasAcargoComponent implements OnInit {
     private backendService: BackendService,
     private authService: AuthService,
     private formDataService: FormDataService,
+    private autoSaveService: AutoSaveService,
     private datePipe: DatePipe
   ) {
     this.generateYears();
@@ -65,6 +67,9 @@ export class PersonasAcargoComponent implements OnInit {
       edad: [{ value: '', disabled: true }],
       fecha_nacimiento: [{ value: '', disabled: true }]
     });
+
+    // Establecer el paso actual en el servicio de auto-guardado
+    this.autoSaveService.setCurrentStep('personas-acargo');
 
     this.personasACargoForm.get('persona_acargo')?.valueChanges.subscribe(value => {
       this.togglePersonalFields(value);
@@ -297,99 +302,34 @@ export class PersonasAcargoComponent implements OnInit {
     try {
       this.isLoading = true;
 
-      // Obtener ID del usuario actual
-      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-      
-      if (!idUsuario) {
-        // Intentar recuperar de userSessionService como fallback
-        const idFallback = this.usuarioSessionService.getIdUsuarioActual(); // Assuming getIdUsuarioActual is the correct fallback
-        
-        if (idFallback) {
-          console.log('⚠️ Usando ID del userSessionService como fallback:', idFallback);
-          // Intentar reconstruir la sesión del userSessionService
-          const usuarioMinimo = { id: idFallback };
-          this.usuarioSessionService.setUsuarioActual(usuarioMinimo);
-          
-          throw new Error(`Sesión incompleta detectada. Se usó el ID ${idFallback} como fallback. Complete primero la información personal si persiste el problema.`);
-        } else {
-        throw new Error('No hay usuario activo. Complete primero la información personal.');
-        }
-      }
-
-      console.log('👤 Procesando personas a cargo para usuario ID:', idUsuario);
-
-      // Obtener la cédula del usuario actual
-      const usuarioActual = this.usuarioSessionService.getUsuarioActual();
-      const cedula = usuarioActual?.cedula || idUsuario; // Usar cédula si está disponible, sino usar ID
-
-      // Verificar si ya existen personas a cargo para este usuario
-      const personasExistentes = await firstValueFrom(
-        this.personaACargoService.obtenerPersonasPorIdUsuario(idUsuario)
-      );
-      
-      const tienePersonasExistentes = personasExistentes && personasExistentes.length > 0;
-
-      // Si el usuario tiene personas a cargo (opción "2"), validar que haya agregado al menos una
-      if (this.personasACargoForm.get('persona_acargo')?.value === '2') {
-        if (this.personas.length === 0) {
-          this.notificationService.showWarning(
-            '⚠️ Sin personas agregadas',
-            'Por favor, agrega al menos una persona a cargo antes de continuar'
-          );
-          return;
-        }
-
-        // Guardar personas a cargo en el backend usando el servicio
-        console.log('💾 Guardando personas a cargo en el backend...');
-        
-        // Preparar datos para el backend
-        const personasData = this.personas.map(persona => ({
+      // Preparar datos para el auto-guardado
+      const personasData = {
+        tienePersonasACargo: this.personasACargoForm.get('persona_acargo')?.value === '2',
+        personas: this.personas.map(persona => ({
           nombre: persona.nombre,
           parentesco: persona.parentesco,
           fechaNacimiento: persona.fechaNacimiento,
           edad: persona.edad
-        }));
+        }))
+      };
 
-        // Guardar usando el servicio
-        const resultado = await firstValueFrom(
-          this.personaACargoService.guardarPersonasACargo(idUsuario, personasData)
+      // Usar el servicio de auto-guardado para guardar con detección de cambios
+      const success = await this.autoSaveService.saveStepData('personas-acargo', personasData);
+      
+      if (success) {
+        this.notificationService.showSuccess(
+          '✅ Éxito', 
+          'Información de personas a cargo guardada exitosamente'
         );
         
-        console.log('✅ Personas a cargo guardadas en BD:', resultado);
+        // Guardar en el estado del formulario
+        this.formStateService.setPersonasACargo(this.personas);
         
-        // Mostrar mensaje apropiado según si existían datos previos
-        if (tienePersonasExistentes) {
-          this.notificationService.showSuccess(
-            '✅ Personas a cargo actualizadas',
-            `Se actualizaron ${this.personas.length} persona(s) a cargo en la base de datos`
-          );
-        } else {
-          this.notificationService.showSuccess(
-            '✅ Personas a cargo guardadas',
-            `Se registraron ${this.personas.length} persona(s) a cargo en la base de datos`
-          );
-        }
+        // Navegar al siguiente paso
+        this.formNavigationService.next();
       } else {
-        // Usuario no tiene personas a cargo - guardar lista vacía
-        await firstValueFrom(
-          this.personaACargoService.guardarPersonasACargo(idUsuario, [])
-        );
-        
-        if (tienePersonasExistentes) {
-          this.notificationService.showInfo(
-            'ℹ️ Datos actualizados',
-            'Se actualizó el registro indicando que no tienes personas a cargo'
-          );
-        } else {
-          this.notificationService.showInfo(
-            'ℹ️ Sin personas a cargo',
-            'Se registró que no tienes personas a cargo'
-          );
-        }
+        throw new Error('No se pudo guardar la información de personas a cargo');
       }
-
-      // Continuar al siguiente paso
-      this.formNavigationService.next();
 
     } catch (error) {
       console.error('Error al validar personas a cargo:', error);

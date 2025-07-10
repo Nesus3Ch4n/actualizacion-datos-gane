@@ -5,6 +5,7 @@ import { NotificationService } from '../../../services/notification.service';
 import { FormNavigationService } from '../../../services/form-navigation.service';
 import { ContactoEmergenciaService } from '../../../services/contacto-emergencia.service';
 import { UsuarioSessionService } from '../../../services/usuario-session.service';
+import { AutoSaveService } from '../../../services/auto-save.service';
 import { firstValueFrom } from 'rxjs';
 import { FormDataService } from '../../../services/form-data.service'; // Added import
 
@@ -43,7 +44,8 @@ export class ContactoComponent implements OnInit {
     private formNavigationService: FormNavigationService,
     private contactoEmergenciaService: ContactoEmergenciaService,
     private usuarioSessionService: UsuarioSessionService,
-    private formDataService: FormDataService // Added injection
+    private formDataService: FormDataService, // Added injection
+    private autoSaveService: AutoSaveService
   ) {}
 
   ngOnInit(): void {
@@ -52,6 +54,9 @@ export class ContactoComponent implements OnInit {
       parentesco: ['', Validators.required],
       telefono: ['', Validators.required]
     });
+
+    // Establecer el paso actual en el servicio de auto-guardado
+    this.autoSaveService.setCurrentStep('contacto');
 
     // Cargar datos guardados si existen
     this.loadFormState();
@@ -199,60 +204,41 @@ export class ContactoComponent implements OnInit {
       return;
     }
 
-    this.isLoading = true;
-    
     try {
-      console.log('📋 Validando y guardando contactos de emergencia...');
-      
-      // Obtener ID del usuario actual
-      const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-      if (!idUsuario) {
-        throw new Error('No hay usuario activo. Complete primero la información personal.');
-      }
+      this.isLoading = true;
 
-      console.log('👤 Usuario ID para guardar contactos:', idUsuario);
+      // Preparar datos para el auto-guardado
+      const contactosData = {
+        contactos: this.contactos.map(contacto => ({
+          nombre: contacto.nombre,
+          parentesco: contacto.parentesco,
+          telefono: contacto.telefono
+        }))
+      };
+
+      // Usar el servicio de auto-guardado para guardar con detección de cambios
+      const success = await this.autoSaveService.saveStepData('contacto', contactosData);
       
-      // Verificar si ya existen contactos de emergencia para este usuario
-      const contactosExistentes = await this.contactoEmergenciaService.obtenerContactosPorUsuario(idUsuario);
-      const tieneContactosExistentes = contactosExistentes && contactosExistentes.length > 0;
-      
-      // Guardar contactos de emergencia en el backend usando el servicio
-      const resultado = await this.contactoEmergenciaService.guardarContactosEmergencia(idUsuario, this.contactos);
-      
-      console.log('✅ Contactos de emergencia guardados en BD:', resultado);
-      
-      // Verificar que se guardaron correctamente
-      if (resultado && resultado.success) {
-        // Mostrar mensaje apropiado según si existían datos previos
-        if (tieneContactosExistentes) {
-          this.notificationService.showSuccess(
-            '✅ Contactos de emergencia actualizados',
-            `Se actualizaron ${this.contactos.length} contactos de emergencia en la base de datos`
-          );
-        } else {
+      if (success) {
         this.notificationService.showSuccess(
-          '✅ Contactos de emergencia guardados',
-          `Se registraron ${this.contactos.length} contactos de emergencia en la base de datos`
+          '✅ Éxito', 
+          'Información de contactos de emergencia guardada exitosamente'
         );
-        }
         
-        // Continuar al siguiente paso
+        // Guardar en el estado del formulario
+        this.formStateService.setContactosEmergencia(this.contactos);
+        
+        // Navegar al siguiente paso
         this.formNavigationService.next();
       } else {
-        throw new Error('El backend no confirmó el guardado de los contactos');
+        throw new Error('No se pudo guardar la información de contactos de emergencia');
       }
-      
+
     } catch (error) {
-      console.error('❌ Error en validateAndNext:', error);
-      
-      let errorMessage = 'Error al guardar los contactos de emergencia';
-      if (error instanceof Error) {
-        errorMessage += ': ' + error.message;
-      }
-      
+      console.error('Error al validar contactos:', error);
       this.notificationService.showError(
-        '❌ Error', 
-        errorMessage
+        '❌ Error',
+        'No se pudieron guardar los contactos de emergencia: ' + (error as Error).message
       );
     } finally {
       this.isLoading = false;

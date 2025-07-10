@@ -5,6 +5,7 @@ import { BackendService } from './backend.service';
 import { NotificationService } from './notification.service';
 import { FormStateService, FormularioCompleto } from './form-state.service';
 import { AuthService } from './auth.service';
+import { ValidationService } from './validation.service';
 
 @Injectable({
   providedIn: 'root'
@@ -16,21 +17,36 @@ export class FormDataService {
     private backendService: BackendService,
     private notificationService: NotificationService,
     private formStateService: FormStateService,
-    private authService: AuthService
+    private authService: AuthService,
+    private validationService: ValidationService
   ) {}
 
   // ========== MÉTODO PRINCIPAL - GUARDAR FORMULARIO COMPLETO ==========
   
   /**
-   * Guardar formulario completo (paso a paso)
+   * Guardar formulario completo con validación mejorada
    */
   async guardarFormularioCompleto(formulario: any): Promise<boolean> {
     try {
-      console.log('📝 Iniciando guardado de formulario completo...');
+      console.log('📝 Iniciando guardado de formulario completo con validación...');
       console.log('📋 Formulario obtenido:', formulario);
 
-      // Paso 1: Verificar si el usuario existe y obtener su ID
-      console.log('👤 Paso 1: Verificando usuario existente...');
+      // Paso 1: Validación completa antes de proceder
+      console.log('🔍 Paso 1: Validación completa del formulario...');
+      const validationResult = await firstValueFrom(
+        this.validationService.validateCompleteForm(formulario)
+      );
+
+      if (!validationResult.isValid) {
+        console.log('❌ Validación falló:', validationResult.message);
+        this.notificationService.showError('Error de Validación', validationResult.message);
+        return false;
+      }
+
+      console.log('✅ Validación exitosa, procediendo con el guardado...');
+
+      // Paso 2: Verificar si el usuario existe y obtener su ID
+      console.log('👤 Paso 2: Verificando usuario existente...');
       const usuarioExistente = await this.verificarUsuarioExistente(formulario.informacionPersonal.cedula);
       
       if (usuarioExistente) {
@@ -46,16 +62,32 @@ export class FormDataService {
       }
     } catch (error) {
       console.error('❌ Error al guardar formulario completo:', error);
+      this.notificationService.showError('Error de Guardado', 'Error al guardar el formulario. Por favor, intenta nuevamente.');
       return false;
     }
   }
 
   /**
-   * Actualizar usuario existente
+   * Actualizar usuario existente con validación de auditoría
    */
   private async actualizarUsuarioExistente(usuarioId: number, formulario: any): Promise<boolean> {
     try {
       console.log('🔄 Actualizando usuario ID:', usuarioId);
+      
+      // Verificar que el usuario esté autenticado antes de actualizar
+      if (!this.authService.isAuthenticated()) {
+        console.log('❌ Usuario no autenticado para actualización');
+        this.notificationService.showError('Error de Autenticación', 'Debes estar autenticado para actualizar datos.');
+        return false;
+      }
+
+      // Verificar que el token esté presente
+      const token = this.authService.getCurrentToken();
+      if (!token) {
+        console.log('❌ No hay token para actualización');
+        this.notificationService.showError('Error de Autenticación', 'Token de autenticación no encontrado.');
+        return false;
+      }
       
       // Preparar datos para actualización
       const datosActualizacion = {
@@ -69,29 +101,40 @@ export class FormDataService {
         informacionCompleta: formulario
       };
 
+      console.log('📤 Enviando actualización con token de autenticación...');
       const resultado = await firstValueFrom(
         this.backendService.actualizarUsuario(usuarioId, datosActualizacion)
       );
 
       if (resultado.success) {
-        console.log('✅ Usuario actualizado exitosamente');
+        console.log('✅ Usuario actualizado exitosamente con auditoría');
+        this.notificationService.showSuccess('Actualización Exitosa', 'Los datos han sido actualizados correctamente.');
         return true;
       } else {
         console.error('❌ Error actualizando usuario:', resultado.error);
+        this.notificationService.showError('Error de Actualización', resultado.error || 'Error al actualizar usuario');
         return false;
       }
     } catch (error) {
       console.error('❌ Error en actualización:', error);
+      this.notificationService.showError('Error de Actualización', 'Error al actualizar los datos. Por favor, intenta nuevamente.');
       return false;
     }
   }
 
   /**
-   * Crear nuevo usuario
+   * Crear nuevo usuario con validación
    */
   private async crearNuevoUsuario(formulario: any): Promise<boolean> {
     try {
       console.log('🆕 Creando nuevo usuario...');
+      
+      // Verificar autenticación antes de crear
+      if (!this.authService.isAuthenticated()) {
+        console.log('❌ Usuario no autenticado para creación');
+        this.notificationService.showError('Error de Autenticación', 'Debes estar autenticado para crear un nuevo usuario.');
+        return false;
+      }
       
       // Preparar los datos del usuario usando el método existente
       const usuarioBasico = this.prepararUsuarioBasico(formulario.informacionPersonal);
@@ -116,13 +159,16 @@ export class FormDataService {
         if (resultado.data?.id) {
           this.setCurrentUserId(resultado.data.id.toString());
         }
+        this.notificationService.showSuccess('Usuario Creado', 'Nuevo usuario creado exitosamente.');
         return true;
       } else {
         console.error('❌ Error creando usuario:', resultado.error || resultado.message);
+        this.notificationService.showError('Error de Creación', resultado.error || resultado.message || 'Error al crear usuario');
         return false;
       }
     } catch (error) {
       console.error('❌ Error en creación:', error);
+      this.notificationService.showError('Error de Creación', 'Error al crear el usuario. Por favor, intenta nuevamente.');
       return false;
     }
   }
@@ -171,6 +217,7 @@ export class FormDataService {
           try {
             const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
             usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
+            console.log('✅ Nuevo usuario creado con ID:', usuarioId);
           } catch (createError: any) {
             console.error('❌ Error creando usuario:', createError);
             // Si es error 400 (usuario ya existe), usar el ID que ya tenemos
@@ -227,7 +274,14 @@ export class FormDataService {
         }
       }
       
+      // Guardar el ID de usuario en sessionStorage para uso posterior
+      console.log('💾 Guardando ID de usuario en sessionStorage:', usuarioId);
+      sessionStorage.setItem('id_usuario', usuarioId);
+      sessionStorage.setItem('cedula', data.cedula);
+      
+      // Actualizar el BehaviorSubject
       this.setCurrentUserId(usuarioId);
+      
       this.notificationService.showSuccess('✅ Éxito', 'Información personal guardada exitosamente');
       
       return usuarioId;
@@ -241,127 +295,67 @@ export class FormDataService {
   /**
    * Guardar estudio académico
    */
-  async guardarEstudioAcademico(estudio: any, usuarioId: string): Promise<void> {
-    try {
-      const estudioData = {
-        ...estudio,
-        usuarioId: Number(usuarioId)
-      };
-      
-      // Usar el endpoint correcto con idUsuario
-      await firstValueFrom(
-        this.backendService.getHttpClient().post<any>(
-          `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${usuarioId}`,
-          [estudioData],
-          this.backendService.getHttpOptions()
-        )
-      );
-      
-      console.log('✅ Estudio académico guardado:', estudio.titulo);
-    } catch (error) {
-      console.error('❌ Error guardando estudio académico:', error);
-      throw error;
-    }
+  async guardarEstudioAcademico(estudio: any): Promise<void> {
+    const usuarioId = sessionStorage.getItem('id_usuario');
+    if (!usuarioId) throw new Error('No hay usuario activo. Complete primero la información personal.');
+    const estudioData = { ...estudio };
+    await firstValueFrom(
+      this.backendService.getHttpClient().post<any>(
+        `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${usuarioId}`,
+        [estudioData],
+        this.backendService.getHttpOptions()
+      )
+    );
   }
 
   /**
    * Guardar vehículo
    */
-  async guardarVehiculo(vehiculo: any, usuarioId: string): Promise<void> {
-    try {
-      const vehiculoData = {
-        ...vehiculo,
-        usuarioId: Number(usuarioId)
-      };
-      
-      // Usar el método correcto del BackendService
-      await firstValueFrom(this.backendService.guardarVehiculos(Number(usuarioId), [vehiculoData]));
-      
-      console.log('✅ Vehículo guardado:', vehiculo.placa);
-    } catch (error) {
-      console.error('❌ Error guardando vehículo:', error);
-      throw error;
-    }
+  async guardarVehiculo(vehiculo: any): Promise<void> {
+    const usuarioId = sessionStorage.getItem('id_usuario');
+    if (!usuarioId) throw new Error('No hay usuario activo. Complete primero la información personal.');
+    const vehiculoData = { ...vehiculo };
+    await firstValueFrom(this.backendService.guardarVehiculos(Number(usuarioId), [vehiculoData]));
   }
 
   /**
    * Guardar vivienda
    */
-  async guardarVivienda(vivienda: any, usuarioId: string): Promise<void> {
-    try {
-      const viviendaData = {
-        ...vivienda,
-        usuarioId: Number(usuarioId)
-      };
-      
-      // Usar el método correcto del BackendService
-      await firstValueFrom(this.backendService.guardarVivienda(Number(usuarioId), viviendaData));
-      
-      console.log('✅ Vivienda guardada:', vivienda.direccion);
-    } catch (error) {
-      console.error('❌ Error guardando vivienda:', error);
-      throw error;
-    }
+  async guardarVivienda(vivienda: any): Promise<void> {
+    const usuarioId = sessionStorage.getItem('id_usuario');
+    if (!usuarioId) throw new Error('No hay usuario activo. Complete primero la información personal.');
+    const viviendaData = { ...vivienda };
+    await firstValueFrom(this.backendService.guardarVivienda(Number(usuarioId), viviendaData));
   }
 
   /**
    * Guardar persona a cargo
    */
-  async guardarPersonaACargo(persona: any, usuarioId: string): Promise<void> {
-    try {
-      const personaData = {
-        ...persona,
-        usuarioId: Number(usuarioId)
-      };
-      
-      // Usar el método correcto del BackendService
-      await firstValueFrom(this.backendService.guardarPersonasACargo(Number(usuarioId), [personaData]));
-      
-      console.log('✅ Persona a cargo guardada:', persona.nombre);
-    } catch (error) {
-      console.error('❌ Error guardando persona a cargo:', error);
-      throw error;
-    }
+  async guardarPersonaACargo(persona: any): Promise<void> {
+    const usuarioId = sessionStorage.getItem('id_usuario');
+    if (!usuarioId) throw new Error('No hay usuario activo. Complete primero la información personal.');
+    const personaData = { ...persona };
+    await firstValueFrom(this.backendService.guardarPersonasACargo(Number(usuarioId), [personaData]));
   }
 
   /**
    * Guardar contacto de emergencia
    */
-  async guardarContactoEmergencia(contacto: any, usuarioId: string): Promise<void> {
-    try {
-      const contactoData = {
-        ...contacto,
-        usuarioId: Number(usuarioId)
-      };
-      
-      // Usar el método correcto del BackendService
-      await firstValueFrom(this.backendService.guardarContactos(Number(usuarioId), [contactoData]));
-      
-      console.log('✅ Contacto de emergencia guardado:', contacto.nombre);
-    } catch (error) {
-      console.error('❌ Error guardando contacto de emergencia:', error);
-      throw error;
-    }
+  async guardarContactoEmergencia(contacto: any): Promise<void> {
+    const usuarioId = sessionStorage.getItem('id_usuario');
+    if (!usuarioId) throw new Error('No hay usuario activo. Complete primero la información personal.');
+    const contactoData = { ...contacto };
+    await firstValueFrom(this.backendService.guardarContactos(Number(usuarioId), [contactoData]));
   }
 
   /**
    * Guardar declaración de conflicto
    */
-  async guardarDeclaracionConflicto(declaracion: any, usuarioId: string): Promise<void> {
-    try {
-      const declaracionData = {
-        ...declaracion,
-        usuarioId: Number(usuarioId)
-      };
-      
-      // Usar el método correcto del BackendService
-      await firstValueFrom(this.backendService.guardarDeclaraciones(Number(usuarioId), [declaracionData]));
-      
-      console.log('✅ Declaración de conflicto guardada:', declaracion.tipoConflicto);
-    } catch (error) {
-      console.error('❌ Error guardando declaración de conflicto:', error);
-      throw error;
-    }
+  async guardarDeclaracionConflicto(declaracion: any): Promise<void> {
+    const usuarioId = sessionStorage.getItem('id_usuario');
+    if (!usuarioId) throw new Error('No hay usuario activo. Complete primero la información personal.');
+    const declaracionData = { ...declaracion };
+    await firstValueFrom(this.backendService.guardarDeclaraciones(Number(usuarioId), [declaracionData]));
   }
 
   // ========== MÉTODO PARA PREPARAR USUARIO BÁSICO ==========

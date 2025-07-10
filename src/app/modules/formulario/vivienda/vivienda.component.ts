@@ -8,6 +8,7 @@ import { UsuarioSessionService } from '../../../services/usuario-session.service
 import { BackendService } from '../../../services/backend.service';
 import { AuthService } from '../../../services/auth.service';
 import { FormDataService } from '../../../services/form-data.service';
+import { AutoSaveService } from '../../../services/auto-save.service';
 import { firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -31,7 +32,8 @@ export class ViviendaComponent implements OnInit {
     private usuarioSessionService: UsuarioSessionService,
     private backendService: BackendService,
     private authService: AuthService,
-    private formDataService: FormDataService
+    private formDataService: FormDataService,
+    private autoSaveService: AutoSaveService
   ) {
     this.generateYears();
   }
@@ -52,6 +54,9 @@ export class ViviendaComponent implements OnInit {
       entidad_vivienda: [{ value: '', disabled: true }],
       año_vivienda: [{ value: '', disabled: true }]
     });
+
+    // Establecer el paso actual en el servicio de auto-guardado
+    this.autoSaveService.setCurrentStep('vivienda');
 
     this.housingForm.get('viviendaes')?.valueChanges.subscribe(value => {
       this.toggleHousingFields(value);
@@ -238,68 +243,40 @@ export class ViviendaComponent implements OnInit {
     if (this.housingForm.valid) {
       this.isLoading = true;
       
-      // Preparar datos de vivienda
-      const viviendaData = {
-        tipoVivienda: this.housingForm.get('tipovivienda')?.value,
-        direccion: `${this.housingForm.get('cdir1')?.value} ${this.housingForm.get('cdir2')?.value} # ${this.housingForm.get('cdir3')?.value} - ${this.housingForm.get('cdir4')?.value}`,
-        infoAdicional: this.housingForm.get('dir_adicional')?.value || '',
-        barrio: this.housingForm.get('barrio')?.value,
-        ciudad: this.housingForm.get('ciudad')?.value,
-        vivienda: this.housingForm.get('viviendaes')?.value,
-        entidad: this.housingForm.get('entidad_vivienda')?.value || '',
-        anio: this.housingForm.get('año_vivienda')?.value || null,
-        tipoAdquisicion: this.getTipoAdquisicionValue()
-      };
-      
       try {
-        // Obtener el ID del usuario actual
-        const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
-        if (!idUsuario) {
-          this.notificationService.showError(
-            '❌ Error',
-            'No hay usuario en sesión. Por favor vuelva al paso anterior.'
-          );
-          return;
-        }
+        // Preparar datos para el auto-guardado
+        const housingData = {
+          tipoVivienda: this.housingForm.get('tipovivienda')?.value,
+          direccion: `${this.housingForm.get('cdir1')?.value} ${this.housingForm.get('cdir2')?.value} # ${this.housingForm.get('cdir3')?.value} - ${this.housingForm.get('cdir4')?.value}`,
+          infoAdicional: this.housingForm.get('dir_adicional')?.value || '',
+          barrio: this.housingForm.get('barrio')?.value,
+          ciudad: this.housingForm.get('ciudad')?.value,
+          vivienda: this.housingForm.get('viviendaes')?.value,
+          entidad: this.housingForm.get('entidad_vivienda')?.value || '',
+          anio: this.housingForm.get('año_vivienda')?.value || null,
+          tipoAdquisicion: this.getTipoAdquisicionValue()
+        };
 
-        console.log('🏠 Guardando vivienda en base de datos...');
-        console.log('📤 Datos de vivienda a guardar:', viviendaData);
-
-        // Guardar en el backend usando el endpoint directo
-        const response = await firstValueFrom(
-          this.backendService.getHttpClient().post<{success: boolean, data: any, message?: string}>(
-            `${this.backendService.getApiUrl()}/formulario/vivienda/guardar?idUsuario=${idUsuario}`, 
-            viviendaData,
-            this.backendService.getHttpOptions()
-          ).pipe(
-            map((res: any) => res),
-            catchError((error) => {
-              console.error('❌ Error en backend:', error);
-              throw error;
-            })
-          )
-        );
+        // Usar el servicio de auto-guardado para guardar con detección de cambios
+        const success = await this.autoSaveService.saveStepData('vivienda', housingData);
         
-        console.log('✅ Vivienda guardada exitosamente:', response);
-        
-        if (response.success) {
-          // Guardar en el estado del formulario también
-          this.formStateService.setVivienda(viviendaData);
-          
+        if (success) {
           this.notificationService.showSuccess(
-            '✅ Éxito',
-            'Vivienda guardada exitosamente en la base de datos'
+            '✅ Éxito', 
+            'Información de vivienda guardada exitosamente'
           );
+          
+          // Guardar en el estado del formulario
+          this.formStateService.setVivienda(housingData);
           
           // Navegar al siguiente paso
           this.formNavigationService.next();
         } else {
-          throw new Error(response.message || 'Error desconocido');
+          throw new Error('No se pudo guardar la información de vivienda');
         }
 
       } catch (error) {
-        console.error('❌ Error al guardar vivienda:', error);
-        
+        console.error('Error al validar vivienda:', error);
         this.notificationService.showError(
           '❌ Error',
           'No se pudo guardar la vivienda: ' + (error as Error).message
