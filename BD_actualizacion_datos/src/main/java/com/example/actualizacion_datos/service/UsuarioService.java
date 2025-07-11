@@ -336,7 +336,11 @@ public class UsuarioService {
     
     // ========== ELIMINAR USUARIO ==========
     public void eliminarUsuario(Long id) {
-        logger.info("🗑️ Eliminando usuario con ID: {}", id);
+        eliminarUsuario(id, null, null);
+    }
+    
+    public void eliminarUsuario(Long id, String adminCedula, String adminNombre) {
+        logger.info("🗑️ Eliminando usuario con ID: {} por administrador: {} ({})", id, adminNombre, adminCedula);
         
         try {
             if (!usuarioRepository.existsById(id)) {
@@ -344,7 +348,7 @@ public class UsuarioService {
             }
             
             usuarioRepository.deleteById(id);
-            logger.info("✅ Usuario eliminado exitosamente con ID: {}", id);
+            logger.info("✅ Usuario eliminado exitosamente con ID: {} por administrador: {}", id, adminNombre);
             
         } catch (Exception e) {
             logger.error("❌ Error al eliminar usuario: {}", e.getMessage(), e);

@@ -5,6 +5,7 @@ import com.example.actualizacion_datos.dto.UsuarioDetalleCompletoDTO;
 import com.example.actualizacion_datos.entity.*;
 import com.example.actualizacion_datos.repository.*;
 import com.example.actualizacion_datos.service.UsuarioService;
+import com.example.actualizacion_datos.service.AuditoriaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,9 @@ public class UsuarioController {
     
     @Autowired
     private ViviendaRepository viviendaRepository;
+    
+    @Autowired
+    private AuditoriaService auditoriaService;
     
     // ========== CREAR USUARIO COMPLETO ==========
     @PostMapping("/completo")
@@ -275,17 +279,42 @@ public class UsuarioController {
     
     // ========== ELIMINAR USUARIO ==========
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarUsuario(@PathVariable Long id) {
-        logger.info("🗑️ Eliminando usuario con ID: {}", id);
+    public ResponseEntity<?> eliminarUsuario(@PathVariable Long id, 
+                                           @RequestParam(required = false) String adminCedula,
+                                           @RequestParam(required = false) String adminNombre) {
+        logger.info("🗑️ Eliminando usuario con ID: {} por administrador: {} ({})", id, adminNombre, adminCedula);
         
         try {
-            usuarioService.eliminarUsuario(id);
+            // Obtener información del usuario antes de eliminarlo para la auditoría
+            Optional<Usuario> usuarioOpt = usuarioService.obtenerUsuarioPorId(id);
+            if (usuarioOpt.isEmpty()) {
+                throw new RuntimeException("Usuario no encontrado con ID: " + id);
+            }
+            
+            Usuario usuarioAEliminar = usuarioOpt.get();
+            String nombreUsuario = usuarioAEliminar.getNombre();
+            Long cedulaUsuario = usuarioAEliminar.getDocumento();
+            
+            // Eliminar el usuario
+            usuarioService.eliminarUsuario(id, adminCedula, adminNombre);
+            
+            // Registrar auditoría de eliminación
+            String descripcion = String.format("Usuario eliminado por administrador. Usuario eliminado: %s (Cédula: %d)", 
+                                             nombreUsuario, cedulaUsuario);
+            
+            auditoriaService.registrarEliminacion(
+                "USUARIO", 
+                id, 
+                adminNombre != null ? adminNombre : "Administrador", 
+                adminCedula != null ? Long.parseLong(adminCedula) : null, 
+                descripcion
+            );
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Usuario eliminado exitosamente");
             
-            logger.info("✅ Usuario eliminado exitosamente con ID: {}", id);
+            logger.info("✅ Usuario eliminado exitosamente con ID: {} por administrador: {}", id, adminNombre);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {

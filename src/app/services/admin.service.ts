@@ -134,4 +134,88 @@ export class AdminService {
   verificarUsuarioPorCedula(cedula: string): Observable<any> {
     return this.http.get<any>(`${this.API_URL}/usuarios/cedula/${cedula}`);
   }
+
+  /**
+   * Generar reporte de integrantes
+   */
+  generarReporteIntegrantes(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/integrantes`, { responseType: 'blob' });
+  }
+
+  /**
+   * Generar reporte de conflicto de intereses
+   */
+  generarReporteConflictoIntereses(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/conflicto-intereses`, { responseType: 'blob' });
+  }
+
+  /**
+   * Generar reporte de estudios
+   */
+  generarReporteEstudios(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/estudios`, { responseType: 'blob' });
+  }
+
+  /**
+   * Generar reporte de personas de contacto
+   */
+  generarReporteContacto(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/contacto`, { responseType: 'blob' });
+  }
+
+  /**
+   * Generar reporte de personas a cargo
+   */
+  generarReportePersonasCargo(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/personas-cargo`, { responseType: 'blob' });
+  }
+
+  /**
+   * Generar reporte de vehículos
+   */
+  generarReporteVehiculos(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/vehiculos`, { responseType: 'blob' });
+  }
+
+  /**
+   * Generar reporte de viviendas
+   */
+  generarReporteViviendas(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/viviendas`, { responseType: 'blob' });
+  }
+
+  /**
+   * Exportar todo (reporte completo)
+   */
+  exportarTodo(): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/reportes/exportar-todo`, { responseType: 'blob' });
+  }
+
+  /**
+   * Eliminar usuario
+   */
+  eliminarUsuario(id: number, adminCedula?: string, adminNombre?: string): Observable<any> {
+    console.log('🗑️ AdminService: Eliminando usuario con ID:', id, 'por admin:', adminNombre, '(', adminCedula, ')');
+    
+    let url = `${this.API_URL}/usuarios/${id}`;
+    const params = new URLSearchParams();
+    
+    if (adminCedula) {
+      params.append('adminCedula', adminCedula);
+    }
+    if (adminNombre) {
+      params.append('adminNombre', adminNombre);
+    }
+    
+    if (params.toString()) {
+      url += '?' + params.toString();
+    }
+    
+    return this.http.delete<any>(url).pipe(
+      map(response => {
+        console.log('✅ AdminService: Usuario eliminado exitosamente:', response);
+        return response;
+      })
+    );
+  }
 } 

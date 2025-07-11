@@ -362,12 +362,14 @@ export class AutoSaveService {
         return response.success;
       }
 
+      console.log('🏠 AutoSave: Datos recibidos del componente:', data);
+      
       const viviendaData = {
         tipoVivienda: data.tipoVivienda,
         direccion: data.direccion,
         barrio: data.barrio || '',
         ciudad: data.ciudad || '',
-        vivienda: data.tipoVivienda || '',
+        vivienda: data.vivienda || '',
         infoAdicional: data.infoAdicional || '',
         entidad: data.entidad || '',
         ano: data.ano || null,
@@ -375,6 +377,9 @@ export class AutoSaveService {
       };
 
       console.log('🏠 AutoSave: Datos mapeados para backend:', viviendaData);
+      console.log('🏠 AutoSave: tipoAdquisicion específico:', data.tipoAdquisicion);
+      console.log('🏠 AutoSave: vivienda específico:', data.vivienda);
+      console.log('🏠 AutoSave: ano específico:', data.ano);
 
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(

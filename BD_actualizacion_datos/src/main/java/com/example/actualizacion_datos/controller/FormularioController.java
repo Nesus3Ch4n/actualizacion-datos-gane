@@ -153,6 +153,14 @@ public class FormularioController {
     @PostMapping("/vivienda/guardar")
     public ResponseEntity<?> guardarVivienda(@RequestParam Long idUsuario, @RequestBody Vivienda vivienda) {
         logger.info("🏠 Guardando vivienda para usuario ID: {}", idUsuario);
+        logger.info("🏠 Datos recibidos - tipoAdquisicion: '{}'", vivienda.getTipoAdquisicion());
+        logger.info("🏠 Datos recibidos - entidad: '{}'", vivienda.getEntidad());
+        logger.info("🏠 Datos recibidos - ano: '{}'", vivienda.getAno());
+        logger.info("🏠 Datos recibidos - barrio: '{}'", vivienda.getBarrio());
+        logger.info("🏠 Datos recibidos - ciudad: '{}'", vivienda.getCiudad());
+        logger.info("🏠 Datos recibidos - vivienda: '{}'", vivienda.getVivienda());
+        logger.info("🏠 Datos recibidos - infoAdicional: '{}'", vivienda.getInfoAdicional());
+        logger.info("🏠 Datos recibidos - tipoVivienda: '{}'", vivienda.getTipoVivienda());
         
         try {
             // Obtener usuario para auditoría
@@ -436,9 +444,23 @@ public class FormularioController {
     }
     
     private void actualizarCamposVivienda(Vivienda viviendaExistente, Vivienda viviendaNueva) {
+        logger.info("🏠 Actualizando campos de vivienda");
+        logger.info("🏠 tipoAdquisicion anterior: '{}' -> nuevo: '{}'", viviendaExistente.getTipoAdquisicion(), viviendaNueva.getTipoAdquisicion());
+        logger.info("🏠 entidad anterior: '{}' -> nuevo: '{}'", viviendaExistente.getEntidad(), viviendaNueva.getEntidad());
+        logger.info("🏠 ano anterior: '{}' -> nuevo: '{}'", viviendaExistente.getAno(), viviendaNueva.getAno());
+        logger.info("🏠 vivienda anterior: '{}' -> nuevo: '{}'", viviendaExistente.getVivienda(), viviendaNueva.getVivienda());
+        
         viviendaExistente.setDireccion(viviendaNueva.getDireccion());
         viviendaExistente.setTipoVivienda(viviendaNueva.getTipoVivienda());
         viviendaExistente.setTipoAdquisicion(viviendaNueva.getTipoAdquisicion());
+        viviendaExistente.setEntidad(viviendaNueva.getEntidad());
+        viviendaExistente.setAno(viviendaNueva.getAno());
+        viviendaExistente.setBarrio(viviendaNueva.getBarrio());
+        viviendaExistente.setCiudad(viviendaNueva.getCiudad());
+        viviendaExistente.setVivienda(viviendaNueva.getVivienda());
+        viviendaExistente.setInfoAdicional(viviendaNueva.getInfoAdicional());
+        
+        logger.info("🏠 Campos actualizados correctamente");
     }
     
     private void actualizarCamposPersonaACargo(PersonaACargo personaExistente, PersonaACargo personaNueva) {

@@ -997,4 +997,96 @@ public class FormularioService {
         relacionExistente.setParentesco(relacionNueva.getParentesco());
         relacionExistente.setTipoParteAsoc(relacionNueva.getTipoParteAsoc());
     }
+    
+    // ========== MÉTODOS PARA REPORTES - OBTENER TODOS LOS REGISTROS ==========
+    
+    /**
+     * Obtiene todas las relaciones de conflicto de intereses
+     */
+    public List<RelacionConf> obtenerTodasLasRelacionesConflicto() {
+        logger.info("📊 Obteniendo todas las relaciones de conflicto de intereses");
+        try {
+            List<RelacionConf> relaciones = relacionConfRepository.findAll();
+            logger.info("✅ Se encontraron {} relaciones de conflicto", relaciones.size());
+            return relaciones;
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener todas las relaciones de conflicto: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener relaciones de conflicto", e);
+        }
+    }
+    
+    /**
+     * Obtiene todos los estudios académicos
+     */
+    public List<EstudioAcademico> obtenerTodosLosEstudios() {
+        logger.info("📊 Obteniendo todos los estudios académicos");
+        try {
+            List<EstudioAcademico> estudios = estudioAcademicoRepository.findAll();
+            logger.info("✅ Se encontraron {} estudios académicos", estudios.size());
+            return estudios;
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener todos los estudios académicos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener estudios académicos", e);
+        }
+    }
+    
+    /**
+     * Obtiene todos los contactos de emergencia
+     */
+    public List<ContactoEmergencia> obtenerTodosLosContactos() {
+        logger.info("📊 Obteniendo todos los contactos de emergencia");
+        try {
+            List<ContactoEmergencia> contactos = contactoEmergenciaRepository.findAll();
+            logger.info("✅ Se encontraron {} contactos de emergencia", contactos.size());
+            return contactos;
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener todos los contactos de emergencia: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener contactos de emergencia", e);
+        }
+    }
+    
+    /**
+     * Obtiene todas las personas a cargo
+     */
+    public List<PersonaACargo> obtenerTodasLasPersonasACargo() {
+        logger.info("📊 Obteniendo todas las personas a cargo");
+        try {
+            List<PersonaACargo> personas = personaACargoRepository.findAll();
+            logger.info("✅ Se encontraron {} personas a cargo", personas.size());
+            return personas;
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener todas las personas a cargo: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener personas a cargo", e);
+        }
+    }
+    
+    /**
+     * Obtiene todos los vehículos
+     */
+    public List<Vehiculo> obtenerTodosLosVehiculos() {
+        logger.info("📊 Obteniendo todos los vehículos");
+        try {
+            List<Vehiculo> vehiculos = vehiculoRepository.findAll();
+            logger.info("✅ Se encontraron {} vehículos", vehiculos.size());
+            return vehiculos;
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener todos los vehículos: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener vehículos", e);
+        }
+    }
+    
+    /**
+     * Obtiene todas las viviendas
+     */
+    public List<Vivienda> obtenerTodasLasViviendas() {
+        logger.info("📊 Obteniendo todas las viviendas");
+        try {
+            List<Vivienda> viviendas = viviendaRepository.findAll();
+            logger.info("✅ Se encontraron {} viviendas", viviendas.size());
+            return viviendas;
+        } catch (Exception e) {
+            logger.error("❌ Error al obtener todas las viviendas: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al obtener viviendas", e);
+        }
+    }
 } 

@@ -4,9 +4,12 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatDialog } from '@angular/material/dialog';
 import { SelectionModel } from '@angular/cdk/collections';
+import { Observable } from 'rxjs';
 import { AdminService, UsuarioAdmin } from '../../services/admin.service';
 import { UsuarioDetalleModalComponent } from '../../../admin-panel/presentation/components/usuario-detalle-modal.component';
 import { ObtenerUsuarioDetalleCompletoUseCase } from '../../../admin-panel/application/use-cases/obtener-usuario-detalle-completo.use-case';
+import { ExcelExportService } from '../../services/excel-export.service';
+import { NotificationService } from '../../services/notification.service';
 
 export interface ReporteConfig {
   tipo: string;
@@ -78,6 +81,20 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
       descripcion: 'Información sobre personas a cargo de empleados',
       icono: 'family_restroom',
       columnas: ['nombre', 'apellido', 'personasACargo', 'numeroPersonas', 'edades']
+    },
+    {
+      tipo: 'vehiculos',
+      nombre: 'Reporte de Vehículos',
+      descripcion: 'Información de vehículos de los empleados',
+      icono: 'directions_car',
+      columnas: ['nombre', 'apellido', 'tipoVehiculo', 'marca', 'placa', 'ano', 'propietario']
+    },
+    {
+      tipo: 'viviendas',
+      nombre: 'Reporte de Viviendas',
+      descripcion: 'Información de viviendas de los empleados',
+      icono: 'home',
+      columnas: ['nombre', 'apellido', 'tipoVivienda', 'direccion', 'ciudad', 'barrio', 'tipoAdquisicion', 'ano']
     }
   ];
 
@@ -90,7 +107,9 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   constructor(
     private dialog: MatDialog,
     private adminService: AdminService,
-    private obtenerUsuarioDetalleCompleto: ObtenerUsuarioDetalleCompletoUseCase
+    private obtenerUsuarioDetalleCompleto: ObtenerUsuarioDetalleCompletoUseCase,
+    private excelExportService: ExcelExportService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -203,39 +222,69 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
 
   // Generación de reportes
   generarReporte(tipoReporte: string): void {
-    const usuariosSeleccionados = this.selection.selected.length > 0 
-      ? this.selection.selected 
-      : this.dataSource.filteredData;
-
     console.log(`Generando reporte: ${tipoReporte}`);
-    console.log('Usuarios seleccionados:', usuariosSeleccionados);
 
-    // Simular descarga de Excel
-    this.simularDescargaExcel(tipoReporte, usuariosSeleccionados);
-  }
+    this.notificationService.showInfo('Generando archivo Excel...', 'Procesando');
 
-  private simularDescargaExcel(tipoReporte: string, usuarios: UsuarioAdmin[]): void {
-    const reporteConfig = this.reportesConfig.find(r => r.tipo === tipoReporte);
-    if (!reporteConfig) return;
+    let reporteObservable: Observable<Blob>;
 
-    // Aquí iría la lógica real de generación de Excel
-    // Por ahora solo simulamos la descarga
-    const nombreArchivo = `${reporteConfig.nombre}_${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    console.log(`📊 Generando ${reporteConfig.nombre}`);
-    console.log(`📁 Archivo: ${nombreArchivo}`);
-    console.log(`👥 Usuarios incluidos: ${usuarios.length}`);
-    console.log(`📋 Columnas: ${reporteConfig.columnas.join(', ')}`);
+    switch (tipoReporte) {
+      case 'integrantes':
+        reporteObservable = this.adminService.generarReporteIntegrantes();
+        break;
+      case 'conflicto-intereses':
+        reporteObservable = this.adminService.generarReporteConflictoIntereses();
+        break;
+      case 'estudios':
+        reporteObservable = this.adminService.generarReporteEstudios();
+        break;
+      case 'contacto':
+        reporteObservable = this.adminService.generarReporteContacto();
+        break;
+      case 'personas-cargo':
+        reporteObservable = this.adminService.generarReportePersonasCargo();
+        break;
+      case 'vehiculos':
+        reporteObservable = this.adminService.generarReporteVehiculos();
+        break;
+      case 'viviendas':
+        reporteObservable = this.adminService.generarReporteViviendas();
+        break;
+      default:
+        this.notificationService.showError('Tipo de reporte no válido', 'Error');
+        return;
+    }
 
-    // Mostrar notificación de éxito
-    this.mostrarNotificacionDescarga(nombreArchivo);
-  }
-
-  private mostrarNotificacionDescarga(nombreArchivo: string): void {
-    // Simular proceso de descarga
-    setTimeout(() => {
-      alert(`✅ Reporte generado exitosamente!\n📁 Archivo: ${nombreArchivo}\n\n(Esta es una simulación - En producción se descargaría el archivo Excel real)`);
-    }, 1000);
+    reporteObservable.subscribe({
+      next: (blob: Blob) => {
+        // Crear URL del blob y descargar
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Generar nombre del archivo
+        const fecha = new Date().toISOString().split('T')[0];
+        const timestamp = Date.now();
+        link.download = `Reporte_${tipoReporte}_${fecha}_${timestamp}.xlsx`;
+        
+        // Descargar archivo
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Limpiar URL
+        window.URL.revokeObjectURL(url);
+        
+        this.notificationService.showSuccess(
+          `Archivo Excel generado exitosamente`,
+          'Éxito'
+        );
+      },
+      error: (error: any) => {
+        console.error('Error al generar reporte:', error);
+        this.notificationService.showError('Error al generar el archivo Excel', 'Error');
+      }
+    });
   }
 
   // Acciones de usuario
@@ -277,10 +326,32 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   }
 
   eliminarUsuario(usuario: UsuarioAdmin): void {
-    if (confirm(`¿Estás seguro de eliminar al usuario ${usuario.nombre} ${usuario.apellido}?`)) {
-      console.log('Eliminar usuario:', usuario);
-      // Aquí haríamos la eliminación real
-      alert('Usuario eliminado (simulación)');
+    if (confirm(`¿Estás seguro de eliminar al usuario ${usuario.nombre} ${usuario.apellido}?\n\nEsta acción no se puede deshacer.`)) {
+      console.log('🗑️ Eliminando usuario:', usuario);
+      
+      // Obtener información del administrador actual (por ahora hardcodeado, pero se puede obtener del servicio de autenticación)
+      const adminCedula = '1006101211'; // Cédula del administrador
+      const adminNombre = 'JESUS FELIPE CORDOBA ECHANDIA'; // Nombre del administrador
+      
+      this.adminService.eliminarUsuario(usuario.id, adminCedula, adminNombre).subscribe({
+        next: (response) => {
+          console.log('✅ Usuario eliminado exitosamente:', response);
+          this.notificationService.showSuccess(
+            `Usuario ${usuario.nombre} ${usuario.apellido} eliminado exitosamente`,
+            'Eliminación completada'
+          );
+          
+          // Recargar la lista de usuarios
+          this.cargarUsuarios();
+        },
+        error: (error) => {
+          console.error('❌ Error al eliminar usuario:', error);
+          this.notificationService.showError(
+            `Error al eliminar usuario: ${error.message || 'Error desconocido'}`,
+            'Error de eliminación'
+          );
+        }
+      });
     }
   }
 
@@ -299,7 +370,38 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
 
   exportarTodo(): void {
     console.log('Exportando todos los datos...');
-    // Generar un reporte completo con todos los usuarios
-    this.generarReporte('integrantes');
+    
+    this.notificationService.showInfo('Generando reporte completo...', 'Procesando');
+
+    this.adminService.exportarTodo().subscribe({
+      next: (blob: Blob) => {
+        // Crear URL del blob y descargar
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Generar nombre del archivo
+        const fecha = new Date().toISOString().split('T')[0];
+        const timestamp = Date.now();
+        link.download = `Reporte_Completo_${fecha}_${timestamp}.xlsx`;
+        
+        // Descargar archivo
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Limpiar URL
+        window.URL.revokeObjectURL(url);
+        
+        this.notificationService.showSuccess(
+          'Reporte completo generado exitosamente',
+          'Éxito'
+        );
+      },
+      error: (error: any) => {
+        console.error('Error al exportar todo:', error);
+        this.notificationService.showError('Error al generar el reporte completo', 'Error');
+      }
+    });
   }
 }

@@ -4,6 +4,7 @@ import { AuditoriaService, AuditoriaDTO, FiltroAuditoria } from '../../services/
 import { NotificationService } from '../../services/notification.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AuditoriaDetalleModalComponent } from './auditoria-detalle-modal.component';
+import { ExcelExportService } from '../../services/excel-export.service';
 
 @Component({
   selector: 'app-auditoria',
@@ -34,7 +35,8 @@ export class AuditoriaComponent implements OnInit {
     private auditoriaService: AuditoriaService,
     private notificationService: NotificationService,
     private fb: FormBuilder,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private excelExportService: ExcelExportService
   ) {
     this.filtroForm = this.fb.group({
       idUsuario: [''],
@@ -172,8 +174,26 @@ export class AuditoriaComponent implements OnInit {
   }
 
   exportarAuditorias(): void {
-    // Implementar exportación a Excel o CSV
-    this.notificationService.showInfo('Función de exportación en desarrollo', 'Información');
+    try {
+      if (this.auditoriasFiltradas.length === 0) {
+        this.notificationService.showWarning('No hay auditorías para exportar', 'Advertencia');
+        return;
+      }
+      
+      this.notificationService.showInfo('Generando archivo Excel...', 'Procesando');
+      
+      // Exportar auditorías filtradas agrupadas por fecha
+      this.excelExportService.exportAuditoriasPorFecha(this.auditoriasFiltradas);
+      
+      this.notificationService.showSuccess(
+        `Archivo Excel generado exitosamente con ${this.auditoriasFiltradas.length} auditorías`,
+        'Éxito'
+      );
+      
+    } catch (error) {
+      console.error('Error al exportar auditorías:', error);
+      this.notificationService.showError('Error al generar el archivo Excel', 'Error');
+    }
   }
 
   obtenerResumenAuditorias(): any {

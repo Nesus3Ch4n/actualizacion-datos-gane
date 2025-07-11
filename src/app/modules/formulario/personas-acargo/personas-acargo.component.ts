@@ -64,8 +64,18 @@ export class PersonasAcargoComponent implements OnInit {
       persona_acargo: ['', Validators.required],
       nombre: [{ value: '', disabled: true }],
       parentesco: [{ value: '', disabled: true }],
-      edad: [{ value: '', disabled: true }],
+      edad: [{ value: '', disabled: true }], // Deshabilitado
       fecha_nacimiento: [{ value: '', disabled: true }]
+    });
+
+    // Calcular edad automáticamente al cambiar la fecha de nacimiento
+    this.personasACargoForm.get('fecha_nacimiento')?.valueChanges.subscribe((fecha: any) => {
+      if (fecha) {
+        const edad = this.calcularEdad(fecha);
+        this.personasACargoForm.get('edad')?.setValue(edad, { emitEvent: false });
+      } else {
+        this.personasACargoForm.get('edad')?.setValue('', { emitEvent: false });
+      }
     });
 
     // Establecer el paso actual en el servicio de auto-guardado
@@ -340,5 +350,20 @@ export class PersonasAcargoComponent implements OnInit {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  /**
+   * Calcula la edad a partir de una fecha de nacimiento
+   */
+  calcularEdad(fechaNacimiento: string | Date): number {
+    if (!fechaNacimiento) return 0;
+    const hoy = new Date();
+    const fecha = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - fecha.getFullYear();
+    const m = hoy.getMonth() - fecha.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+      edad--;
+    }
+    return edad;
   }
 }

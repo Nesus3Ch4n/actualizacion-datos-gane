@@ -268,8 +268,22 @@ export class BackendService {
   /**
    * Eliminar usuario
    */
-  eliminarUsuario(id: number): Observable<any> {
-    return this.http.delete<BackendResponse>(`${this.API_URL}/usuarios/${id}`, this.getHttpOptions())
+  eliminarUsuario(id: number, adminCedula?: string, adminNombre?: string): Observable<any> {
+    let url = `${this.API_URL}/usuarios/${id}`;
+    const params = new URLSearchParams();
+    
+    if (adminCedula) {
+      params.append('adminCedula', adminCedula);
+    }
+    if (adminNombre) {
+      params.append('adminNombre', adminNombre);
+    }
+    
+    if (params.toString()) {
+      url += '?' + params.toString();
+    }
+    
+    return this.http.delete<BackendResponse>(url, this.getHttpOptions())
       .pipe(
         map(response => {
           if (response.success) {

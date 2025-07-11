@@ -52,7 +52,7 @@ export class ViviendaComponent implements OnInit {
       tipo_adquisicion: [{ value: '', disabled: true }],
       tipo_adquisicion2: [{ value: '', disabled: true }],
       entidad_vivienda: [{ value: '', disabled: true }],
-      año_vivienda: [{ value: '', disabled: true }]
+      ano: [{ value: '', disabled: true }]
     });
 
     // Establecer el paso actual en el servicio de auto-guardado
@@ -185,7 +185,7 @@ export class ViviendaComponent implements OnInit {
       tipo_adquisicion: vivienda.tipoAdquisicion || '',
       tipo_adquisicion2: vivienda.tipoAdquisicionOtro || '',
       entidad_vivienda: vivienda.entidad || '',
-      año_vivienda: vivienda.anio || ''
+      ano: vivienda.ano || ''
     });
 
     // Habilitar campos según el tipo de vivienda
@@ -202,7 +202,7 @@ export class ViviendaComponent implements OnInit {
   }
 
   toggleHousingFields(value: string): void {
-    const fields = ['tipo_adquisicion', 'tipo_adquisicion2', 'entidad_vivienda', 'año_vivienda'];
+    const fields = ['tipo_adquisicion', 'tipo_adquisicion2', 'entidad_vivienda', 'ano'];
 
     if (value === 'Propia') { // Si selecciona "Propia"
       fields.forEach(field => {
@@ -244,6 +244,14 @@ export class ViviendaComponent implements OnInit {
       this.isLoading = true;
       
       try {
+        // Debug: Verificar valores del formulario
+        console.log('🏠 Debug - Valores del formulario:');
+        console.log('tipo_adquisicion:', this.housingForm.get('tipo_adquisicion')?.value);
+        console.log('tipo_adquisicion2:', this.housingForm.get('tipo_adquisicion2')?.value);
+        console.log('viviendaes:', this.housingForm.get('viviendaes')?.value);
+        console.log('entidad_vivienda:', this.housingForm.get('entidad_vivienda')?.value);
+        console.log('ano:', this.housingForm.get('ano')?.value);
+        
         // Preparar datos para el auto-guardado
         const housingData = {
           tipoVivienda: this.housingForm.get('tipovivienda')?.value,
@@ -253,9 +261,11 @@ export class ViviendaComponent implements OnInit {
           ciudad: this.housingForm.get('ciudad')?.value,
           vivienda: this.housingForm.get('viviendaes')?.value,
           entidad: this.housingForm.get('entidad_vivienda')?.value || '',
-          anio: this.housingForm.get('año_vivienda')?.value || null,
+          ano: this.housingForm.get('ano')?.value || null,
           tipoAdquisicion: this.getTipoAdquisicionValue()
         };
+
+        console.log('🏠 Debug - Datos preparados para envío:', housingData);
 
         // Usar el servicio de auto-guardado para guardar con detección de cambios
         const success = await this.autoSaveService.saveStepData('vivienda', housingData);
@@ -307,9 +317,14 @@ export class ViviendaComponent implements OnInit {
 
   getTipoAdquisicionValue(): string {
     const tipoAdquisicion = this.housingForm.get('tipo_adquisicion')?.value;
+    console.log('🏠 Debug - getTipoAdquisicionValue - tipo_adquisicion:', tipoAdquisicion);
+    
     if (tipoAdquisicion === '4') {
-      return this.housingForm.get('tipo_adquisicion2')?.value || '';
+      const valorOtro = this.housingForm.get('tipo_adquisicion2')?.value || '';
+      console.log('🏠 Debug - getTipoAdquisicionValue - valorOtro:', valorOtro);
+      return valorOtro;
     } else {
+      console.log('🏠 Debug - getTipoAdquisicionValue - retornando:', tipoAdquisicion || '');
       return tipoAdquisicion || '';
     }
   }
