@@ -52,8 +52,6 @@ export class UsuarioService {
    */
   async guardarInformacionPersonal(informacionPersonal: any): Promise<any> {
     try {
-      console.log('💾 Guardando información personal:', informacionPersonal);
-
       // Preparar datos para el backend
       const usuarioData = {
         nombre: informacionPersonal.nombre,
@@ -75,8 +73,6 @@ export class UsuarioService {
 
       // Guardar en el backend
       const resultado = await firstValueFrom(this.backendService.crearUsuario(usuarioData));
-      
-      console.log('✅ Usuario guardado exitosamente:', resultado);
       
       this.notificationService.showSuccess(
         'Éxito',

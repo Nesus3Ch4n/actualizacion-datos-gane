@@ -77,7 +77,6 @@ export class ViviendaComponent implements OnInit {
     // Cargar datos del estado del formulario si existen
     const viviendaGuardada = this.formStateService.getVivienda();
     if (viviendaGuardada && Object.keys(viviendaGuardada).length > 0) {
-      console.log('📋 Vivienda cargada desde estado del formulario:', viviendaGuardada);
       this.cargarDatosEnFormulario(viviendaGuardada);
     }
   }
@@ -85,12 +84,10 @@ export class ViviendaComponent implements OnInit {
   async cargarViviendaExistente(): Promise<void> {
     try {
       this.isLoading = true;
-      console.log('🏠 Cargando datos de vivienda existentes...');
       
       // Obtener el ID del usuario desde el servicio de sesión
       const idUsuario = this.usuarioSessionService.getIdUsuarioActual();
       if (!idUsuario) {
-        console.log('⚠️ No hay ID de usuario disponible para cargar vivienda');
         return;
       }
 
@@ -99,7 +96,6 @@ export class ViviendaComponent implements OnInit {
       
       if (datosCompletos && datosCompletos.viviendas && datosCompletos.viviendas.length > 0) {
         const vivienda = datosCompletos.viviendas[0]; // Tomar la primera vivienda
-        console.log('✅ Vivienda cargada desde datos completos:', vivienda);
         
         // Cargar datos en el formulario
         this.cargarDatosEnFormulario(vivienda);
@@ -108,9 +104,6 @@ export class ViviendaComponent implements OnInit {
           '✅ Datos cargados',
           'Se cargaron los datos de vivienda existentes'
         );
-      } else {
-        console.log('ℹ️ No se encontraron datos de vivienda en los datos completos');
-        console.log('📋 Datos completos recibidos:', datosCompletos);
       }
       
     } catch (error) {
@@ -169,7 +162,7 @@ export class ViviendaComponent implements OnInit {
       }
     }
 
-    console.log('🏠 Dirección separada:', { cdir1, cdir2, cdir3, cdir4 });
+
 
     // Cargar datos en el formulario
     this.housingForm.patchValue({
@@ -244,14 +237,6 @@ export class ViviendaComponent implements OnInit {
       this.isLoading = true;
       
       try {
-        // Debug: Verificar valores del formulario
-        console.log('🏠 Debug - Valores del formulario:');
-        console.log('tipo_adquisicion:', this.housingForm.get('tipo_adquisicion')?.value);
-        console.log('tipo_adquisicion2:', this.housingForm.get('tipo_adquisicion2')?.value);
-        console.log('viviendaes:', this.housingForm.get('viviendaes')?.value);
-        console.log('entidad_vivienda:', this.housingForm.get('entidad_vivienda')?.value);
-        console.log('ano:', this.housingForm.get('ano')?.value);
-        
         // Preparar datos para el auto-guardado
         const housingData = {
           tipoVivienda: this.housingForm.get('tipovivienda')?.value,
@@ -264,8 +249,6 @@ export class ViviendaComponent implements OnInit {
           ano: this.housingForm.get('ano')?.value || null,
           tipoAdquisicion: this.getTipoAdquisicionValue()
         };
-
-        console.log('🏠 Debug - Datos preparados para envío:', housingData);
 
         // Usar el servicio de auto-guardado para guardar con detección de cambios
         const success = await this.autoSaveService.saveStepData('vivienda', housingData);
@@ -317,14 +300,10 @@ export class ViviendaComponent implements OnInit {
 
   getTipoAdquisicionValue(): string {
     const tipoAdquisicion = this.housingForm.get('tipo_adquisicion')?.value;
-    console.log('🏠 Debug - getTipoAdquisicionValue - tipo_adquisicion:', tipoAdquisicion);
     
     if (tipoAdquisicion === '4') {
-      const valorOtro = this.housingForm.get('tipo_adquisicion2')?.value || '';
-      console.log('🏠 Debug - getTipoAdquisicionValue - valorOtro:', valorOtro);
-      return valorOtro;
+      return this.housingForm.get('tipo_adquisicion2')?.value || '';
     } else {
-      console.log('🏠 Debug - getTipoAdquisicionValue - retornando:', tipoAdquisicion || '');
       return tipoAdquisicion || '';
     }
   }

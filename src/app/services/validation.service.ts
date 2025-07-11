@@ -27,7 +27,6 @@ export class ValidationService {
    * Validar autenticación y obtener ID de usuario antes de actualizar
    */
   validateBeforeUpdate(cedula: string): Observable<ValidationResult> {
-    console.log('🔍 Validando antes de actualizar para cédula:', cedula);
     
     return this.validateAuthentication().pipe(
       switchMap(authResult => {
@@ -119,7 +118,6 @@ export class ValidationService {
    * Validar datos del formulario antes de enviar
    */
   validateFormData(formData: any): ValidationResult {
-    console.log('📋 Validando datos del formulario...');
     
     // Validar que existan datos básicos
     if (!formData || !formData.informacionPersonal) {
@@ -162,7 +160,6 @@ export class ValidationService {
       };
     }
 
-    console.log('✅ Datos del formulario válidos');
     return {
       isValid: true,
       message: 'Datos del formulario válidos'
@@ -192,7 +189,6 @@ export class ValidationService {
    * Validación completa antes de guardar formulario
    */
   validateCompleteForm(formData: any): Observable<ValidationResult> {
-    console.log('🔍 Iniciando validación completa del formulario...');
     
     // Primero validar datos del formulario
     const formValidation = this.validateFormData(formData);

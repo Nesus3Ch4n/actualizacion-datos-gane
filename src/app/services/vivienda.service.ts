@@ -19,8 +19,6 @@ export class ViviendaService {
 
   // Guardar información de vivienda de un usuario específico
   guardarVivienda(cedula: number, vivienda: any): Observable<any> {
-    console.log(`🏠 Guardando información de vivienda para cédula: ${cedula}`);
-    
     return this.http.post<any>(`${this.apiUrl}/formulario/vivienda/guardar?cedula=${cedula}`, vivienda, this.httpOptions)
       .pipe(
         catchError(error => {
@@ -32,8 +30,6 @@ export class ViviendaService {
 
   // Obtener información de vivienda de un usuario específico
   obtenerViviendaPorCedula(cedula: number): Observable<any> {
-    console.log(`📋 Obteniendo información de vivienda para cédula: ${cedula}`);
-    
     return this.http.get<any>(`${this.apiUrl}/consulta/viviendas/${cedula}`)
       .pipe(
         catchError(error => {

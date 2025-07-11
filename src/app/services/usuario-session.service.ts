@@ -25,7 +25,6 @@ export class UsuarioSessionService {
 
   // Establecer el usuario actual después del login/registro
   setUsuarioActual(usuario: any): void {
-    console.log('👤 Usuario establecido:', usuario);
     this.usuarioActualSubject.next(usuario);
     localStorage.setItem('usuarioActual', JSON.stringify(usuario));
   }
@@ -33,7 +32,6 @@ export class UsuarioSessionService {
   // Obtener el ID del usuario actual
   getIdUsuarioActual(): number | null {
     const usuario = this.usuarioActualSubject.value;
-    console.log('🔍 Usuario actual en sesión:', usuario);
     return usuario ? usuario.idUsuario : null;
   }
 
@@ -51,18 +49,15 @@ export class UsuarioSessionService {
   // Buscar usuario por cédula y establecerlo como actual
   async buscarYEstablecerUsuario(cedula: number): Promise<any> {
     try {
-      console.log(`🔍 Buscando usuario con cédula: ${cedula}`);
-      
       // Primero intentar obtener el usuario directamente por cédula
       try {
         const usuario = await this.backendService.obtenerUsuarioPorCedula(cedula.toString()).toPromise();
         if (usuario) {
           this.setUsuarioActual(usuario);
-          console.log(`✅ Usuario encontrado directamente con ID: ${usuario.idUsuario}`);
           return usuario;
         }
       } catch (error) {
-        console.log('Usuario no encontrado por cédula directa, buscando en lista...');
+        // Usuario no encontrado por cédula directa
       }
       
       // Si no se encuentra directamente, buscar en la lista completa
@@ -76,12 +71,10 @@ export class UsuarioSessionService {
         
         if (usuario) {
           this.setUsuarioActual(usuario);
-          console.log(`✅ Usuario encontrado en lista con ID: ${usuario.idUsuario}`);
           return usuario;
         }
       }
       
-      console.log('❌ Usuario no encontrado');
       return null;
     } catch (error) {
       console.error('❌ Error al buscar usuario:', error);

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { NotificationService } from './notification.service';
 
 export interface UsuarioBD {
   idUsuario: number;
@@ -44,25 +45,21 @@ export class AdminService {
 
   private readonly API_URL = environment.apiBaseUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private notificationService: NotificationService
+  ) {}
 
   /**
    * Obtener todos los usuarios de la base de datos
    */
   obtenerUsuarios(): Observable<UsuarioAdmin[]> {
-    console.log('🔍 AdminService: Solicitando usuarios del backend...');
     return this.http.get<any>(`${this.API_URL}/usuarios`).pipe(
       map(response => {
-        console.log('📥 AdminService: Respuesta del backend:', response);
         if (response && response.success && response.data) {
-          console.log('✅ AdminService: Datos recibidos correctamente');
-          console.log('👥 AdminService: Usuarios sin transformar:', response.data);
           // Transformar los usuarios de la BD al formato del panel
-          const usuariosTransformados = this.transformarUsuarios(response.data);
-          console.log('🔄 AdminService: Usuarios transformados:', usuariosTransformados);
-          return usuariosTransformados;
+          return this.transformarUsuarios(response.data);
         } else {
-          console.log('⚠️ AdminService: No hay datos o error en la respuesta');
           // Si no hay usuarios o hay error, devolver array vacío
           return this.transformarUsuarios([]);
         }
@@ -101,9 +98,8 @@ export class AdminService {
    * Transformar usuarios de la BD al formato del panel de administración
    */
   private transformarUsuarios(usuariosBD: UsuarioBD[]): UsuarioAdmin[] {
-    console.log('🔄 AdminService: Transformando usuarios:', usuariosBD);
     return usuariosBD.map(usuario => {
-      const usuarioTransformado = {
+      return {
         id: usuario.idUsuario,
       nombre: usuario.nombre ? usuario.nombre.split(' ')[0] || usuario.nombre : 'Sin nombre',
       apellido: usuario.nombre ? usuario.nombre.split(' ').slice(1).join(' ') || 'Sin apellido' : 'Sin apellido',
@@ -116,8 +112,6 @@ export class AdminService {
       tieneConflictoIntereses: false, // Por defecto false, se puede calcular después
         cedula: usuario.documento
       };
-      console.log('👤 AdminService: Usuario transformado:', usuarioTransformado);
-      return usuarioTransformado;
     });
   }
 
@@ -195,8 +189,6 @@ export class AdminService {
    * Eliminar usuario
    */
   eliminarUsuario(id: number, adminCedula?: string, adminNombre?: string): Observable<any> {
-    console.log('🗑️ AdminService: Eliminando usuario con ID:', id, 'por admin:', adminNombre, '(', adminCedula, ')');
-    
     let url = `${this.API_URL}/usuarios/${id}`;
     const params = new URLSearchParams();
     
@@ -211,11 +203,6 @@ export class AdminService {
       url += '?' + params.toString();
     }
     
-    return this.http.delete<any>(url).pipe(
-      map(response => {
-        console.log('✅ AdminService: Usuario eliminado exitosamente:', response);
-        return response;
-      })
-    );
+    return this.http.delete<any>(url);
   }
 } 

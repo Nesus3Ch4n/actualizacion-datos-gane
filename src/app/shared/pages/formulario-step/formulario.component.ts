@@ -89,10 +89,7 @@ export class FormularioComponent implements OnInit, OnDestroy {
 
   navigateTo(index: number) {
     if (index >= 0 && index < this.stepsData.length && this.stepsData[index].enabled) {
-      console.log(`Navegando al paso ${index}: ${this.stepsData[index].title}`);
       this.formNavigationService.navigateToWithRoute(index, this.route);
-    } else {
-      console.warn(`Paso ${index} no disponible en el modo actual`);
     }
   }
 
@@ -100,7 +97,6 @@ export class FormularioComponent implements OnInit, OnDestroy {
     if (this.currentIndex < this.stepsData.length - 1) {
       this.navigateTo(this.currentIndex + 1);
     } else {
-      console.log('Formulario completado, redirigiendo a finalización');
       this.router.navigate(['/completado']);
     }
   }

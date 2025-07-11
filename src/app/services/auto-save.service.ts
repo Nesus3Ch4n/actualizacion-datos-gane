@@ -45,14 +45,11 @@ export class AutoSaveService {
    */
   async saveStepData(step: string, data: any, forceSave: boolean = false): Promise<boolean> {
     try {
-      console.log(`💾 AutoSave: Guardando paso ${step}...`);
-      
       // Obtener datos anteriores del paso
       const previousData = this.getStepData(step);
       const hasChanges = forceSave || this.hasDataChanged(previousData?.data, data);
       
       if (!hasChanges && !forceSave) {
-        console.log(`ℹ️ AutoSave: No hay cambios en paso ${step}, omitiendo guardado`);
         return true;
       }
 
@@ -68,7 +65,6 @@ export class AutoSaveService {
           lastSaved: new Date()
         });
         
-        console.log(`✅ AutoSave: Paso ${step} guardado exitosamente`);
         return true;
       }
       
@@ -83,32 +79,24 @@ export class AutoSaveService {
    * Guardar datos específicos según el tipo de paso
    */
   private async saveStepDataToBackend(step: string, data: any): Promise<boolean> {
-    console.log(`🔄 AutoSave: Iniciando guardado para paso: ${step}`);
-    
     // Para el paso 'personal', no necesitamos ID de usuario inicialmente
     if (step === 'personal') {
-      console.log('👤 AutoSave: Guardando información personal (sin ID requerido)');
       return await this.savePersonalInfo(data);
     }
     
     // Para otros pasos, obtener el ID del usuario del UsuarioSessionService
-    console.log('🔍 AutoSave: Buscando ID de usuario...');
-    
     let userId = this.usuarioSessionService.getIdUsuarioActual();
-    console.log('🔍 AutoSave: ID desde UsuarioSessionService:', userId);
     
     if (!userId) {
       // Backup: Intentar obtener del FormDataService
       const userIdString = this.formDataService.getCurrentUserIdValue();
       userId = userIdString ? parseInt(userIdString) : null;
-      console.log('🔍 AutoSave: ID desde FormDataService (backup):', userId);
     }
     
     if (!userId) {
       // Backup: Intentar obtener del sessionStorage
       const userIdFromStorage = sessionStorage.getItem('id_usuario');
       userId = userIdFromStorage ? parseInt(userIdFromStorage) : null;
-      console.log('🔍 AutoSave: ID desde sessionStorage (backup):', userId);
     }
     
     if (!userId) {
@@ -116,8 +104,6 @@ export class AutoSaveService {
       this.notificationService.showError('Error', 'No hay usuario activo. Complete primero la información personal.');
       return false;
     }
-
-    console.log(`✅ AutoSave: ID de usuario encontrado: ${userId} para paso: ${step}`);
 
     try {
       switch (step) {
@@ -154,8 +140,6 @@ export class AutoSaveService {
    */
   private async savePersonalInfo(data: any): Promise<boolean> {
     try {
-      console.log('👤 AutoSave: Guardando información personal...');
-      
       const mappedData = {
         documento: data.cedula,
         cedulaExpedicion: data.cedulaExpedicion,
@@ -173,8 +157,6 @@ export class AutoSaveService {
         correo: data.correo
       };
 
-      console.log('👤 AutoSave: Datos mapeados para backend:', mappedData);
-
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(
           `${this.backendService.getApiUrl()}/formulario/informacion-personal/guardar`,
@@ -183,15 +165,12 @@ export class AutoSaveService {
         )
       );
 
-      console.log('👤 AutoSave: Respuesta del backend:', response);
-
       if (response.success) {
-        console.log('👤 AutoSave: Respuesta exitosa, estableciendo usuario...');
-        console.log('👤 AutoSave: response.data:', response.data);
+        // Mostrar notificación de éxito
+        this.notificationService.showFormSaved('Información Personal');
         
         // Obtener el ID del usuario de la respuesta
         const userId = response.data?.idUsuario || response.data?.id;
-        console.log('👤 AutoSave: ID extraído de la respuesta:', userId);
         
         if (userId) {
           // Crear objeto de usuario completo para UsuarioSessionService
@@ -213,20 +192,13 @@ export class AutoSaveService {
           
           // Backup: Guardar también en sessionStorage para persistencia
           sessionStorage.setItem('id_usuario', userId.toString());
-          
-          console.log('✅ AutoSave: Usuario establecido en todos los servicios:', userId);
-        } else {
-          console.warn('⚠️ AutoSave: No se pudo obtener el ID del usuario de la respuesta');
-          console.warn('⚠️ AutoSave: response.data.idUsuario:', response.data?.idUsuario);
-          console.warn('⚠️ AutoSave: response.data.id:', response.data?.id);
         }
-      } else {
-        console.error('❌ AutoSave: Respuesta no exitosa:', response);
       }
 
       return response.success;
     } catch (error: any) {
       console.error('❌ Error guardando información personal:', error);
+      this.notificationService.showFormError('Información Personal', error.error?.message || error.message || 'Error desconocido');
       if (error.error) {
         console.error('❌ Detalles del error:', error.error);
       }
@@ -278,8 +250,6 @@ export class AutoSaveService {
         };
       });
 
-      console.log('📚 AutoSave: Datos mapeados para backend:', estudiosData);
-
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(
           `${this.backendService.getApiUrl()}/formulario/estudios/guardar?idUsuario=${userId}`,
@@ -288,7 +258,6 @@ export class AutoSaveService {
         )
       );
 
-      console.log('📚 AutoSave: Respuesta del backend:', response);
       return response.success;
     } catch (error: any) {
       console.error('❌ Error guardando información académica:', error);
@@ -304,14 +273,10 @@ export class AutoSaveService {
    */
   private async saveVehicleInfo(data: any, userId: string): Promise<boolean> {
     try {
-      console.log('🚗 AutoSave: Preparando datos de vehículos:', data);
-      
       // Filtrar vehículos que no estén vacíos
       const vehiculosValidos = data.vehiculos?.filter((vehiculo: any) => 
         vehiculo.marca && vehiculo.placa
       ) || [];
-
-      console.log('🚗 AutoSave: Vehículos válidos encontrados:', vehiculosValidos.length);
 
       const vehiculosData = vehiculosValidos.map((vehiculo: any) => ({
         tipoVehiculo: vehiculo.tipo || 'PARTICULAR',
@@ -321,8 +286,6 @@ export class AutoSaveService {
         propietario: vehiculo.propietario || ''
       }));
 
-      console.log('🚗 AutoSave: Datos mapeados para backend:', vehiculosData);
-
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(
           `${this.backendService.getApiUrl()}/formulario/vehiculos/guardar?idUsuario=${userId}`,
@@ -331,7 +294,6 @@ export class AutoSaveService {
         )
       );
 
-      console.log('🚗 AutoSave: Respuesta del backend:', response);
       return response.success;
     } catch (error: any) {
       console.error('❌ Error guardando información de vehículos:', error);
@@ -347,10 +309,7 @@ export class AutoSaveService {
    */
   private async saveHousingInfo(data: any, userId: string): Promise<boolean> {
     try {
-      console.log('🏠 AutoSave: Preparando datos de vivienda:', data);
-      
       if (!data.direccion && !data.tipoVivienda) {
-        console.log('🏠 AutoSave: No hay datos de vivienda, enviando objeto vacío');
         // Si no hay datos de vivienda, enviar objeto vacío para eliminar
         const response = await firstValueFrom(
           this.backendService.getHttpClient().post<any>(
@@ -362,8 +321,6 @@ export class AutoSaveService {
         return response.success;
       }
 
-      console.log('🏠 AutoSave: Datos recibidos del componente:', data);
-      
       const viviendaData = {
         tipoVivienda: data.tipoVivienda,
         direccion: data.direccion,
@@ -376,11 +333,6 @@ export class AutoSaveService {
         tipoAdquisicion: data.tipoAdquisicion || ''
       };
 
-      console.log('🏠 AutoSave: Datos mapeados para backend:', viviendaData);
-      console.log('🏠 AutoSave: tipoAdquisicion específico:', data.tipoAdquisicion);
-      console.log('🏠 AutoSave: vivienda específico:', data.vivienda);
-      console.log('🏠 AutoSave: ano específico:', data.ano);
-
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(
           `${this.backendService.getApiUrl()}/formulario/vivienda/guardar?idUsuario=${userId}`,
@@ -389,7 +341,6 @@ export class AutoSaveService {
         )
       );
 
-      console.log('🏠 AutoSave: Respuesta del backend:', response);
       return response.success;
     } catch (error: any) {
       console.error('❌ Error guardando información de vivienda:', error);
@@ -405,14 +356,10 @@ export class AutoSaveService {
    */
   private async saveDependentsInfo(data: any, userId: string): Promise<boolean> {
     try {
-      console.log('👨‍👩‍👧‍👦 AutoSave: Preparando datos de personas a cargo:', data);
-      
       // Filtrar personas que no estén vacías
       const personasValidas = data.personas?.filter((persona: any) => 
         persona.nombre && persona.parentesco
       ) || [];
-
-      console.log('👨‍👩‍👧‍👦 AutoSave: Personas válidas encontradas:', personasValidas.length);
 
       const personasData = personasValidas.map((persona: any) => {
         // Calcular edad si se proporciona fecha de nacimiento
@@ -442,8 +389,6 @@ export class AutoSaveService {
         };
       });
 
-      console.log('👨‍👩‍👧‍👦 AutoSave: Datos mapeados para backend:', personasData);
-
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(
           `${this.backendService.getApiUrl()}/formulario/personas-acargo/guardar?idUsuario=${userId}`,
@@ -452,7 +397,6 @@ export class AutoSaveService {
         )
       );
 
-      console.log('👨‍👩‍👧‍👦 AutoSave: Respuesta del backend:', response);
       return response.success;
     } catch (error: any) {
       console.error('❌ Error guardando información de personas a cargo:', error);
@@ -468,22 +412,16 @@ export class AutoSaveService {
    */
   private async saveContactInfo(data: any, userId: string): Promise<boolean> {
     try {
-      console.log('📞 AutoSave: Preparando datos de contactos:', data);
-      
       // Filtrar contactos que no estén vacíos
       const contactosValidos = data.contactos?.filter((contacto: any) => 
         contacto.nombre && contacto.telefono
       ) || [];
-
-      console.log('📞 AutoSave: Contactos válidos encontrados:', contactosValidos.length);
 
       const contactosData = contactosValidos.map((contacto: any) => ({
         nombreCompleto: contacto.nombre,
         parentesco: contacto.parentesco,
         numeroCelular: contacto.telefono
       }));
-
-      console.log('📞 AutoSave: Datos mapeados para backend:', contactosData);
 
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(
@@ -493,7 +431,6 @@ export class AutoSaveService {
         )
       );
 
-      console.log('📞 AutoSave: Respuesta del backend:', response);
       return response.success;
     } catch (error: any) {
       console.error('❌ Error guardando información de contactos:', error);
@@ -509,14 +446,10 @@ export class AutoSaveService {
    */
   private async saveDeclarationInfo(data: any, userId: string): Promise<boolean> {
     try {
-      console.log('⚖️ AutoSave: Preparando datos de declaraciones:', data);
-      
       // Filtrar declaraciones que no estén vacías - corregir el filtro para usar 'personas' en lugar de 'declaraciones'
       const declaracionesValidas = data.personas?.filter((persona: any) => 
         persona.nombre && persona.parentesco
       ) || [];
-
-      console.log('⚖️ AutoSave: Declaraciones válidas encontradas:', declaracionesValidas.length);
 
       const declaracionesData = declaracionesValidas.map((persona: any) => ({
         nombreCompleto: persona.nombre,
@@ -527,8 +460,6 @@ export class AutoSaveService {
         fechaCreacion: new Date().toISOString().split('T')[0] // Agregar fecha de creación
       }));
 
-      console.log('⚖️ AutoSave: Datos mapeados para backend:', declaracionesData);
-
       const response = await firstValueFrom(
         this.backendService.getHttpClient().post<any>(
           `${this.backendService.getApiUrl()}/formulario/relaciones-conflicto/guardar?idUsuario=${userId}`,
@@ -537,7 +468,6 @@ export class AutoSaveService {
         )
       );
 
-      console.log('⚖️ AutoSave: Respuesta del backend:', response);
       return response.success;
     } catch (error: any) {
       console.error('❌ Error guardando información de declaraciones:', error);

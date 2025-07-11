@@ -21,9 +21,6 @@ export class InformacionPersonalService {
    */
   async guardarInformacionPersonal(idUsuario: number, informacion: any): Promise<any> {
     try {
-      console.log('💾 Guardando información personal en base de datos:', informacion);
-      console.log('👤 Usuario ID:', idUsuario);
-
       // Asegurar que la información tenga el ID del usuario
       const datosCompletos = {
         ...informacion,
@@ -44,8 +41,6 @@ export class InformacionPersonalService {
           })
         )
       );
-      
-      console.log('✅ Información personal guardada exitosamente:', response);
       
       if (response.success) {
         this.notificationService.showSuccess(
@@ -75,8 +70,6 @@ export class InformacionPersonalService {
    */
   async obtenerInformacionPorCedula(cedula: string): Promise<any> {
     try {
-      console.log('📋 Obteniendo información personal para cédula:', cedula);
-
       // Obtener desde el backend usando el endpoint del ConsultaController
       const response = await firstValueFrom(
         this.backendService.getHttpClient().get<any>(
@@ -91,15 +84,10 @@ export class InformacionPersonalService {
         )
       );
       
-      console.log('✅ Información personal obtenida exitosamente:', response);
-      
       return response; // Retorna la información personal
 
     } catch (error) {
       console.error('❌ Error al obtener información personal:', error);
-      
-      // No mostrar error si no hay información (es normal)
-      console.log('ℹ️ No se encontró información personal para la cédula');
       
       return null; // Retorna null si no hay información
     }

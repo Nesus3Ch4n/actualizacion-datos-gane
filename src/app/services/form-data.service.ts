@@ -28,34 +28,24 @@ export class FormDataService {
    */
   async guardarFormularioCompleto(formulario: any): Promise<boolean> {
     try {
-      console.log('📝 Iniciando guardado de formulario completo con validación...');
-      console.log('📋 Formulario obtenido:', formulario);
-
       // Paso 1: Validación completa antes de proceder
-      console.log('🔍 Paso 1: Validación completa del formulario...');
       const validationResult = await firstValueFrom(
         this.validationService.validateCompleteForm(formulario)
       );
 
       if (!validationResult.isValid) {
-        console.log('❌ Validación falló:', validationResult.message);
         this.notificationService.showError('Error de Validación', validationResult.message);
         return false;
       }
 
-      console.log('✅ Validación exitosa, procediendo con el guardado...');
-
       // Paso 2: Verificar si el usuario existe y obtener su ID
-      console.log('👤 Paso 2: Verificando usuario existente...');
       const usuarioExistente = await this.verificarUsuarioExistente(formulario.informacionPersonal.cedula);
       
       if (usuarioExistente) {
-        console.log('✅ Usuario encontrado, actualizando datos...');
         // Actualizar usuario existente
         const resultado = await this.actualizarUsuarioExistente(usuarioExistente.id, formulario);
         return resultado;
       } else {
-        console.log('🆕 Usuario no encontrado, creando nuevo...');
         // Crear nuevo usuario
         const resultado = await this.crearNuevoUsuario(formulario);
         return resultado;
@@ -72,11 +62,8 @@ export class FormDataService {
    */
   private async actualizarUsuarioExistente(usuarioId: number, formulario: any): Promise<boolean> {
     try {
-      console.log('🔄 Actualizando usuario ID:', usuarioId);
-      
       // Verificar que el usuario esté autenticado antes de actualizar
       if (!this.authService.isAuthenticated()) {
-        console.log('❌ Usuario no autenticado para actualización');
         this.notificationService.showError('Error de Autenticación', 'Debes estar autenticado para actualizar datos.');
         return false;
       }
@@ -84,7 +71,6 @@ export class FormDataService {
       // Verificar que el token esté presente
       const token = this.authService.getCurrentToken();
       if (!token) {
-        console.log('❌ No hay token para actualización');
         this.notificationService.showError('Error de Autenticación', 'Token de autenticación no encontrado.');
         return false;
       }
@@ -101,13 +87,11 @@ export class FormDataService {
         informacionCompleta: formulario
       };
 
-      console.log('📤 Enviando actualización con token de autenticación...');
       const resultado = await firstValueFrom(
         this.backendService.actualizarUsuario(usuarioId, datosActualizacion)
       );
 
       if (resultado.success) {
-        console.log('✅ Usuario actualizado exitosamente con auditoría');
         this.notificationService.showSuccess('Actualización Exitosa', 'Los datos han sido actualizados correctamente.');
         return true;
       } else {
@@ -127,11 +111,8 @@ export class FormDataService {
    */
   private async crearNuevoUsuario(formulario: any): Promise<boolean> {
     try {
-      console.log('🆕 Creando nuevo usuario...');
-      
       // Verificar autenticación antes de crear
       if (!this.authService.isAuthenticated()) {
-        console.log('❌ Usuario no autenticado para creación');
         this.notificationService.showError('Error de Autenticación', 'Debes estar autenticado para crear un nuevo usuario.');
         return false;
       }
@@ -145,16 +126,11 @@ export class FormDataService {
         informacionCompleta: formulario
       };
 
-      console.log('📋 Datos del usuario a crear:', datosUsuario);
-
       const resultado = await firstValueFrom(
         this.backendService.crearUsuarioCompleto(datosUsuario)
       );
 
-      console.log('✅ Respuesta del backend:', resultado);
-
       if (resultado.success) {
-        console.log('✅ Usuario creado exitosamente con ID:', resultado.data?.id);
         // Guardar el ID del usuario creado
         if (resultado.data?.id) {
           this.setCurrentUserId(resultado.data.id.toString());
@@ -180,7 +156,6 @@ export class FormDataService {
    */
   async guardarInformacionPersonal(data: any): Promise<string> {
     try {
-      console.log('👤 Guardando información personal...');
       
       const usuarioBasico = this.prepararUsuarioBasico(data);
       let usuarioId: string;
@@ -188,18 +163,14 @@ export class FormDataService {
       const usuarioExistente = await this.verificarUsuarioExistente(data.cedula);
       
       if (usuarioExistente) {
-        console.log('🔄 Usuario existente, obteniendo ID para actualizar...');
-        
         // Determinar el ID del usuario
         let userId: number;
         if (usuarioExistente.idUsuario) {
           // Si viene del endpoint autenticado, usar el ID real
           userId = usuarioExistente.idUsuario;
-          console.log('✅ Usando ID real del usuario:', userId);
         } else if (usuarioExistente.cedula) {
           // Si viene del endpoint público, usar la cédula como ID temporal
           userId = Number(usuarioExistente.cedula);
-          console.log('⚠️ Usando cédula como ID temporal:', userId);
         } else {
           throw new Error('No se pudo determinar el ID del usuario');
         }
@@ -209,20 +180,16 @@ export class FormDataService {
         try {
           // Intentar actualizar usando el ID correcto
           await firstValueFrom(this.backendService.actualizarUsuario(userId, usuarioBasico));
-          console.log('✅ Usuario actualizado exitosamente');
         } catch (updateError: any) {
           console.error('❌ Error actualizando usuario:', updateError);
           // Si falla la actualización, intentar crear nuevo usuario
-          console.log('🔄 Error al actualizar, intentando crear nuevo usuario...');
           try {
             const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
             usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
-            console.log('✅ Nuevo usuario creado con ID:', usuarioId);
           } catch (createError: any) {
             console.error('❌ Error creando usuario:', createError);
             // Si es error 400 (usuario ya existe), usar el ID que ya tenemos
             if (createError.status === 400 && createError.message?.includes('Ya existe un usuario con cédula')) {
-              console.log('ℹ️ Usuario ya existe, usando ID existente');
               // Mantener el ID que ya teníamos
             } else {
               throw createError;
@@ -230,21 +197,18 @@ export class FormDataService {
           }
         }
       } else {
-        console.log('🆕 Creando nuevo usuario...');
         try {
           const nuevoUsuario = await firstValueFrom(this.backendService.crearUsuarioCompleto(usuarioBasico));
           usuarioId = nuevoUsuario.id?.toString() || nuevoUsuario.toString();
-          console.log('✅ Nuevo usuario creado con ID:', usuarioId);
         } catch (createError: any) {
           console.error('❌ Error creando usuario:', createError);
           
           // Si es error 401, intentar con endpoint de prueba
           if (createError.status === 401) {
-            console.log('🔄 Error 401, intentando endpoint de prueba...');
             try {
               const resultado = await firstValueFrom(this.backendService.crearUsuarioPrueba(usuarioBasico));
               usuarioId = resultado.id?.toString() || resultado.toString();
-              console.log('✅ Usuario creado con endpoint de prueba, ID:', usuarioId);
+
             } catch (pruebaError) {
               console.error('❌ Error en endpoint de prueba:', pruebaError);
               // Intentar con método alternativo
@@ -255,12 +219,12 @@ export class FormDataService {
                 console.error('❌ Error en método alternativo:', altError);
                 // Generar ID temporal para continuar
                 usuarioId = Date.now().toString();
-                console.log('🆔 Usando ID temporal:', usuarioId);
+  
               }
             }
           } else {
             // Para otros errores, intentar endpoint de prueba
-            console.log('🔄 Error desconocido, intentando endpoint de prueba...');
+
             try {
               const resultado = await firstValueFrom(this.backendService.crearUsuarioPrueba(usuarioBasico));
               usuarioId = resultado.id?.toString() || resultado.toString();
@@ -268,7 +232,7 @@ export class FormDataService {
               console.error('❌ Error en endpoint de prueba:', pruebaError);
               // Generar ID temporal para continuar
               usuarioId = Date.now().toString();
-              console.log('🆔 Usando ID temporal:', usuarioId);
+
             }
           }
         }

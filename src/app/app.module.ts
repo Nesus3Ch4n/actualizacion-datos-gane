@@ -10,6 +10,7 @@ import { AppComponent } from './app.component';
 import { FormularioComponent } from './shared/pages/formulario-step/formulario.component';
 import { AuditoriaComponent } from './components/auditoria/auditoria.component';
 import { AuditoriaDetalleModalComponent } from './components/auditoria/auditoria-detalle-modal.component';
+import { NotificationContainerComponent } from './components/notification-container.component';
 import { FormularioModule } from './modules/formulario/formulario.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UsuarioDetalleModalComponent } from '../admin-panel/presentation/components/usuario-detalle-modal.component';
@@ -39,7 +40,8 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     MaterialModule,
     FormularioModule,
     AdminModule,
-    AppRoutingModule
+    AppRoutingModule,
+    NotificationContainerComponent
   ],
   providers: [
     AuthGuard,

@@ -126,18 +126,11 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
    * Cargar usuarios de la base de datos
    */
   cargarUsuarios(): void {
-    console.log('🔄 AdminPanel: Iniciando carga de usuarios...');
     this.cargando = true;
     this.error = '';
 
     this.adminService.obtenerUsuarios().subscribe({
       next: (usuarios) => {
-        console.log('✅ AdminPanel: Usuarios cargados del backend:', usuarios);
-        console.log('📊 AdminPanel: Total usuarios:', usuarios.length);
-        if (usuarios.length > 0) {
-          console.log('👤 AdminPanel: Primer usuario:', usuarios[0]);
-          console.log('🆔 AdminPanel: ID del primer usuario:', usuarios[0].id);
-        }
         this.dataSource.data = usuarios;
         this.cargando = false;
       },
@@ -146,10 +139,8 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
         this.error = 'Error al cargar usuarios: ' + error.message;
         this.cargando = false;
         
-        console.log('⚠️ AdminPanel: Usando usuarios de prueba debido al error...');
         // Si hay error, usar usuarios de prueba
         this.adminService.obtenerUsuariosPrueba().subscribe(usuariosPrueba => {
-          console.log('🔄 AdminPanel: Usuarios de prueba cargados:', usuariosPrueba);
           this.dataSource.data = usuariosPrueba;
         });
       }
@@ -222,9 +213,20 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
 
   // Generación de reportes
   generarReporte(tipoReporte: string): void {
-    console.log(`Generando reporte: ${tipoReporte}`);
-
-    this.notificationService.showInfo('Generando archivo Excel...', 'Procesando');
+    // Mostrar notificación de generación
+    const reporteNombres: { [key: string]: string } = {
+      'integrantes': 'Integrantes',
+      'conflicto-intereses': 'Conflicto de Intereses',
+      'estudios': 'Estudios Académicos',
+      'contacto': 'Personas de Contacto',
+      'personas-cargo': 'Personas a Cargo',
+      'vehiculos': 'Vehículos',
+      'viviendas': 'Viviendas',
+      'todo': 'Reporte Completo'
+    };
+    
+    const nombreReporte = reporteNombres[tipoReporte] || tipoReporte;
+    this.notificationService.showReportDownloading(nombreReporte);
 
     let reporteObservable: Observable<Blob>;
 
@@ -251,7 +253,7 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
         reporteObservable = this.adminService.generarReporteViviendas();
         break;
       default:
-        this.notificationService.showError('Tipo de reporte no válido', 'Error');
+        this.notificationService.showReportError(nombreReporte, 'Tipo de reporte no válido');
         return;
     }
 
@@ -275,39 +277,24 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
         // Limpiar URL
         window.URL.revokeObjectURL(url);
         
-        this.notificationService.showSuccess(
-          `Archivo Excel generado exitosamente`,
-          'Éxito'
-        );
+        this.notificationService.showReportGenerated(nombreReporte);
       },
       error: (error: any) => {
         console.error('Error al generar reporte:', error);
-        this.notificationService.showError('Error al generar el archivo Excel', 'Error');
+        this.notificationService.showReportError(nombreReporte, error.message || 'Error desconocido');
       }
     });
   }
 
   // Acciones de usuario
   verDetalle(usuario: UsuarioAdmin): void {
-    console.log('=== SOLICITANDO DETALLE DE USUARIO ===');
-    console.log('Usuario seleccionado completo:', usuario);
-    console.log('ID del usuario:', usuario.id);
-    console.log('Tipo de ID:', typeof usuario.id);
-    console.log('¿ID es undefined?', usuario.id === undefined);
-    console.log('¿ID es null?', usuario.id === null);
-    
     if (usuario.id === undefined || usuario.id === null) {
-      console.error('❌ ERROR: El ID del usuario es undefined o null');
       alert('Error: No se puede obtener el detalle del usuario porque el ID no está disponible');
       return;
     }
     
     this.obtenerUsuarioDetalleCompleto.execute(usuario.id).subscribe({
       next: (detalle) => {
-        console.log('=== DETALLE OBTENIDO DEL BACKEND ===');
-        console.log('Detalle completo recibido:', detalle);
-        console.log('=====================================');
-        
         this.dialog.open(UsuarioDetalleModalComponent, {
           width: '600px',
           data: detalle
@@ -321,35 +308,24 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   }
 
   editarUsuario(usuario: UsuarioAdmin): void {
-    console.log('Editar usuario:', usuario);
     alert(`Editar usuario: ${usuario.nombre} ${usuario.apellido}\n(Funcionalidad pendiente de implementar)`);
   }
 
   eliminarUsuario(usuario: UsuarioAdmin): void {
     if (confirm(`¿Estás seguro de eliminar al usuario ${usuario.nombre} ${usuario.apellido}?\n\nEsta acción no se puede deshacer.`)) {
-      console.log('🗑️ Eliminando usuario:', usuario);
-      
-      // Obtener información del administrador actual (por ahora hardcodeado, pero se puede obtener del servicio de autenticación)
-      const adminCedula = '1006101211'; // Cédula del administrador
-      const adminNombre = 'JESUS FELIPE CORDOBA ECHANDIA'; // Nombre del administrador
+      // Obtener información del administrador actual
+      const adminCedula = '1006101211';
+      const adminNombre = 'JESUS FELIPE CORDOBA ECHANDIA';
       
       this.adminService.eliminarUsuario(usuario.id, adminCedula, adminNombre).subscribe({
         next: (response) => {
-          console.log('✅ Usuario eliminado exitosamente:', response);
-          this.notificationService.showSuccess(
-            `Usuario ${usuario.nombre} ${usuario.apellido} eliminado exitosamente`,
-            'Eliminación completada'
-          );
+          this.notificationService.showUserDeleted(`${usuario.nombre} ${usuario.apellido}`);
           
           // Recargar la lista de usuarios
           this.cargarUsuarios();
         },
         error: (error) => {
-          console.error('❌ Error al eliminar usuario:', error);
-          this.notificationService.showError(
-            `Error al eliminar usuario: ${error.message || 'Error desconocido'}`,
-            'Error de eliminación'
-          );
+          this.notificationService.showUserDeleteError(error.message || 'Error desconocido');
         }
       });
     }
@@ -369,9 +345,7 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
   }
 
   exportarTodo(): void {
-    console.log('Exportando todos los datos...');
-    
-    this.notificationService.showInfo('Generando reporte completo...', 'Procesando');
+    this.notificationService.showReportDownloading('Reporte Completo');
 
     this.adminService.exportarTodo().subscribe({
       next: (blob: Blob) => {
@@ -393,14 +367,11 @@ export class AdminPanelComponent implements OnInit, AfterViewInit {
         // Limpiar URL
         window.URL.revokeObjectURL(url);
         
-        this.notificationService.showSuccess(
-          'Reporte completo generado exitosamente',
-          'Éxito'
-        );
+        this.notificationService.showReportGenerated('Reporte Completo');
       },
       error: (error: any) => {
         console.error('Error al exportar todo:', error);
-        this.notificationService.showError('Error al generar el reporte completo', 'Error');
+        this.notificationService.showReportError('Reporte Completo', error.message || 'Error desconocido');
       }
     });
   }

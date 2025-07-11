@@ -19,7 +19,6 @@ export class VehiculoService {
 
   // Guardar vehículos de un usuario específico
   guardarVehiculos(idUsuario: number, vehiculos: any[]): Observable<any> {
-    console.log(`🚗 Guardando ${vehiculos.length} vehículos para usuario ID: ${idUsuario}`);
     return this.http.post<any>(`${this.apiUrl}/formulario/vehiculos/guardar?idUsuario=${idUsuario}`, vehiculos, this.httpOptions)
       .pipe(
         catchError(error => {
@@ -31,7 +30,6 @@ export class VehiculoService {
 
   // Obtener vehículos de un usuario específico
   obtenerVehiculosPorCedula(cedula: number): Observable<any[]> {
-    console.log(`📋 Obteniendo vehículos para cédula: ${cedula}`);
     return this.http.get<any[]>(`${this.apiUrl}/consulta/vehiculos/${cedula}`)
       .pipe(
         catchError(error => {

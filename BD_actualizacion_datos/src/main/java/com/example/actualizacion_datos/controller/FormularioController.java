@@ -69,7 +69,7 @@ public class FormularioController {
             
             Map<String, Object> response = Map.of(
                 "success", true,
-                "message", "Estudios académicos guardados exitosamente",
+                "message", "✅ Estudios académicos guardados exitosamente. Se procesaron " + estudiosGuardados.size() + " registros.",
                 "data", estudiosGuardados
             );
             
@@ -81,7 +81,7 @@ public class FormularioController {
             
             Map<String, Object> errorResponse = Map.of(
                 "success", false,
-                "message", "Error al guardar estudios académicos: " + e.getMessage()
+                "message", "❌ Error al guardar estudios académicos: " + e.getMessage()
             );
             
             return ResponseEntity.badRequest().body(errorResponse);
@@ -130,7 +130,7 @@ public class FormularioController {
             
             Map<String, Object> response = Map.of(
                 "success", true,
-                "message", "Vehículos guardados exitosamente",
+                "message", "🚗 Vehículos guardados exitosamente. Se procesaron " + vehiculosGuardados.size() + " registros.",
                 "data", vehiculosGuardados
             );
             
@@ -142,7 +142,7 @@ public class FormularioController {
             
             Map<String, Object> errorResponse = Map.of(
                 "success", false,
-                "message", "Error al guardar vehículos: " + e.getMessage()
+                "message", "❌ Error al guardar vehículos: " + e.getMessage()
             );
             
             return ResponseEntity.badRequest().body(errorResponse);
@@ -153,14 +153,7 @@ public class FormularioController {
     @PostMapping("/vivienda/guardar")
     public ResponseEntity<?> guardarVivienda(@RequestParam Long idUsuario, @RequestBody Vivienda vivienda) {
         logger.info("🏠 Guardando vivienda para usuario ID: {}", idUsuario);
-        logger.info("🏠 Datos recibidos - tipoAdquisicion: '{}'", vivienda.getTipoAdquisicion());
-        logger.info("🏠 Datos recibidos - entidad: '{}'", vivienda.getEntidad());
-        logger.info("🏠 Datos recibidos - ano: '{}'", vivienda.getAno());
-        logger.info("🏠 Datos recibidos - barrio: '{}'", vivienda.getBarrio());
-        logger.info("🏠 Datos recibidos - ciudad: '{}'", vivienda.getCiudad());
-        logger.info("🏠 Datos recibidos - vivienda: '{}'", vivienda.getVivienda());
-        logger.info("🏠 Datos recibidos - infoAdicional: '{}'", vivienda.getInfoAdicional());
-        logger.info("🏠 Datos recibidos - tipoVivienda: '{}'", vivienda.getTipoVivienda());
+
         
         try {
             // Obtener usuario para auditoría
@@ -179,7 +172,7 @@ public class FormularioController {
                 
                 Map<String, Object> response = Map.of(
                     "success", true,
-                    "message", "Vivienda actualizada exitosamente",
+                    "message", "🏠 Vivienda actualizada exitosamente",
                     "data", viviendaActualizada
                 );
                 
@@ -192,7 +185,7 @@ public class FormularioController {
                 
                 Map<String, Object> response = Map.of(
                     "success", true,
-                    "message", "Vivienda guardada exitosamente",
+                    "message", "🏠 Vivienda guardada exitosamente",
                     "data", viviendaGuardada
                 );
                 
@@ -205,7 +198,7 @@ public class FormularioController {
             
             Map<String, Object> errorResponse = Map.of(
                 "success", false,
-                "message", "Error al guardar vivienda: " + e.getMessage()
+                "message", "❌ Error al guardar vivienda: " + e.getMessage()
             );
             
             return ResponseEntity.badRequest().body(errorResponse);
@@ -444,12 +437,6 @@ public class FormularioController {
     }
     
     private void actualizarCamposVivienda(Vivienda viviendaExistente, Vivienda viviendaNueva) {
-        logger.info("🏠 Actualizando campos de vivienda");
-        logger.info("🏠 tipoAdquisicion anterior: '{}' -> nuevo: '{}'", viviendaExistente.getTipoAdquisicion(), viviendaNueva.getTipoAdquisicion());
-        logger.info("🏠 entidad anterior: '{}' -> nuevo: '{}'", viviendaExistente.getEntidad(), viviendaNueva.getEntidad());
-        logger.info("🏠 ano anterior: '{}' -> nuevo: '{}'", viviendaExistente.getAno(), viviendaNueva.getAno());
-        logger.info("🏠 vivienda anterior: '{}' -> nuevo: '{}'", viviendaExistente.getVivienda(), viviendaNueva.getVivienda());
-        
         viviendaExistente.setDireccion(viviendaNueva.getDireccion());
         viviendaExistente.setTipoVivienda(viviendaNueva.getTipoVivienda());
         viviendaExistente.setTipoAdquisicion(viviendaNueva.getTipoAdquisicion());
@@ -459,8 +446,6 @@ public class FormularioController {
         viviendaExistente.setCiudad(viviendaNueva.getCiudad());
         viviendaExistente.setVivienda(viviendaNueva.getVivienda());
         viviendaExistente.setInfoAdicional(viviendaNueva.getInfoAdicional());
-        
-        logger.info("🏠 Campos actualizados correctamente");
     }
     
     private void actualizarCamposPersonaACargo(PersonaACargo personaExistente, PersonaACargo personaNueva) {

@@ -52,7 +52,6 @@ export class FormNavigationService {
       this.setCurrentIndex(index);
       const targetRoute = this.components[index];
       const fullRoute = `/formulario/${targetRoute}`;
-      console.log(`🔄 FormNavigationService: Navegando a ${fullRoute}`);
       
       // Usar navegación absoluta con ruta completa
       this.router.navigate([fullRoute], { 
@@ -68,7 +67,6 @@ export class FormNavigationService {
       this.setCurrentIndex(index);
       const targetRoute = this.components[index];
       const fullRoute = `/formulario/${targetRoute}`;
-      console.log(`🔄 FormNavigationService: Navegando a ${fullRoute} (con route)`);
       
       // Usar navegación absoluta con ruta completa
       this.router.navigate([fullRoute], { 

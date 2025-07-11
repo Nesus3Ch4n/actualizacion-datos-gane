@@ -312,7 +312,7 @@ public class UsuarioController {
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Usuario eliminado exitosamente");
+            response.put("message", "🗑️ Usuario eliminado exitosamente por el administrador " + adminNombre);
             
             logger.info("✅ Usuario eliminado exitosamente con ID: {} por administrador: {}", id, adminNombre);
             return ResponseEntity.ok(response);
@@ -322,7 +322,7 @@ public class UsuarioController {
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
-            errorResponse.put("message", "Error al eliminar usuario: " + e.getMessage());
+            errorResponse.put("message", "❌ Error al eliminar usuario: " + e.getMessage());
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
