@@ -7,6 +7,7 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,9 @@ public class UsuarioService {
     
     @Autowired
     private ModelMapper modelMapper;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     
     // ========== CREAR USUARIO COMPLETO ==========
     public Usuario crearUsuarioCompleto(UsuarioCompletoDTO usuarioDTO) {
@@ -347,6 +351,15 @@ public class UsuarioService {
                 throw new RuntimeException("Usuario no encontrado con ID: " + id);
             }
             
+            // Primero eliminar registros de auditoría relacionados con este usuario
+            try {
+                jdbcTemplate.update("DELETE FROM AUDITORIA WHERE ID_USUARIO = ?", id);
+                logger.info("🗑️ Registros de auditoría eliminados para usuario ID: {}", id);
+            } catch (Exception e) {
+                logger.warn("⚠️ No se pudieron eliminar registros de auditoría: {}", e.getMessage());
+            }
+            
+            // Luego eliminar el usuario (las claves foráneas CASCADE eliminarán el resto)
             usuarioRepository.deleteById(id);
             logger.info("✅ Usuario eliminado exitosamente con ID: {} por administrador: {}", id, adminNombre);
             

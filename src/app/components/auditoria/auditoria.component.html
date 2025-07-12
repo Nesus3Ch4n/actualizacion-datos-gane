@@ -50,6 +50,111 @@
     </div>
   </div>
 
+  <!-- Estadísticas de Actualizaciones Anuales -->
+  <div class="actualizaciones-section" *ngIf="!cargandoEstadisticas && estadisticasActualizacion">
+    <div class="section-header">
+      <h2><i class="fas fa-calendar-check"></i> Estadísticas de Actualizaciones Anuales</h2>
+      <div class="header-actions">
+        <button mat-raised-button color="primary" (click)="inicializarDatos()" matTooltip="Inicializar datos de prueba">
+          <i class="fas fa-database"></i>
+          Inicializar Datos
+        </button>
+        <button mat-icon-button (click)="refrescarEstadisticas()" matTooltip="Refrescar estadísticas">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="estadisticas-grid">
+      <div class="estadistica-card total-actualizaciones">
+        <div class="card-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ estadisticasActualizacion.total }}</h3>
+          <p>Total Usuarios</p>
+        </div>
+      </div>
+
+      <div class="estadistica-card completadas">
+        <div class="card-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ estadisticasActualizacion.completadas }}</h3>
+          <p>Actualizaciones Completadas</p>
+          <small>{{ estadisticasActualizacion.porcentajeCompletadas | number:'1.1-1' }}%</small>
+        </div>
+      </div>
+
+      <div class="estadistica-card pendientes">
+        <div class="card-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ estadisticasActualizacion.pendientes }}</h3>
+          <p>Pendientes de Actualizar</p>
+          <small>{{ estadisticasActualizacion.porcentajePendientes | number:'1.1-1' }}%</small>
+        </div>
+      </div>
+
+      <div class="estadistica-card vencidas">
+        <div class="card-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ estadisticasActualizacion.vencidas }}</h3>
+          <p>Actualizaciones Vencidas</p>
+          <small>{{ estadisticasActualizacion.porcentajeVencidas | number:'1.1-1' }}%</small>
+        </div>
+      </div>
+
+      <div class="estadistica-card proximos-vencer">
+        <div class="card-icon">
+          <i class="fas fa-hourglass-half"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ estadisticasActualizacion.proximosAVencer }}</h3>
+          <p>Próximos a Vencer (30 días)</p>
+        </div>
+      </div>
+
+      <div class="estadistica-card necesitan-actualizacion">
+        <div class="card-icon">
+          <i class="fas fa-edit"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ estadisticasActualizacion.necesitanActualizacion }}</h3>
+          <p>Necesitan Actualización</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráfico de Pastel -->
+    <div class="grafico-section">
+      <div class="grafico-container">
+        <canvas baseChart
+                [data]="pieChartData"
+                [type]="pieChartType"
+                [options]="pieChartOptions">
+        </canvas>
+      </div>
+    </div>
+
+    <!-- Controles de Acción -->
+    <div class="controles-accion">
+      <button mat-raised-button color="warn" (click)="cargarControlesVencidos()">
+        <i class="fas fa-exclamation-triangle"></i>
+        Ver Vencidos ({{ estadisticasActualizacion.vencidas }})
+      </button>
+      
+      <button mat-raised-button color="accent" (click)="cargarControlesPendientes()">
+        <i class="fas fa-clock"></i>
+        Ver Pendientes ({{ estadisticasActualizacion.pendientes }})
+      </button>
+    </div>
+  </div>
+
   <!-- Filtros -->
   <div class="filtros-section">
     <div class="filtros-header">
@@ -190,8 +295,8 @@
           <td mat-cell *matCellDef="let auditoria">
             <div class="detalles-cell">
               <div class="detalles-text">
-                <p><strong>Valor Anterior:</strong> {{ auditoria.valorAnterior }}</p>
-                <p><strong>Valor Nuevo:</strong> {{ auditoria.valorNuevo }}</p>
+                <p><strong>Valor Anterior:</strong> <span class="valor-anterior">{{ auditoria.valorAnterior }}</span></p>
+                <p><strong>Valor Nuevo:</strong> <span class="valor-nuevo">{{ auditoria.valorNuevo }}</span></p>
               </div>
             </div>
           </td>

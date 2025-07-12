@@ -4,12 +4,14 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { NgChartsModule } from 'ng2-charts';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { FormularioComponent } from './shared/pages/formulario-step/formulario.component';
 import { AuditoriaComponent } from './components/auditoria/auditoria.component';
 import { AuditoriaDetalleModalComponent } from './components/auditoria/auditoria-detalle-modal.component';
+import { UsuariosPendientesModalComponent } from './components/auditoria/usuarios-pendientes-modal.component';
 import { NotificationContainerComponent } from './components/notification-container.component';
 import { FormularioModule } from './modules/formulario/formulario.module';
 import { AdminModule } from './modules/admin/admin.module';
@@ -29,7 +31,8 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     FormularioComponent,
     AuditoriaComponent,
     UsuarioDetalleModalComponent,
-    AuditoriaDetalleModalComponent
+    AuditoriaDetalleModalComponent,
+    UsuariosPendientesModalComponent
   ],
   imports: [
     BrowserModule,
@@ -41,7 +44,8 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     FormularioModule,
     AdminModule,
     AppRoutingModule,
-    NotificationContainerComponent
+    NotificationContainerComponent,
+    NgChartsModule
   ],
   providers: [
     AuthGuard,

@@ -17,10 +17,10 @@ import { NotificationService, Notification } from '../services/notification.serv
         
         <div class="notification-icon">
           <span [ngSwitch]="notification.type">
-            <span *ngSwitchCase="'success'">✅</span>
-            <span *ngSwitchCase="'error'">❌</span>
-            <span *ngSwitchCase="'warning'">⚠️</span>
-            <span *ngSwitchDefault>ℹ️</span>
+            <span *ngSwitchCase="'success'"></span>
+            <span *ngSwitchCase="'error'"></span>
+            <span *ngSwitchCase="'warning'"></span>
+            <span *ngSwitchDefault></span>
           </span>
         </div>
         

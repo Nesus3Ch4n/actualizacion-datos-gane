@@ -1,10 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { AuditoriaService, AuditoriaDTO, FiltroAuditoria } from '../../services/auditoria.service';
+import { ActualizacionService, EstadisticasActualizacion, ControlActualizacion } from '../../services/actualizacion.service';
 import { NotificationService } from '../../services/notification.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AuditoriaDetalleModalComponent } from './auditoria-detalle-modal.component';
+import { UsuariosPendientesModalComponent } from './usuarios-pendientes-modal.component';
 import { ExcelExportService } from '../../services/excel-export.service';
+import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
 
 @Component({
   selector: 'app-auditoria',
@@ -31,8 +35,44 @@ export class AuditoriaComponent implements OnInit {
   // Columnas de la tabla
   columnasMostradas: string[] = ['fecha', 'tabla', 'tipoPeticion', 'usuario', 'idUsuario', 'descripcion', 'detalles', 'ip', 'acciones'];
 
+  // Estadísticas de actualizaciones
+  estadisticasActualizacion: EstadisticasActualizacion | null = null;
+  controlesPendientes: ControlActualizacion[] = [];
+  controlesVencidos: ControlActualizacion[] = [];
+  cargandoEstadisticas = false;
+
+  // Gráfico de pastel
+  @ViewChild(BaseChartDirective) chart: BaseChartDirective | undefined;
+  
+  public pieChartOptions: ChartConfiguration['options'] = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+      },
+      title: {
+        display: true,
+        text: 'Estado de Actualizaciones Anuales'
+      }
+    }
+  };
+  
+  public pieChartData: ChartData<'pie', number[], string | string[]> = {
+    labels: ['Completadas', 'Pendientes', 'Vencidas'],
+    datasets: [{
+      data: [0, 0, 0],
+      backgroundColor: ['#27ae60', '#f39c12', '#e74c3c'],
+      borderColor: ['#27ae60', '#f39c12', '#e74c3c'],
+      borderWidth: 2
+    }]
+  };
+  
+  public pieChartType: ChartType = 'pie';
+
   constructor(
     private auditoriaService: AuditoriaService,
+    private actualizacionService: ActualizacionService,
     private notificationService: NotificationService,
     private fb: FormBuilder,
     private dialog: MatDialog,
@@ -50,6 +90,7 @@ export class AuditoriaComponent implements OnInit {
   ngOnInit(): void {
     this.cargarOpcionesFiltros();
     this.cargarTodasAuditorias();
+    this.cargarEstadisticasActualizaciones();
   }
 
   cargarOpcionesFiltros(): void {
@@ -204,6 +245,155 @@ export class AuditoriaComponent implements OnInit {
       eliminaciones: this.auditoriasFiltradas.filter(a => a.tipoPeticion === 'DELETE').length
     };
     return resumen;
+  }
+
+  /**
+   * Cargar estadísticas de actualizaciones anuales
+   */
+  cargarEstadisticasActualizaciones(): void {
+    this.cargandoEstadisticas = true;
+    
+    this.actualizacionService.obtenerEstadisticas().subscribe({
+      next: (estadisticas) => {
+        this.estadisticasActualizacion = estadisticas;
+        this.cargandoEstadisticas = false;
+        console.log('📊 Estadísticas de actualizaciones cargadas:', estadisticas);
+        
+        // Actualizar datos del gráfico
+        this.actualizarGraficoPie();
+      },
+      error: (error) => {
+        console.error('Error al cargar estadísticas de actualizaciones:', error);
+        this.notificationService.showError('Error al cargar estadísticas de actualizaciones', 'Error');
+        this.cargandoEstadisticas = false;
+      }
+    });
+  }
+
+  /**
+   * Actualizar datos del gráfico de pastel
+   */
+  actualizarGraficoPie(): void {
+    if (this.estadisticasActualizacion) {
+      this.pieChartData.datasets[0].data = [
+        this.estadisticasActualizacion.completadas,
+        this.estadisticasActualizacion.pendientes,
+        this.estadisticasActualizacion.vencidas
+      ];
+      
+      // Actualizar etiquetas con porcentajes
+      this.pieChartData.labels = [
+        `Completadas (${this.estadisticasActualizacion.porcentajeCompletadas.toFixed(1)}%)`,
+        `Pendientes (${this.estadisticasActualizacion.porcentajePendientes.toFixed(1)}%)`,
+        `Vencidas (${this.estadisticasActualizacion.porcentajeVencidas.toFixed(1)}%)`
+      ];
+      
+      // Forzar actualización del gráfico
+      if (this.chart) {
+        this.chart.update();
+      }
+    }
+  }
+
+  /**
+   * Cargar controles pendientes de actualización
+   */
+  cargarControlesPendientes(): void {
+    this.actualizacionService.obtenerPendientes().subscribe({
+      next: (pendientes) => {
+        this.controlesPendientes = pendientes;
+        console.log('📋 Controles pendientes cargados:', pendientes.length);
+        this.mostrarUsuariosPendientes();
+      },
+      error: (error) => {
+        console.error('Error al cargar controles pendientes:', error);
+        this.notificationService.showError('Error al cargar controles pendientes', 'Error');
+      }
+    });
+  }
+
+  /**
+   * Cargar controles vencidos
+   */
+  cargarControlesVencidos(): void {
+    this.actualizacionService.obtenerVencidas().subscribe({
+      next: (vencidas) => {
+        this.controlesVencidos = vencidas;
+        console.log('⏰ Controles vencidos cargados:', vencidas.length);
+        this.mostrarUsuariosVencidos();
+      },
+      error: (error) => {
+        console.error('Error al cargar controles vencidos:', error);
+        this.notificationService.showError('Error al cargar controles vencidos', 'Error');
+      }
+    });
+  }
+
+  /**
+   * Mostrar modal de usuarios pendientes
+   */
+  mostrarUsuariosPendientes(): void {
+    this.dialog.open(UsuariosPendientesModalComponent, {
+      width: '90vw',
+      maxWidth: '1200px',
+      maxHeight: '90vh',
+      data: {
+        tipo: 'pendientes',
+        usuarios: this.controlesPendientes
+      },
+      disableClose: false,
+      autoFocus: false
+    });
+  }
+
+  /**
+   * Mostrar modal de usuarios vencidos
+   */
+  mostrarUsuariosVencidos(): void {
+    this.dialog.open(UsuariosPendientesModalComponent, {
+      width: '90vw',
+      maxWidth: '1200px',
+      maxHeight: '90vh',
+      data: {
+        tipo: 'vencidos',
+        usuarios: this.controlesVencidos
+      },
+      disableClose: false,
+      autoFocus: false
+    });
+  }
+
+  /**
+   * Refrescar todas las estadísticas
+   */
+  refrescarEstadisticas(): void {
+    this.cargarEstadisticasActualizaciones();
+    this.cargarControlesPendientes();
+    this.cargarControlesVencidos();
+  }
+
+  /**
+   * Inicializar datos de prueba
+   */
+  inicializarDatos(): void {
+    this.notificationService.showInfo('Inicializando datos de prueba...', 'Procesando');
+    
+    this.actualizacionService.inicializarDatos().subscribe({
+      next: (response) => {
+        console.log('✅ Datos inicializados:', response);
+        this.notificationService.showSuccess(
+          `Datos inicializados: ${response.controlesCreados} controles creados de ${response.usuariosProcesados} usuarios`,
+          'Éxito'
+        );
+        
+        // Refrescar estadísticas después de inicializar
+        this.refrescarEstadisticas();
+      },
+      error: (error) => {
+        console.error('❌ Error inicializando datos:', error);
+        this.notificationService.showError('Error al inicializar datos', 'Error');
+      }
+    });
   }
   
   verDetalles(auditoria: AuditoriaDTO): void {

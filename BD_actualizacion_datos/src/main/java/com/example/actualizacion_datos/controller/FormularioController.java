@@ -3,6 +3,8 @@ package com.example.actualizacion_datos.controller;
 import com.example.actualizacion_datos.entity.*;
 import com.example.actualizacion_datos.service.FormularioService;
 import com.example.actualizacion_datos.service.AuditoriaService;
+import com.example.actualizacion_datos.service.ViviendaBaseService;
+import com.example.actualizacion_datos.config.AuditoriaInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,12 @@ public class FormularioController {
     
     @Autowired
     private AuditoriaService auditoriaService;
+    
+    @Autowired
+    private ViviendaBaseService viviendaBaseService;
+    
+    @Autowired
+    private AuditoriaInterceptor auditoriaInterceptor;
     
     // ========== GUARDAR ESTUDIOS ACADÉMICOS ==========
     @PostMapping("/estudios/guardar")
@@ -164,20 +172,116 @@ public class FormularioController {
             List<Vivienda> viviendasExistentes = formularioService.obtenerViviendas(idUsuario);
             
             if (!viviendasExistentes.isEmpty()) {
-                // Actualizar vivienda existente
+                // Actualizar vivienda existente con auditoría específica por campo
                 Vivienda viviendaExistente = viviendasExistentes.get(0);
-                actualizarCamposVivienda(viviendaExistente, vivienda);
-                viviendaExistente.setUsuario(usuario);
-                Vivienda viviendaActualizada = formularioService.actualizarVivienda(viviendaExistente);
                 
-                Map<String, Object> response = Map.of(
-                    "success", true,
-                    "message", "🏠 Vivienda actualizada exitosamente",
-                    "data", viviendaActualizada
-                );
+                // Crear copia del estado anterior para auditoría
+                Vivienda viviendaAnterior = new Vivienda();
+                viviendaAnterior.setIdVivienda(viviendaExistente.getIdVivienda());
+                viviendaAnterior.setTipoVivienda(viviendaExistente.getTipoVivienda());
+                viviendaAnterior.setDireccion(viviendaExistente.getDireccion());
+                viviendaAnterior.setInfoAdicional(viviendaExistente.getInfoAdicional());
+                viviendaAnterior.setBarrio(viviendaExistente.getBarrio());
+                viviendaAnterior.setCiudad(viviendaExistente.getCiudad());
+                viviendaAnterior.setVivienda(viviendaExistente.getVivienda());
+                viviendaAnterior.setEntidad(viviendaExistente.getEntidad());
+                viviendaAnterior.setAno(viviendaExistente.getAno());
+                viviendaAnterior.setTipoAdquisicion(viviendaExistente.getTipoAdquisicion());
                 
-                logger.info("✅ Vivienda actualizada exitosamente para usuario ID: {}", idUsuario);
-                return ResponseEntity.ok(response);
+                // Actualizar campos y detectar cambios
+                boolean hasChanges = false;
+                
+                if (vivienda.getTipoVivienda() != null && !vivienda.getTipoVivienda().equals(viviendaExistente.getTipoVivienda())) {
+                    logger.info("🔄 Cambio detectado en tipo de vivienda: '{}' -> '{}'", viviendaExistente.getTipoVivienda(), vivienda.getTipoVivienda());
+                    viviendaExistente.setTipoVivienda(vivienda.getTipoVivienda());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getDireccion() != null && !vivienda.getDireccion().equals(viviendaExistente.getDireccion())) {
+                    logger.info("🔄 Cambio detectado en dirección: '{}' -> '{}'", viviendaExistente.getDireccion(), vivienda.getDireccion());
+                    viviendaExistente.setDireccion(vivienda.getDireccion());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getInfoAdicional() != null && !vivienda.getInfoAdicional().equals(viviendaExistente.getInfoAdicional())) {
+                    logger.info("🔄 Cambio detectado en información adicional: '{}' -> '{}'", viviendaExistente.getInfoAdicional(), vivienda.getInfoAdicional());
+                    viviendaExistente.setInfoAdicional(vivienda.getInfoAdicional());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getBarrio() != null && !vivienda.getBarrio().equals(viviendaExistente.getBarrio())) {
+                    logger.info("🔄 Cambio detectado en barrio: '{}' -> '{}'", viviendaExistente.getBarrio(), vivienda.getBarrio());
+                    viviendaExistente.setBarrio(vivienda.getBarrio());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getCiudad() != null && !vivienda.getCiudad().equals(viviendaExistente.getCiudad())) {
+                    logger.info("🔄 Cambio detectado en ciudad: '{}' -> '{}'", viviendaExistente.getCiudad(), vivienda.getCiudad());
+                    viviendaExistente.setCiudad(vivienda.getCiudad());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getVivienda() != null && !vivienda.getVivienda().equals(viviendaExistente.getVivienda())) {
+                    logger.info("🔄 Cambio detectado en vivienda: '{}' -> '{}'", viviendaExistente.getVivienda(), vivienda.getVivienda());
+                    viviendaExistente.setVivienda(vivienda.getVivienda());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getEntidad() != null && !vivienda.getEntidad().equals(viviendaExistente.getEntidad())) {
+                    logger.info("🔄 Cambio detectado en entidad: '{}' -> '{}'", viviendaExistente.getEntidad(), vivienda.getEntidad());
+                    viviendaExistente.setEntidad(vivienda.getEntidad());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getAno() != null && !vivienda.getAno().equals(viviendaExistente.getAno())) {
+                    logger.info("🔄 Cambio detectado en año: '{}' -> '{}'", viviendaExistente.getAno(), vivienda.getAno());
+                    viviendaExistente.setAno(vivienda.getAno());
+                    hasChanges = true;
+                }
+                
+                if (vivienda.getTipoAdquisicion() != null && !vivienda.getTipoAdquisicion().equals(viviendaExistente.getTipoAdquisicion())) {
+                    logger.info("🔄 Cambio detectado en tipo de adquisición: '{}' -> '{}'", viviendaExistente.getTipoAdquisicion(), vivienda.getTipoAdquisicion());
+                    viviendaExistente.setTipoAdquisicion(vivienda.getTipoAdquisicion());
+                    hasChanges = true;
+                }
+                
+                if (hasChanges) {
+                    logger.info("✅ Se detectaron cambios, actualizando vivienda...");
+                    viviendaExistente.setVersion(viviendaExistente.getVersion() + 1);
+                    
+                    // Registrar auditoría manual antes de actualizar
+                    try {
+                        String usuarioModificador = auditoriaInterceptor.obtenerUsuarioActual();
+                        Long idUsuarioModificador = auditoriaInterceptor.obtenerIdUsuarioActual();
+                        logger.info("🔍 Registrando auditoría manual para vivienda: {} con modificador: {}", 
+                                  viviendaExistente.getIdVivienda(), usuarioModificador);
+                        auditoriaInterceptor.registrarActualizacion("VIVIENDA", viviendaAnterior, viviendaExistente, 
+                                                                 idUsuarioModificador, usuarioModificador);
+                        logger.info("✅ Auditoría manual registrada exitosamente para vivienda: {}", viviendaExistente.getIdVivienda());
+                    } catch (Exception e) {
+                        logger.warn("⚠️ Error registrando auditoría manual: {}", e.getMessage());
+                        e.printStackTrace();
+                    }
+                    
+                    Vivienda viviendaActualizada = viviendaBaseService.update(viviendaExistente.getIdVivienda(), viviendaExistente);
+                    
+                    Map<String, Object> response = Map.of(
+                        "success", true,
+                        "message", "🏠 Vivienda actualizada exitosamente",
+                        "data", viviendaActualizada
+                    );
+                    
+                    logger.info("✅ Vivienda actualizada exitosamente para usuario ID: {}", idUsuario);
+                    return ResponseEntity.ok(response);
+                } else {
+                    logger.info("ℹ️ No se detectaron cambios en la vivienda");
+                    Map<String, Object> response = Map.of(
+                        "success", true,
+                        "message", "ℹ️ No se detectaron cambios en la vivienda",
+                        "data", viviendaExistente
+                    );
+                    return ResponseEntity.ok(response);
+                }
             } else {
                 // Crear nueva vivienda
                 vivienda.setUsuario(usuario);

@@ -146,6 +146,20 @@ export class ExcelExportService {
   }
 
   /**
+   * Exporta un array de objetos a una hoja de Excel simple
+   */
+  exportarSimple(datos: any[], nombreArchivo: string = 'reporte.xlsx', nombreHoja: string = 'Datos'): void {
+    if (!datos || datos.length === 0) {
+      throw new Error('No hay datos para exportar');
+    }
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(datos);
+    XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([wbout], { type: 'application/octet-stream' }), nombreArchivo);
+  }
+
+  /**
    * Crea datos de resumen para auditorías
    */
   private crearResumenAuditorias(auditorias: any[]): any[] {
